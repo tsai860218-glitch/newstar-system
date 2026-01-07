@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新星啟動計畫旗艦系統 (2026 Pro v3.3)</title>
+    <title>新星啟動計畫旗艦系統 (2026 Pro v3.5)</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -56,6 +56,12 @@
         .is-learning { border-left: 4px solid #10b981; background: #f0fff4; }
         .section-header { font-weight: bold; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #555; }
 
+        /* V3.5 Product Row Styles */
+        .product-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; animation: fadeIn 0.3s; }
+        .product-row input { padding: 8px; font-size: 0.9rem; background: white; }
+        .btn-remove-prod { color: #dc3545; background: none; border: none; cursor: pointer; font-size: 1.1rem; }
+        .btn-remove-prod:hover { color: #a71d2a; }
+
         /* Tree View */
         .tree-node { margin-left: 25px; border-left: 2px dashed #ccc; padding-left: 20px; position: relative; margin-top: 15px; }
         .tree-node::before { content: ""; position: absolute; left: 0; top: 18px; width: 18px; height: 2px; background: #ccc; }
@@ -68,36 +74,31 @@
         .tree-root > .tree-content { background: linear-gradient(to right, #f3e5f5, #fff); border: 1px solid #d1c4e9; border-left: 5px solid var(--purple); width: 100%; box-sizing: border-box; }
         .tree-root > .tree-content .tree-name { font-size: 1.2rem; color: #4a148c; }
 
-        /* Buttons & Badges */
-        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-dark); }
-        .btn-purple { background: var(--purple); color: white; }
-        .btn-purple:hover { background: #5a32a3; }
-        .btn-outline { background: white; border: 1px solid var(--border); color: var(--text); }
-        .btn-danger { background: #dc3545; color: white; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
-        th { background: #f1f5f9; font-weight: 700; color: #475569; }
+        /* Badges */
         .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
         .badge-sales { background: #3b82f6; color: white; }
         .badge-new { background: #e67e22; color: white; }
         .badge-learn { background: #10b981; color: white; }
         .badge-sponsor { background: var(--purple); color: white; }
-        
-        /* New Star Status Badge */
         .status-active { color: #28a745; font-weight: bold; background: #e6f9ed; padding: 2px 6px; border-radius: 4px; border: 1px solid #28a745; }
         .status-inactive { color: #999; font-size: 0.85rem; }
 
-        /* Instant Bonus Box */
+        /* Others */
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-purple { background: var(--purple); color: white; }
+        .btn-outline { background: white; border: 1px solid var(--border); color: var(--text); }
+        .btn-danger { background: #dc3545; color: white; }
         .instant-bonus-box { background: #2c3e50; color: white; padding: 20px; border-radius: 10px; margin-top: 20px; border-left: 6px solid var(--secondary); }
         .ib-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; margin-bottom: 10px;}
-        .ib-title { font-size: 1rem; opacity: 0.9; }
         .ib-total { font-size: 1.8rem; font-weight: bold; color: var(--secondary); }
         .ib-breakdown { display: flex; justify-content: space-between; gap: 10px; }
         .ib-item { flex: 1; background: rgba(255,255,255,0.08); padding: 10px; border-radius: 6px; text-align: center; }
-        .ib-val { font-weight: bold; font-size: 1rem; color: #fff; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+        th { background: #f1f5f9; font-weight: 700; color: #475569; }
 
         .section { display: none; animation: fadeIn 0.4s; }
         .section.active { display: block; }
@@ -118,7 +119,7 @@
 <body>
 
     <div class="sidebar">
-        <div class="logo"><i class="fas fa-gem"></i> 新星啟動系統 <small style="font-size:0.6em; color:#28a745;">(V3.3)</small></div>
+        <div class="logo"><i class="fas fa-gem"></i> 新星啟動系統 <small style="font-size:0.6em; color:#28a745;">(V3.5)</small></div>
         
         <div class="nav-divider">數據管理</div>
         <div class="nav-item active" onclick="switchTab('dashboard')"><i class="fas fa-chart-line"></i> 業績戰情室</div>
@@ -173,9 +174,7 @@
             <div class="grid-2">
                 <div class="card">
                     <h3><i class="fas fa-sitemap"></i> 無限層級組織樹</h3>
-                    <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">
-                        包含「業績歸戶」邏輯檢查。
-                    </p>
+                    <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">包含「業績歸戶」邏輯檢查。</p>
                     <div id="treeContainer" style="overflow-x:auto; padding-bottom:20px;"></div>
                 </div>
                 <div class="card">
@@ -194,7 +193,7 @@
                     <div class="card">
                         <div class="form-group"><label>日期</label><input type="date" id="entryDate" onchange="updateInstantCalc()"></div>
                         <div class="form-group">
-                            <label>操作會員 (Log Owner)</label>
+                            <label>操作會員 (僅顯示參加中)</label>
                             <select id="entryMember" onchange="checkMemberSelect(); updateInstantCalc(); updateNewcomerUplineSelect();"></select>
                             <div id="quickAddMemberBox" style="display:none; background:#f0f9ff; padding:15px; margin-top:10px; border-radius:8px; border:1px dashed #0066cc;">
                                 <small style="color:#0066cc; font-weight:bold; font-size:1rem;"><i class="fas fa-user-plus"></i> 建立新會員</small>
@@ -220,7 +219,16 @@
                                 <div class="equal-sign" style="font-size:1.2rem; padding-top:20px;">=</div>
                                 <div class="form-group" style="margin:0;"><label style="font-size:0.8rem;">BV (1:50)</label><input type="number" id="entryBV" placeholder="0" oninput="autoConvert('bv', 'entry'); updateInstantCalc();" onfocus="this.select()" style="background:#fff;"></div>
                             </div>
+                            
+                            <div style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px;">
+                                <label style="font-size:0.85rem; color:#666;">📦 分享產品明細 (非必填)</label>
+                                <div id="productContainer"></div>
+                                <button class="btn btn-outline" style="font-size:0.8rem; padding:5px 10px; margin-top:5px; border-style:dashed;" onclick="addProductRow()">
+                                    <i class="fas fa-plus"></i> 新增品項
+                                </button>
+                            </div>
                         </div>
+                        
                         <div class="input-section is-newcomer">
                             <div class="section-header"><i class="fas fa-user-plus"></i> 推薦新人</div>
                             <div class="form-group" style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #e67e22;">
@@ -311,7 +319,7 @@
                     <div class="form-group"><label>會員</label><select id="filterMember" onchange="renderLogs()"><option value="all">全部</option></select></div>
                     <div class="form-group"><label style="visibility:hidden">R</label><button class="btn btn-outline" style="width:100%" onclick="resetLogFilter()">重置</button></div>
                 </div>
-                <table id="logTable"><thead><tr><th>日期</th><th>會員</th><th>類型</th><th>內容</th><th>數值</th><th>操作</th></tr></thead><tbody></tbody></table>
+                <table id="logTable"><thead><tr><th>日期</th><th>會員</th><th>類型</th><th>內容</th><th>數值 / 預估獎金</th><th>操作</th></tr></thead><tbody></tbody></table>
             </div>
         </div>
 
@@ -426,123 +434,19 @@
         if(tabId==='network') renderNetwork(); 
     }
 
-    // --- NETWORK TREE LOGIC ---
-    function renderNetwork() {
-        const treeContainer = document.getElementById('treeContainer');
-        const listBody = document.querySelector('#referralTable tbody');
-        
-        let parentMap = {};
-        let childrenMap = {}; 
-        let referralList = [];
-
-        logs.filter(l => l.type === 'newcomer').forEach(l => {
-            const childData = l.newcomerData;
-            const parentId = childData.uplineId || l.memberId; 
-            if (parentMap[childData.id] !== parentId) {
-                parentMap[childData.id] = parentId;
-                if(!childrenMap[parentId]) childrenMap[parentId] = [];
-                if(!childrenMap[parentId].some(c => c.id === childData.id)) {
-                    childrenMap[parentId].push({ id: childData.id, name: childData.name, date: l.date });
-                }
-                const pName = members.find(m=>m.id===parentId)?.name || parentId;
-                referralList.push({ date: l.date, parent: `${pName} (${parentId})`, child: `${childData.name} (${childData.id})` });
-            }
-        });
-
-        referralList.sort((a,b) => new Date(b.date) - new Date(a.date));
-        listBody.innerHTML = referralList.length ? referralList.map(r => `<tr><td>${r.date}</td><td style="color:#0066cc; font-weight:bold;">${r.parent}</td><td>${r.child}</td></tr>`).join('') : '<tr><td colspan="3" style="text-align:center">尚無推薦紀錄</td></tr>';
-
-        if(sponsors.length === 0) {
-            treeContainer.innerHTML = "<div style='padding:20px; color:#666;'>請先建立「發起人」資料。</div>";
-            return;
-        }
-
-        function buildTree(memberId, memberName, date) {
-            let html = `
-                <div class="tree-node">
-                    <div class="tree-content">
-                        <i class="fas fa-user" style="color:#555"></i>
-                        <div class="tree-name">${memberName}</div>
-                        <div class="tree-id">#${memberId}</div>
-                    </div>`;
-            if(date) html += `<div style="position:relative"><span style="position:absolute; left:35px; top:-8px; font-size:0.7rem; color:#999;"><i class="far fa-clock"></i> ${date} 加入</span></div>`;
-            if(childrenMap[memberId]) {
-                childrenMap[memberId].forEach(child => { html += buildTree(child.id, child.name, child.date); });
-            }
-            html += `</div>`;
-            return html;
-        }
-
-        let fullHtml = "";
-        sponsors.forEach(sp => {
-            const roots = members.filter(m => {
-                if(m.sponsorId !== sp.id) return false;
-                const uplineId = parentMap[m.id];
-                if(!uplineId) return true; 
-                return false; 
-            });
-            if(roots.length > 0) {
-                fullHtml += `<div class="tree-node tree-root"><div class="tree-content"><i class="fas fa-crown"></i><div class="tree-name">${sp.name}</div></div>`;
-                roots.forEach(root => { fullHtml += buildTree(root.id, root.name, null); });
-                fullHtml += `</div>`;
-            }
-        });
-        
-        if(!fullHtml) fullHtml = "<div style='padding:20px; color:#999;'>尚無組織結構。</div>";
-        treeContainer.innerHTML = fullHtml;
+    // --- V3.5 Product Row Logic ---
+    function addProductRow() {
+        const div = document.createElement('div');
+        div.className = 'product-row';
+        div.innerHTML = `
+            <input type="text" placeholder="品項名稱" class="prod-name" style="flex:2;">
+            <input type="number" placeholder="數量" class="prod-qty" style="flex:1;">
+            <button onclick="this.parentElement.remove()" class="btn-remove-prod"><i class="fas fa-times"></i></button>
+        `;
+        document.getElementById('productContainer').appendChild(div);
     }
 
-    // --- Sponsor Logic ---
-    function addSponsor() {
-        const name = document.getElementById('newSponsorName').value.trim();
-        const id = document.getElementById('newSponsorID').value.trim();
-        if(!name || !id) return alert("請輸入完整資訊");
-        if(sponsors.find(s => s.id === id)) return alert("ID 已存在");
-        sponsors.push({ id, name });
-        saveToLocal(); refreshAllUI();
-        document.getElementById('newSponsorName').value = ''; document.getElementById('newSponsorID').value = '';
-    }
-    function deleteSponsor(id) { if(confirm("確定刪除?")) { sponsors = sponsors.filter(s=>s.id!==id); saveToLocal(); refreshAllUI(); } }
-    function renderSponsors() {
-        document.querySelector('#sponsorTable tbody').innerHTML = sponsors.length ? sponsors.map(s => `<tr><td>${s.id}</td><td>${s.name}</td><td><button class="btn btn-outline" style="color:red" onclick="deleteSponsor('${s.id}')"><i class="fas fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="3">無資料</td></tr>';
-    }
-    function updateSponsorSelects() {
-        const opts = '<option value="" disabled selected>-- 選擇發起人 --</option>' + sponsors.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-        document.getElementById('newMemSponsor').innerHTML = opts;
-        document.getElementById('quickNewMemSponsor').innerHTML = opts;
-    }
-
-    // --- Member Logic (V3.3 New Star Status) ---
-    function addMember() {
-        const id = document.getElementById('newMemberID').value.trim();
-        const name = document.getElementById('newMemberName').value.trim();
-        const spId = document.getElementById('newMemSponsor').value;
-        const isNS = document.getElementById('newMemIsNewStar').checked;
-
-        if(!id || !name || !spId) return alert("請輸入完整資訊與發起人");
-        if(members.find(m=>m.id===id)) return alert("編號重複");
-        
-        members.push({ id, name, sponsorId: spId, isNewStar: isNS });
-        saveToLocal(); refreshAllUI();
-        document.getElementById('newMemberID').value=''; document.getElementById('newMemberName').value=''; document.getElementById('newMemSponsor').value='';
-    }
-    function toggleNewStar(id) {
-        const m = members.find(m=>m.id===id);
-        if(m) {
-            m.isNewStar = !m.isNewStar;
-            saveToLocal(); refreshAllUI();
-        }
-    }
-    function renderMembers() {
-        document.querySelector('#memberTable tbody').innerHTML = members.length ? members.map(m => {
-            const spName = sponsors.find(s=>s.id===m.sponsorId)?.name || '-';
-            const statusBadge = m.isNewStar ? '<span class="status-active">參加中</span>' : '<span class="status-inactive">未參加 (業績歸上線)</span>';
-            const toggleBtn = `<button class="btn btn-outline" style="padding:2px 5px; font-size:0.75rem;" onclick="toggleNewStar('${m.id}')">切換</button>`;
-            return `<tr><td>${m.id}</td><td>${m.name}</td><td>${statusBadge} ${toggleBtn}</td><td>${spName}</td><td><button class="btn btn-outline" style="color:red" onclick="deleteMember('${m.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
-        }).join('') : '<tr><td colspan="5">無資料</td></tr>';
-    }
-
-    // --- Entry Logic ---
+    // --- Entry Logic (V3.5) ---
     function addCompositeLog() {
         const date = document.getElementById('entryDate').value;
         let memberId = document.getElementById('entryMember').value;
@@ -566,7 +470,28 @@
         let saved=0;
         const pv = parseFloat(document.getElementById('entryPV').value)||0;
         if(pv>0) {
-            logs.push({ id: Date.now()+1, date, memberId, type: 'sales', pv, details: `業績 (BV: ${document.getElementById('entryBV').value})` });
+            const bvVal = document.getElementById('entryBV').value;
+            
+            // V3.5 Collect Products
+            let products = [];
+            document.querySelectorAll('.product-row').forEach(row => {
+                const pname = row.querySelector('.prod-name').value.trim();
+                const pqty = row.querySelector('.prod-qty').value.trim();
+                if(pname) products.push({name: pname, qty: pqty || 1});
+            });
+            
+            let detailStr = `業績 (BV: ${bvVal})`;
+            if(products.length > 0) {
+                const prodStr = products.map(p => `${p.name}x${p.qty}`).join(', ');
+                detailStr += ` | 📦 ${prodStr}`;
+            }
+
+            logs.push({ 
+                id: Date.now()+1, date, memberId, 
+                type: 'sales', pv, 
+                details: detailStr,
+                products: products // Store raw data
+            });
             saved++;
         }
         
@@ -577,13 +502,11 @@
             const uplineId = document.getElementById('newcomerUpline').value || memberId;
             
             if(!nID) return alert("請輸入新人編號");
-            
             if(!members.find(m=>m.id===nID)) {
                 const uplineObj = members.find(m=>m.id===uplineId);
                 const inheritSponsor = uplineObj ? uplineObj.sponsorId : "";
-                members.push({id: nID, name: nName, sponsorId: inheritSponsor, isNewStar: true}); // Default new to active? Or make optional.
+                members.push({id: nID, name: nName, sponsorId: inheritSponsor, isNewStar: true}); 
             }
-
             logs.push({
                 id: Date.now()+2, date, memberId, 
                 type: 'newcomer', pv: 0, 
@@ -603,16 +526,18 @@
         document.getElementById('entryPV').value=''; document.getElementById('entryBV').value='';
         document.getElementById('newcomerName').value=''; document.getElementById('newcomerID').value=''; document.getElementById('newcomerBV').value='';
         document.getElementById('learningNote').value=''; document.getElementById('learningFileCheck').checked=false;
+        // Clear products
+        document.getElementById('productContainer').innerHTML = '';
+        
         updateInstantCalc();
     }
 
-    // --- Helpers ---
+    // --- Helpers (V3.4 Updates) ---
     function checkMemberSelect() { document.getElementById('quickAddMemberBox').style.display = (document.getElementById('entryMember').value === 'new_mode') ? 'block' : 'none'; }
     function autoConvert(s, c) { 
         const p=document.getElementById(c==='entry'?'entryPV':'calcPV'), b=document.getElementById(c==='entry'?'entryBV':'calcBV');
         if(s==='pv') b.value=(parseFloat(p.value)||0)*50; else p.value=(parseFloat(b.value)||0)/50; 
     }
-    
     function updateNewcomerUplineSelect() {
         const curMem = document.getElementById('entryMember').value;
         const sel = document.getElementById('newcomerUpline');
@@ -620,30 +545,28 @@
         sel.innerHTML = h;
         if(curMem && curMem!=='new_mode') sel.value = curMem;
     }
-
-    function updateInstantCalc() {
-        // (Simplified for brevity, same logic as before)
-        const tel = document.getElementById('ibTotalVal');
-        tel.innerText = "計算中..."; 
-        // In V3.3, real-time recursive calc is complex. We stick to simple preview or remove it if too heavy. 
-        // For now, let's keep basic logic but it won't reflect roll-up accurately in preview.
-        tel.innerText = "-"; // Reset for safety
-    }
-
-    function saveToLocal() { localStorage.setItem('amway_members', JSON.stringify(members)); localStorage.setItem('amway_logs', JSON.stringify(logs)); localStorage.setItem('amway_sponsors', JSON.stringify(sponsors)); saveToCloud(); }
-    function deleteMember(id){ if(confirm("刪除?")) { members=members.filter(m=>m.id!==id); saveToLocal(); refreshAllUI(); } }
-    function deleteLog(id){ if(confirm("刪除?")) { logs=logs.filter(l=>l.id!==id); saveToLocal(); refreshAllUI(); } }
+    
+    // V3.4: Filtered Selection
     function updateMemberSelects() {
         const cur = document.getElementById('entryMember').value;
-        let h = '<option value="" disabled selected>-- 選擇 --</option><option value="new_mode" style="color:blue;">➕ 新增會員...</option>';
-        h += members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
-        document.getElementById('entryMember').innerHTML = h;
-        if(cur && members.find(m=>m.id===cur)) document.getElementById('entryMember').value = cur;
-        document.getElementById('filterMember').innerHTML = '<option value="all">全部</option>' + members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+        
+        // 1. Entry Dropdown: Only Participating Members
+        const activeMembers = members.filter(m => m.isNewStar);
+        let entryHtml = '<option value="" disabled selected>-- 選擇操作會員 (僅限參加中) --</option>';
+        entryHtml += '<option value="new_mode" style="color:blue;">➕ 建立新會員...</option>';
+        entryHtml += activeMembers.map(m => `<option value="${m.id}">${m.name} (${m.id})</option>`).join('');
+        document.getElementById('entryMember').innerHTML = entryHtml;
+        
+        if(cur && (cur === 'new_mode' || activeMembers.find(m=>m.id===cur))) {
+            document.getElementById('entryMember').value = cur;
+        }
+
+        // 2. Filter Dropdown: All Members
+        document.getElementById('filterMember').innerHTML = '<option value="all">全部會員</option>' + members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
         updateNewcomerUplineSelect();
     }
-    
-    // V3.3 Translation
+
+    // V3.4: Render Logs with Newcomer Bonus & BV
     function renderLogs() {
         const fm=document.getElementById('filterMonth').value, fmem=document.getElementById('filterMember').value;
         let d = logs.filter(l=> (!fm||l.date.startsWith(fm)) && (fmem==='all'||l.memberId===fmem));
@@ -654,32 +577,47 @@
         document.querySelector('#logTable tbody').innerHTML = d.length ? d.map(l=>{
             const m = members.find(x=>x.id===l.memberId)?.name || l.memberId;
             let cls = l.type==='sales'?'badge-sales':(l.type==='newcomer'?'badge-new':'badge-learn');
-            return `<tr><td>${l.date}</td><td>${m}</td><td><span class="badge ${cls}">${typeMap[l.type]}</span></td><td>${l.details}</td><td>${l.pv>0?l.pv:'-'}</td><td><button onclick="deleteLog(${l.id})" style="color:red;border:none;background:none"><i class="fas fa-trash"></i></button></td></tr>`;
+            
+            // Value Logic V3.4
+            let valDisplay = '-';
+            if(l.type === 'sales') {
+                valDisplay = `${(l.pv||0).toLocaleString()} PV`;
+            } else if (l.type === 'newcomer' && l.newcomerData) {
+                const nbv = l.newcomerData.bv || 0;
+                const bonus = Math.round(nbv * 0.01);
+                valDisplay = `<div>新人BV: ${nbv.toLocaleString()}</div><div style="color:#e67e22; font-size:0.85rem; font-weight:bold;">推薦獎金: $${bonus.toLocaleString()}</div>`;
+            } else if (l.type === 'learning') {
+                valDisplay = `<span style="color:#10b981;">觸發 +3%</span>`;
+            }
+
+            return `<tr><td>${l.date}</td><td>${m}</td><td><span class="badge ${cls}">${typeMap[l.type]}</span></td><td>${l.details}</td><td>${valDisplay}</td><td><button onclick="deleteLog(${l.id})" style="color:red;border:none;background:none"><i class="fas fa-trash"></i></button></td></tr>`;
         }).join('') : '<tr><td colspan="6" style="text-align:center">無紀錄</td></tr>';
     }
+
+    function updateInstantCalc() {
+        // Simple preview (Full logic is in calculateMonthlyStats)
+        const tel = document.getElementById('ibTotalVal');
+        tel.innerText = "-"; 
+    }
+
+    function saveToLocal() { localStorage.setItem('amway_members', JSON.stringify(members)); localStorage.setItem('amway_logs', JSON.stringify(logs)); localStorage.setItem('amway_sponsors', JSON.stringify(sponsors)); saveToCloud(); }
+    function deleteMember(id){ if(confirm("刪除?")) { members=members.filter(m=>m.id!==id); saveToLocal(); refreshAllUI(); } }
+    function deleteLog(id){ if(confirm("刪除?")) { logs=logs.filter(l=>l.id!==id); saveToLocal(); refreshAllUI(); } }
+    
     function populateMonthSelect() {
         const s = document.getElementById('dashMonthSelect'); s.innerHTML='';
         for(let i=1;i<=12;i++) { let v=`2026-${i.toString().padStart(2,'0')}`; let o=document.createElement('option'); o.value=v; o.text=`2026年 ${i}月`; s.appendChild(o); }
         let now=new Date().toISOString().slice(0,7); if(now.startsWith('2026')) s.value=now;
     }
 
-    // --- V3.3 RECURSIVE PV CALCULATION (Roll-up) ---
+    // Calculation (Roll-up)
     function calculateMonthlyStats(monthStr) {
-        // 1. Prepare raw data for the month
         const monthLogs = logs.filter(l => l.date.startsWith(monthStr));
-        
-        // Map: MemberID -> Personal Sales PV
         let personalSalesMap = {};
-        // Map: MemberID -> Array of Newcomers (for bonus calc)
         let personalNewcomersMap = {};
-        // Map: MemberID -> Has Learning
         let personalLearningMap = {};
+        let childrenMap = {}; 
         
-        // Build Relationship Map (Parent -> Children) based on ALL logs (historical) or just use latest snapshot?
-        // Better to build from ALL logs to get structure, but PV only from this month.
-        let childrenMap = {}; // parentID -> [childID]
-        
-        // Build structure from logs
         logs.filter(l => l.type === 'newcomer').forEach(l => {
             const childData = l.newcomerData;
             const parentId = childData.uplineId || l.memberId;
@@ -687,66 +625,35 @@
             if(!childrenMap[parentId].includes(childData.id)) childrenMap[parentId].push(childData.id);
         });
 
-        // Aggregating Personal Data for THIS MONTH
-        members.forEach(m => {
-            personalSalesMap[m.id] = 0;
-            personalNewcomersMap[m.id] = [];
-            personalLearningMap[m.id] = false;
-        });
+        members.forEach(m => { personalSalesMap[m.id]=0; personalNewcomersMap[m.id]=[]; personalLearningMap[m.id]=false; });
 
         monthLogs.forEach(l => {
-            if(l.type === 'sales') {
-                if(personalSalesMap[l.memberId] !== undefined) personalSalesMap[l.memberId] += l.pv;
-            } else if (l.type === 'newcomer') {
-                if(personalNewcomersMap[l.memberId]) personalNewcomersMap[l.memberId].push(l.newcomerData);
-            } else if (l.type === 'learning') {
-                if(personalLearningMap[l.memberId] !== undefined) personalLearningMap[l.memberId] = true;
-            }
+            if(l.type === 'sales') { if(personalSalesMap[l.memberId]!==undefined) personalSalesMap[l.memberId]+=l.pv; }
+            else if (l.type === 'newcomer') { if(personalNewcomersMap[l.memberId]) personalNewcomersMap[l.memberId].push(l.newcomerData); }
+            else if (l.type === 'learning') { if(personalLearningMap[l.memberId]!==undefined) personalLearningMap[l.memberId]=true; }
         });
 
-        // Recursive Function for Group PV (Roll-up)
-        // Returns the total PV that rolls up TO this member (including their own)
-        // If member is New Star, they roll up 0 to their upline (Breakaway), but their function still calculates their group.
-        
         function calculateGroupPV(memId) {
             let total = personalSalesMap[memId] || 0;
             const children = childrenMap[memId] || [];
-            
             children.forEach(childId => {
                 const childMem = members.find(m => m.id === childId);
-                // Recursive call to get child's total group PV
                 const childGroupPV = calculateGroupPV(childId);
-                
-                // Logic: If child is NOT New Star, add their group PV to me.
-                // If child IS New Star, they breakaway (add 0 to me).
-                if (childMem && !childMem.isNewStar) {
-                    total += childGroupPV;
-                }
+                if (childMem && !childMem.isNewStar) { total += childGroupPV; }
             });
             return total;
         }
 
         let res = [];
         members.forEach(m => {
-            // Calculate Effective PV based on Roll-up
             const effectivePV = calculateGroupPV(m.id);
-            
-            // Only show active or people with downlines
-            // But we want to show everyone for now
-            if (effectivePV === 0 && personalNewcomersMap[m.id].length === 0 && !personalLearningMap[m.id]) return;
+            // V3.4 Filter: Only show active participants in dashboard if they have PV or activity
+            if (!m.isNewStar && effectivePV === 0) return; 
 
             const c = calculateBonusLogic(effectivePV, effectivePV*50, personalNewcomersMap[m.id].length>0, personalNewcomersMap[m.id], personalLearningMap[m.id]);
-            res.push({
-                ...m,
-                pv: effectivePV,
-                bonus: c.total,
-                isGraduated: c.isGraduated,
-                detailsText: c.detailsText
-            });
+            res.push({ ...m, pv: effectivePV, bonus: c.total, isGraduated: c.isGraduated, detailsText: c.detailsText });
         });
-
-        res.sort((a,b)=>b.bonus-a.bonus); 
-        return res;
+        res.sort((a,b)=>b.bonus-a.bonus); return res;
     }
 
     function calculateBonusLogic(pv, bv, isRec, news, hasLearn) {
@@ -762,7 +669,7 @@
         const m = document.getElementById('dashMonthSelect').value; const stats = calculateMonthlyStats(m);
         document.getElementById('totalPVDisplay').innerText = stats.reduce((a,b)=>a+b.pv,0).toLocaleString();
         document.getElementById('totalBonusDisplay').innerText = "$"+stats.reduce((a,b)=>a+b.bonus,0).toLocaleString();
-        document.getElementById('activeMembersDisplay').innerText = `${stats.length}/${members.length}`;
+        document.getElementById('activeMembersDisplay').innerText = `${stats.length}/${members.filter(m=>m.isNewStar).length}`;
         const tb = document.querySelector('#rankingTable tbody');
         tb.innerHTML = stats.length ? stats.slice(0,10).map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.pv.toLocaleString()}</td><td style="font-size:0.8rem;color:#666">${s.detailsText}</td><td style="font-weight:bold;color:#ff9900">${s.isGraduated?"畢業":'$'+s.bonus.toLocaleString()}</td></tr>`).join('') : '<tr><td colspan="5" style="text-align:center">無資料</td></tr>';
     }
@@ -774,8 +681,49 @@
         if(res.isGraduated) { document.getElementById('simGraduateMsg').style.display='block'; document.getElementById('simValTotal').innerText="畢業"; }
         else { document.getElementById('simGraduateMsg').style.display='none'; document.getElementById('simValTotal').innerText=res.total.toLocaleString(); }
     }
-    function exportData(){ const d={members, logs, sponsors, version:"Pro_2026_v3.3"}; const u=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:"application/json"})); const a=document.createElement('a'); a.href=u; a.download=`NewStar_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); }
+    function exportData(){ const d={members, logs, sponsors, version:"Pro_2026_v3.4"}; const u=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:"application/json"})); const a=document.createElement('a'); a.href=u; a.download=`NewStar_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); }
     function importData(i){ const f=i.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ try{ const d=JSON.parse(e.target.result); if(d.members&&d.logs&&confirm("覆蓋?")){members=d.members;logs=d.logs;sponsors=d.sponsors||[]; saveToLocal();location.reload();} }catch(e){alert("錯誤");} }; r.readAsText(f); }
+    
+    // --- Network Logic (Must be included to avoid error) ---
+    function renderNetwork() {
+        const treeContainer = document.getElementById('treeContainer');
+        if(!treeContainer) return; // Guard
+        const listBody = document.querySelector('#referralTable tbody');
+        let parentMap = {}; let childrenMap = {}; let referralList = [];
+        logs.filter(l => l.type === 'newcomer').forEach(l => {
+            const childData = l.newcomerData; const parentId = childData.uplineId || l.memberId; 
+            if (parentMap[childData.id] !== parentId) {
+                parentMap[childData.id] = parentId;
+                if(!childrenMap[parentId]) childrenMap[parentId] = [];
+                if(!childrenMap[parentId].some(c => c.id === childData.id)) {
+                    childrenMap[parentId].push({ id: childData.id, name: childData.name, date: l.date });
+                }
+                const pName = members.find(m=>m.id===parentId)?.name || parentId;
+                referralList.push({ date: l.date, parent: `${pName} (${parentId})`, child: `${childData.name} (${childData.id})` });
+            }
+        });
+        referralList.sort((a,b) => new Date(b.date) - new Date(a.date));
+        listBody.innerHTML = referralList.length ? referralList.map(r => `<tr><td>${r.date}</td><td style="color:#0066cc; font-weight:bold;">${r.parent}</td><td>${r.child}</td></tr>`).join('') : '<tr><td colspan="3" style="text-align:center">尚無推薦紀錄</td></tr>';
+        if(sponsors.length === 0) { treeContainer.innerHTML = "<div style='padding:20px; color:#666;'>請先建立「發起人」資料。</div>"; return; }
+        function buildTree(memberId, memberName, date) {
+            let html = `<div class="tree-node"><div class="tree-content"><i class="fas fa-user" style="color:#555"></i><div class="tree-name">${memberName}</div><div class="tree-id">#${memberId}</div></div>`;
+            if(date) html += `<div style="position:relative"><span style="position:absolute; left:35px; top:-8px; font-size:0.7rem; color:#999;"><i class="far fa-clock"></i> ${date} 加入</span></div>`;
+            if(childrenMap[memberId]) { childrenMap[memberId].forEach(child => { html += buildTree(child.id, child.name, child.date); }); }
+            html += `</div>`; return html;
+        }
+        let fullHtml = "";
+        sponsors.forEach(sp => {
+            const roots = members.filter(m => { if(m.sponsorId !== sp.id) return false; const uplineId = parentMap[m.id]; if(!uplineId) return true; return false; });
+            if(roots.length > 0) {
+                fullHtml += `<div class="tree-node tree-root"><div class="tree-content"><i class="fas fa-crown"></i><div class="tree-name">${sp.name}</div></div>`;
+                roots.forEach(root => { fullHtml += buildTree(root.id, root.name, null); });
+                fullHtml += `</div>`;
+            }
+        });
+        if(!fullHtml) fullHtml = "<div style='padding:20px; color:#999;'>尚無組織結構。</div>";
+        treeContainer.innerHTML = fullHtml;
+    }
+
     function clearAllData() { if(prompt("輸入DELETE確認")!=='DELETE')return; localStorage.clear(); members=[]; logs=[]; sponsors=[]; saveToCloud(); alert("已清除"); location.reload(); }
     function exportPDF(){const e=document.getElementById('dashboard');html2pdf().set({margin:0.2,filename:'Report.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2},jsPDF:{unit:'in',format:'a4',orientation:'landscape'}}).from(e).save();}
 </script>
