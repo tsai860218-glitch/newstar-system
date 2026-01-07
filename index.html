@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新星啟動計畫旗艦系統 (2026 Pro v2.6)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #0066cc;
+            --primary-dark: #004c99;
+            --secondary: #ff9900;
+            --bg: #f0f2f5;
+            --text: #333;
+            --border: #e1e1e1;
+            --success: #28a745;
+        }
+
+        body { font-family: "Microsoft JhengHei", 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+
+        /* Sidebar */
+        .sidebar { width: 260px; background: white; border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; z-index: 10;}
+        .logo { padding: 25px 20px; font-size: 1.3rem; font-weight: bold; color: var(--primary); border-bottom: 1px solid var(--border); background: #f8f9fa;}
+        .nav-item { padding: 16px 20px; cursor: pointer; transition: 0.2s; color: #555; display: flex; align-items: center; gap: 12px; font-weight: 500; }
+        .nav-item:hover { background: #eef7ff; color: var(--primary); }
+        .nav-item.active { background: #eef7ff; color: var(--primary); border-right: 4px solid var(--primary); font-weight: bold; }
+        .nav-divider { font-size: 0.8rem; color: #999; padding: 15px 20px 5px; text-transform: uppercase; font-weight: bold; margin-top: 10px;}
+        
+        /* Main */
+        .main { flex: 1; padding: 30px; overflow-y: auto; position: relative; scroll-behavior: smooth; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 10px; }
+        .page-title { font-size: 1.6rem; font-weight: bold; color: #2c3e50; border-left: 5px solid var(--primary); padding-left: 15px; }
+        .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.04); margin-bottom: 25px; border: 1px solid #f0f0f0; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
+
+        /* Inputs */
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-size: 0.95rem; font-weight: 600; color: #4b5563; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        .row-inputs { display: flex; gap: 15px; align-items: center; }
+        .row-inputs > div { flex: 1; }
+        .equal-sign { font-size: 1.5rem; color: #999; font-weight: bold; padding-top: 25px; }
+
+        /* Input Sections */
+        .input-section { border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 15px; transition: 0.2s; }
+        .input-section:hover { border-color: #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .is-sales { border-left: 4px solid #3b82f6; background: #f8fbff; }
+        .is-newcomer { border-left: 4px solid #e67e22; background: #fffaf5; }
+        .is-learning { border-left: 4px solid #10b981; background: #f0fff4; }
+        .section-header { font-weight: bold; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #555; }
+
+        /* Instant Bonus Box */
+        .instant-bonus-box {
+            background: #2c3e50; color: white; padding: 20px; border-radius: 10px; 
+            margin-top: 20px; border-left: 6px solid var(--secondary); box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .ib-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; margin-bottom: 10px;}
+        .ib-title { font-size: 1rem; opacity: 0.9; }
+        .ib-total { font-size: 1.8rem; font-weight: bold; color: var(--secondary); text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .ib-breakdown { display: flex; justify-content: space-between; gap: 10px; }
+        .ib-item { flex: 1; background: rgba(255,255,255,0.08); padding: 10px; border-radius: 6px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .ib-label { font-size: 0.75rem; color: #aaa; margin-bottom: 4px; }
+        .ib-val { font-weight: bold; font-size: 1rem; color: #fff; }
+
+        /* Tree View Styles */
+        .tree-node { margin-left: 20px; border-left: 2px solid #e1e1e1; padding-left: 15px; position: relative; margin-top: 10px; }
+        .tree-node::before { content: ""; position: absolute; left: 0; top: 15px; width: 10px; height: 2px; background: #e1e1e1; }
+        .tree-content { display: flex; align-items: center; gap: 10px; background: white; border: 1px solid #eee; padding: 8px 12px; border-radius: 6px; width: fit-content; }
+        .tree-name { font-weight: bold; color: #333; }
+        .tree-id { color: #888; font-size: 0.85rem; font-family: monospace; }
+        .tree-date { font-size: 0.8rem; color: #fff; background: #0066cc; padding: 2px 6px; border-radius: 4px; }
+        .tree-root { margin-left: 0; border-left: none; padding-left: 0; }
+        .tree-root > .tree-content { background: #eef7ff; border-color: #b8daff; }
+        .tree-root::before { display: none; }
+
+        /* Buttons & Table */
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-outline { background: white; border: 1px solid var(--border); color: var(--text); }
+        .btn-danger { background: #dc3545; color: white; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+        th { background: #f1f5f9; font-weight: 700; color: #475569; }
+        .badge { padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; color: white; font-weight: bold; }
+        .badge-sales { background: #3b82f6; }
+        .badge-new { background: #e67e22; }
+        .badge-learn { background: #10b981; }
+
+        .section { display: none; animation: fadeIn 0.4s; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; height: auto; min-height: 100vh; }
+            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; height: auto; border-bottom: 1px solid var(--border); border-right: none; }
+            .nav-item { padding: 15px; white-space: nowrap; }
+            .nav-divider, .logo { display: none; }
+            .main { padding: 15px; overflow: visible; }
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .row-inputs { flex-direction: column; gap: 5px; }
+            .equal-sign { transform: rotate(90deg); padding: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo"><i class="fas fa-gem"></i> 新星啟動系統 Pro</div>
+        
+        <div class="nav-divider">數據管理</div>
+        <div class="nav-item active" onclick="switchTab('dashboard')"><i class="fas fa-chart-line"></i> 業績戰情室</div>
+        <div class="nav-item" onclick="switchTab('network')"><i class="fas fa-project-diagram"></i> 組織關係圖</div>
+        <div class="nav-item" onclick="switchTab('entry')"><i class="fas fa-pen"></i> 新增綜合紀錄</div>
+        <div class="nav-item" onclick="switchTab('members')"><i class="fas fa-users"></i> 會員資料庫</div>
+        <div class="nav-item" onclick="switchTab('logs')"><i class="fas fa-list"></i> 日誌明細</div>
+
+        <div class="nav-divider">工具與規劃</div>
+        <div class="nav-item" onclick="switchTab('calculator')"><i class="fas fa-calculator"></i> 獎金模擬器</div>
+        <div class="nav-item" onclick="switchTab('guide')"><i class="fas fa-book-open"></i> 攻略百科</div>
+        
+        <div class="nav-divider">系統</div>
+        <div class="nav-item" onclick="switchTab('settings')"><i class="fas fa-cog"></i> 設定與備份</div>
+    </div>
+
+    <div class="main">
+        
+        <div id="dashboard" class="section active">
+            <div class="header">
+                <div class="page-title">當月業績戰情室</div>
+                <div style="display:flex; gap:10px;">
+                    <select id="dashMonthSelect" onchange="renderDashboard()" style="width: auto; cursor:pointer; font-weight:bold; color:var(--primary);">
+                        </select>
+                    <button class="btn btn-outline" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> 下載報表</button>
+                </div>
+            </div>
+            <div class="grid-3">
+                <div class="card" style="border-top: 4px solid var(--primary);">
+                    <div style="color: #666; font-size: 0.9rem;">本月團隊總 PV</div>
+                    <h1 id="totalPVDisplay" style="margin: 10px 0; color: var(--primary);">0</h1>
+                </div>
+                <div class="card" style="border-top: 4px solid var(--secondary);">
+                    <div style="color: #666; font-size: 0.9rem;">預估發放總獎金</div>
+                    <h1 id="totalBonusDisplay" style="margin: 10px 0; color: var(--secondary);">$0</h1>
+                </div>
+                <div class="card" style="border-top: 4px solid var(--success);">
+                    <div style="color: #666; font-size: 0.9rem;">活躍夥伴 / 總人數</div>
+                    <h1 id="activeMembersDisplay" style="margin: 10px 0; color: var(--success);">0 / 0</h1>
+                </div>
+            </div>
+            <div class="card">
+                <h3>💰 獎金排行榜 (Top 10)</h3>
+                <div style="overflow-x: auto;">
+                    <table id="rankingTable">
+                        <thead><tr><th>排名</th><th>會員</th><th>總 PV</th><th>詳細結構</th><th>預估獎金</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="network" class="section">
+            <div class="page-title">🧬 組織關係圖</div>
+            
+            <div class="grid-2">
+                <div class="card">
+                    <h3><i class="fas fa-sitemap"></i> 推薦階層樹狀圖</h3>
+                    <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">
+                        系統根據您在「日誌」中輸入的推薦紀錄，自動產生上下線關係。
+                    </p>
+                    <div id="treeContainer" style="overflow-x:auto; padding-bottom:20px;">
+                        </div>
+                </div>
+
+                <div class="card">
+                    <h3><i class="fas fa-history"></i> 推薦歷史清單</h3>
+                    <div style="max-height: 600px; overflow-y: auto;">
+                        <table id="referralTable">
+                            <thead><tr><th>推薦日期</th><th>推薦人 (上線)</th><th>新人 (下線)</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="entry" class="section">
+            <div class="page-title">📝 新增綜合紀錄</div>
+            <div class="grid-2">
+                <div>
+                    <div class="card">
+                        <div class="form-group">
+                            <label>日期</label>
+                            <input type="date" id="entryDate" onchange="updateInstantCalc()">
+                        </div>
+                        <div class="form-group">
+                            <label>選擇會員 / 或新增</label>
+                            <select id="entryMember" onchange="checkMemberSelect(); updateInstantCalc();"></select>
+                            <div id="quickAddMemberBox" style="display:none; background:#f0f9ff; padding:10px; margin-top:10px; border-radius:6px; border:1px dashed #0066cc;">
+                                <small style="color:#0066cc; font-weight:bold;">➕ 建立新會員資料</small>
+                                <div style="display:flex; gap:10px; margin-top:5px;">
+                                    <input type="text" id="quickNewMemName" placeholder="姓名" style="font-size:0.9rem;">
+                                    <input type="text" id="quickNewMemID" placeholder="編號" style="font-size:0.9rem;">
+                                </div>
+                            </div>
+                        </div>
+                        <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+                        <div class="input-section is-sales">
+                            <div class="section-header"><i class="fas fa-shopping-cart"></i> 一般業績輸入</div>
+                            <div class="row-inputs">
+                                <div class="form-group" style="margin:0;"><label style="font-size:0.8rem;">PV</label><input type="number" id="entryPV" placeholder="0" oninput="autoConvert('pv', 'entry'); updateInstantCalc();" onfocus="this.select()"></div>
+                                <div class="equal-sign" style="font-size:1.2rem; padding-top:20px;">=</div>
+                                <div class="form-group" style="margin:0;"><label style="font-size:0.8rem;">BV (1:50)</label><input type="number" id="entryBV" placeholder="0" oninput="autoConvert('bv', 'entry'); updateInstantCalc();" onfocus="this.select()" style="background:#fff;"></div>
+                            </div>
+                        </div>
+                        <div class="input-section is-newcomer">
+                            <div class="section-header"><i class="fas fa-user-plus"></i> 推薦新人輸入</div>
+                            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                                <input type="text" id="newcomerName" placeholder="新人姓名" oninput="updateInstantCalc()">
+                                <input type="text" id="newcomerID" placeholder="新人編號 (重要:用於建立關係)">
+                            </div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.8rem;">新人當月消費 BV</label><input type="number" id="newcomerBV" placeholder="0" oninput="updateInstantCalc()"></div>
+                        </div>
+                        <div class="input-section is-learning">
+                            <div class="section-header"><i class="fas fa-graduation-cap"></i> 學習心得輸入</div>
+                            <textarea id="learningNote" rows="2" placeholder="心得摘要..." oninput="updateInstantCalc()"></textarea>
+                            <label style="margin-top:10px; display:flex; align-items:center; gap:10px; cursor:pointer;"><input type="checkbox" id="learningFileCheck" style="width:auto;" onchange="updateInstantCalc()"> <span>已繳交證明 (觸發 +3% 獎勵)</span></label>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="card" style="position:sticky; top:20px;">
+                        <h3>📊 累計獎金預覽</h3>
+                        <p style="font-size:0.9rem; color:#666; margin-bottom:5px;">基於當月目前狀態，加入左側內容後增加：</p>
+                        <div class="instant-bonus-box">
+                            <div class="ib-header"><div class="ib-title">預計獎金增加總額</div><div class="ib-total" id="ibTotalVal">$0</div></div>
+                            <div class="ib-breakdown">
+                                <div class="ib-item"><div class="ib-label">業績/升級</div><div class="ib-val" id="ibDiffBase">+0</div></div>
+                                <div class="ib-item"><div class="ib-label">新人加碼</div><div class="ib-val" id="ibDiffNew">+0</div></div>
+                                <div class="ib-item"><div class="ib-label">學習獎勵</div><div class="ib-val" id="ibDiffLearn">+0</div></div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" style="width:100%; margin-top:20px; padding:15px; font-size:1.1rem;" onclick="addCompositeLog()"><i class="fas fa-save"></i> 確認儲存所有紀錄</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="members" class="section">
+            <div class="page-title">👥 會員資料庫</div>
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>會員列表</h3>
+                    <button class="btn btn-outline" onclick="document.getElementById('entry').click(); switchTab('entry');"><i class="fas fa-plus"></i> 去新增紀錄建立會員</button>
+                </div>
+                <div style="max-height: 500px; overflow-y: auto;">
+                    <table id="memberTable"><thead><tr><th>編號</th><th>姓名</th><th>操作</th></tr></thead><tbody></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <div id="logs" class="section">
+            <div class="page-title">📋 詳細紀錄明細</div>
+            <div class="card">
+                <div class="grid-3">
+                    <div class="form-group"><label>月份</label><input type="month" id="filterMonth" onchange="renderLogs()"></div>
+                    <div class="form-group"><label>會員</label><select id="filterMember" onchange="renderLogs()"><option value="all">全部</option></select></div>
+                    <div class="form-group"><label style="visibility:hidden">R</label><button class="btn btn-outline" style="width:100%" onclick="resetLogFilter()">重置</button></div>
+                </div>
+                <table id="logTable"><thead><tr><th>日期</th><th>會員</th><th>類型</th><th>詳細內容</th><th>數值</th><th>操作</th></tr></thead><tbody></tbody></table>
+            </div>
+        </div>
+
+        <div id="calculator" class="section">
+            <div class="page-title">🧮 獎金模擬器</div>
+            <div class="card">
+                <div class="grid-2">
+                    <div style="background:#f0f9ff; padding:20px; border-radius:8px;">
+                        <div class="form-group"><label>預估 PV</label><input type="number" id="calcPV" oninput="autoConvert('pv','calc'); runSimulation()"></div>
+                        <div class="form-group"><label>預估 BV</label><input type="number" id="calcBV" oninput="autoConvert('bv','calc'); runSimulation()"></div>
+                        <div class="form-group"><label>推薦人數</label><input type="number" id="calcPartners" oninput="runSimulation()"></div>
+                        <div class="form-group"><label>新人BV</label><input type="number" id="calcNewcomerBV" oninput="runSimulation()"></div>
+                        <div class="form-group"><label><input type="checkbox" id="calcHasLearned" onchange="runSimulation()"> 已學習</label></div>
+                    </div>
+                    <div style="background:#2c3e50; color:white; padding:20px; border-radius:8px; display:flex; flex-direction:column; justify-content:center; text-align:center;">
+                        <div id="simGraduateMsg" style="display:none; color:#28a745; margin-bottom:10px;">🎉 畢業 (Core+)</div>
+                        <div>模擬總獎金</div>
+                        <div style="font-size:2.5rem; font-weight:bold; color:#ff9900;" id="simValTotal">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="guide" class="section">
+            <div class="page-title">📖 攻略百科</div>
+            <div class="card">
+                <div style="background:#fafafa; padding:20px; border-radius:8px; line-height:1.8;">
+                    <h3>🌟 新星啟動計畫</h3>
+                    <ul><li><strong>業績達標：</strong>0-3% 加碼 3% / 6% 加碼 1%。</li><li><strong>推薦加碼：</strong>有推薦人，比例升級 (3%➝4%, 6%➝+2%)。</li><li><strong>新人回饋：</strong>新人BV x 1%。</li><li><strong>學習獎勵：</strong>總額外 +3%。</li></ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings" class="section">
+            <div class="page-title">⚙️ 設定</div>
+            <div class="card">
+                <button class="btn btn-primary" onclick="exportData()">下載備份</button>
+                <input type="file" id="importFile" style="display:none" onchange="importData(this)">
+                <button class="btn btn-outline" onclick="document.getElementById('importFile').click()">還原備份</button>
+                <button class="btn btn-danger" onclick="clearAllData()" style="margin-left:20px;">清除資料</button>
+            </div>
+        </div>
+
+    </div>
+
+<script>
+    // --- Global Data ---
+    let members = JSON.parse(localStorage.getItem('amway_members')) || [];
+    let logs = JSON.parse(localStorage.getItem('amway_logs')) || [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('entryDate').valueAsDate = new Date();
+        document.getElementById('filterMonth').value = new Date().toISOString().slice(0, 7);
+        populateMonthSelect(); renderMembers(); updateMemberSelects(); renderLogs(); renderDashboard(); runSimulation();
+    });
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        const map = {'dashboard':0, 'network':1, 'entry':2, 'members':3, 'logs':4, 'calculator':5, 'guide':6, 'settings':7};
+        if(map[tabId]!==undefined) document.querySelectorAll('.nav-item')[map[tabId]].classList.add('active');
+        
+        if(tabId==='dashboard') renderDashboard();
+        if(tabId==='logs') renderLogs();
+        if(tabId==='network') renderNetwork(); 
+    }
+
+    // --- Network Tree Logic ---
+    function renderNetwork() {
+        const treeContainer = document.getElementById('treeContainer');
+        const listBody = document.querySelector('#referralTable tbody');
+        
+        let relations = {};
+        let referralList = [];
+        let allChildren = new Set(); 
+
+        logs.filter(l => l.type === 'newcomer').forEach(l => {
+            const parentId = l.memberId;
+            const childData = l.newcomerData; 
+            if(!relations[parentId]) relations[parentId] = [];
+            if(!relations[parentId].find(c => c.id === childData.id)) {
+                relations[parentId].push({ id: childData.id, name: childData.name, date: l.date });
+                allChildren.add(childData.id);
+                referralList.push({ date: l.date, parent: members.find(m=>m.id===parentId)?.name || parentId, child: `${childData.name} (${childData.id})` });
+            }
+        });
+
+        referralList.sort((a,b) => new Date(b.date) - new Date(a.date));
+        listBody.innerHTML = referralList.length ? referralList.map(r => `<tr><td>${r.date}</td><td style="color:#0066cc; font-weight:bold;">${r.parent}</td><td>${r.child}</td></tr>`).join('') : '<tr><td colspan="3" style="text-align:center">尚無推薦紀錄</td></tr>';
+
+        let roots = members.filter(m => !allChildren.has(m.id));
+        Object.keys(relations).forEach(pid => { if(!members.find(m=>m.id===pid) && !allChildren.has(pid)) { roots.push({id: pid, name: pid}); } });
+
+        function buildTreeHtml(memberId, memberName, depth=0) {
+            let html = `<div class="tree-node ${depth===0?'tree-root':''}"><div class="tree-content">${depth===0 ? '<i class="fas fa-user-tie" style="color:#0066cc"></i>' : '<i class="fas fa-user" style="color:#666"></i>'}<div class="tree-name">${memberName}</div><div class="tree-id">#${memberId}</div></div>`;
+            if(relations[memberId]) { relations[memberId].forEach(child => { html += `<div style="position:relative"><span style="position:absolute; left:30px; top:5px; font-size:0.7rem; color:#999;"><i class="far fa-clock"></i> ${child.date} 加入</span>${buildTreeHtml(child.id, child.name, depth+1)}</div>`; }); }
+            html += `</div>`;
+            return html;
+        }
+
+        if(roots.length === 0 && Object.keys(relations).length > 0) { treeContainer.innerHTML = "<div style='padding:20px'>無法判定根節點，顯示所有關係：</div>"; } 
+        else if(roots.length === 0) { treeContainer.innerHTML = "<div style='text-align:center; padding:30px; color:#999;'>尚無任何會員或推薦關係</div>"; } 
+        else {
+            roots.sort((a,b) => (relations[b.id]?.length||0) - (relations[a.id]?.length||0));
+            treeContainer.innerHTML = roots.map(root => buildTreeHtml(root.id, root.name)).join('');
+        }
+    }
+
+    // --- Standard Logic ---
+    function checkMemberSelect() {
+        const val = document.getElementById('entryMember').value;
+        document.getElementById('quickAddMemberBox').style.display = (val === 'new_mode') ? 'block' : 'none';
+    }
+
+    function autoConvert(source, context) {
+        let pvId, bvId;
+        if(context==='entry') { pvId='entryPV'; bvId='entryBV'; }
+        else { pvId='calcPV'; bvId='calcBV'; }
+        const pvEl = document.getElementById(pvId), bvEl = document.getElementById(bvId);
+        if(source==='pv') bvEl.value = (parseFloat(pvEl.value)||0) * 50;
+        else pvEl.value = (parseFloat(bvEl.value)||0) / 50;
+    }
+
+    function updateInstantCalc() {
+        const memberIdSelect = document.getElementById('entryMember').value;
+        const dateStr = document.getElementById('entryDate').value;
+        const totalEl = document.getElementById('ibTotalVal');
+        const diffBaseEl = document.getElementById('ibDiffBase');
+        const diffNewEl = document.getElementById('ibDiffNew');
+        const diffLearnEl = document.getElementById('ibDiffLearn');
+
+        if(!dateStr || !memberIdSelect) {
+            totalEl.innerText = "$ -"; diffBaseEl.innerText="+0"; diffNewEl.innerText="+0"; diffLearnEl.innerText="+0"; return;
+        }
+
+        let effectiveId = memberIdSelect === 'new_mode' ? "TEMP" : memberIdSelect;
+        const monthStr = dateStr.slice(0, 7);
+
+        let oldRes = { total: 0, breakdown: { base:0, new:0, learn:0 }, isGraduated: false };
+        let simPV = 0; let simNewcomers = []; let simHasLearning = false;
+
+        if (effectiveId !== "TEMP") {
+            const stats = calculateMonthlyStats(monthStr);
+            const memberStat = stats.find(s => s.id === effectiveId);
+            if(memberStat) {
+                oldRes = calculateBonusLogic(memberStat.pv, memberStat.pv*50, memberStat.newcomers.length>0, memberStat.newcomers, memberStat.hasLearning);
+                simPV = memberStat.pv; simNewcomers = [...memberStat.newcomers]; simHasLearning = memberStat.hasLearning;
+            }
+        }
+
+        const addPV = parseFloat(document.getElementById('entryPV').value) || 0;
+        simPV += addPV;
+        const nName = document.getElementById('newcomerName').value;
+        const nBV = parseFloat(document.getElementById('newcomerBV').value) || 0;
+        if(nName) { simNewcomers.push({ bv: nBV }); }
+        if(document.getElementById('learningFileCheck').checked) { simHasLearning = true; }
+
+        const newRes = calculateBonusLogic(simPV, simPV*50, simNewcomers.length>0, simNewcomers, simHasLearning);
+
+        if (newRes.isGraduated && !oldRes.isGraduated) {
+            totalEl.innerText = "畢業 (Core+)"; diffBaseEl.innerText="-"; diffNewEl.innerText="-"; diffLearnEl.innerText="-";
+        } else if (newRes.isGraduated) {
+             totalEl.innerText = "已畢業";
+        } else {
+            const dTotal = newRes.total - oldRes.total;
+            const dBase = newRes.breakdown.base - oldRes.breakdown.base;
+            const dNew = newRes.breakdown.new - oldRes.breakdown.new;
+            const dLearn = newRes.breakdown.learn - oldRes.breakdown.learn;
+            const colorize = (el, val) => {
+                el.innerText = (val>=0?"+":"") + Math.round(val).toLocaleString();
+                el.style.color = val>0 ? "#ff9900" : (val<0?"#dc3545":"#fff");
+            };
+            colorize(totalEl, dTotal); colorize(diffBaseEl, dBase); colorize(diffNewEl, dNew); colorize(diffLearnEl, dLearn);
+        }
+    }
+
+    function addCompositeLog() {
+        const date = document.getElementById('entryDate').value;
+        let memberId = document.getElementById('entryMember').value;
+
+        if(!date) return alert("請選擇日期");
+        if(!memberId) return alert("請選擇會員");
+
+        // --- NEW: Sync Logic for Quick Add ---
+        if (memberId === 'new_mode') {
+            const newName = document.getElementById('quickNewMemName').value.trim();
+            const newID = document.getElementById('quickNewMemID').value.trim();
+            if(!newName || !newID) return alert("請輸入新會員資料");
+            if(members.find(m=>m.id===newID)) return alert("編號重複");
+            
+            // 1. Create member immediately
+            members.push({id: newID, name: newName});
+            
+            // 2. Refresh lists (so dropdowns are updated)
+            updateMemberSelects();
+            renderMembers();
+            
+            // 3. Set the current select to this new ID automatically
+            document.getElementById('entryMember').value = newID;
+            memberId = newID;
+            
+            // 4. Clear quick add inputs & hide box
+            document.getElementById('quickNewMemName').value = '';
+            document.getElementById('quickNewMemID').value = '';
+            checkMemberSelect(); // this will hide the box because value is no longer 'new_mode'
+        }
+
+        let savedCount = 0;
+        const pvVal = parseFloat(document.getElementById('entryPV').value) || 0;
+        if(pvVal > 0) {
+            const bvVal = parseFloat(document.getElementById('entryBV').value) || 0;
+            logs.push({ id: Date.now() + 1, date, memberId, type: 'sales', pv: pvVal, details: `一般業績 (BV: ${bvVal})` });
+            savedCount++;
+        }
+        const nName = document.getElementById('newcomerName').value.trim();
+        if(nName) {
+            const nID = document.getElementById('newcomerID').value.trim();
+            const nBV = parseFloat(document.getElementById('newcomerBV').value) || 0;
+            if(!nID) return alert("請輸入新人編號 (用於建立組織關係)");
+            
+            // Auto-add newcomer to member list if not exists
+            if(!members.find(m=>m.id===nID)) {
+                members.push({id: nID, name: nName});
+            }
+
+            logs.push({
+                id: Date.now() + 2, date, memberId, type: 'newcomer', pv: 0,
+                details: `推薦: ${nName} (${nID}) - BV: ${nBV}`,
+                newcomerData: { name: nName, id: nID, bv: nBV }
+            });
+            savedCount++;
+        }
+        if(document.getElementById('learningFileCheck').checked) {
+            const note = document.getElementById('learningNote').value;
+            logs.push({ id: Date.now() + 3, date, memberId, type: 'learning', pv: 0, details: `心得: ${note || "已繳交證明"}`, isLearning: true });
+            savedCount++;
+        }
+
+        if(savedCount === 0) return alert("您沒有輸入任何資料");
+
+        saveToLocal();
+        alert(`成功儲存 ${savedCount} 筆紀錄！`);
+        
+        document.getElementById('entryPV').value = ''; document.getElementById('entryBV').value = '';
+        document.getElementById('newcomerName').value = ''; document.getElementById('newcomerID').value = ''; document.getElementById('newcomerBV').value = '';
+        document.getElementById('learningNote').value = ''; document.getElementById('learningFileCheck').checked = false;
+        
+        // Keep the current member selected for continuous entry, or reset? 
+        // Let's keep it selected for convenience, but recalculate instant bonus (should be 0 change now)
+        updateInstantCalc();
+    }
+
+    function saveToLocal() {
+        localStorage.setItem('amway_members', JSON.stringify(members));
+        localStorage.setItem('amway_logs', JSON.stringify(logs));
+        // Note: updateMemberSelects() moved to explicit call when needed to avoid resetting selection during typing
+    }
+    
+    function deleteMember(id){ if(confirm("刪除?")) { members=members.filter(m=>m.id!==id); saveToLocal(); updateMemberSelects(); renderMembers(); } }
+    function deleteLog(id){ if(confirm("刪除?")) { logs=logs.filter(l=>l.id!==id); saveToLocal(); renderLogs(); renderNetwork(); } }
+    
+    function renderMembers() {
+        const tbody = document.querySelector('#memberTable tbody');
+        tbody.innerHTML = members.length ? members.map(m=>`<tr><td>${m.id}</td><td>${m.name}</td><td><button class="btn btn-outline" style="color:red" onclick="deleteMember('${m.id}')"><i class="fas fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="3">無資料</td></tr>';
+    }
+    
+    function updateMemberSelects() {
+        // Save current selection if any
+        const currentEntryVal = document.getElementById('entryMember').value;
+        const currentFilterVal = document.getElementById('filterMember').value;
+
+        let html = '<option value="" disabled selected>-- 選擇 --</option>';
+        html += '<option value="new_mode" style="color:blue; font-weight:bold;">➕ 新增會員...</option>';
+        html += members.map(m=>`<option value="${m.id}">${m.name} (${m.id})</option>`).join('');
+        
+        const entrySel = document.getElementById('entryMember');
+        entrySel.innerHTML = html;
+        if(currentEntryVal && currentEntryVal !== 'new_mode' && members.find(m=>m.id===currentEntryVal)) {
+            entrySel.value = currentEntryVal;
+        }
+
+        const filterSel = document.getElementById('filterMember');
+        filterSel.innerHTML = '<option value="all">全部</option>' + members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+        if(currentFilterVal && members.find(m=>m.id===currentFilterVal)) {
+            filterSel.value = currentFilterVal;
+        }
+    }
+
+    function renderLogs() {
+        const fm=document.getElementById('filterMonth').value, fmem=document.getElementById('filterMember').value;
+        let d = logs.filter(l=> (!fm||l.date.startsWith(fm)) && (fmem==='all'||l.memberId===fmem));
+        d.sort((a,b)=>new Date(b.date)-new Date(a.date));
+        document.querySelector('#logTable tbody').innerHTML = d.length ? d.map(l=>{
+            const m = members.find(x=>x.id===l.memberId)?.name || l.memberId;
+            let cls = l.type==='sales'?'badge-sales':(l.type==='newcomer'?'badge-new':'badge-learn');
+            return `<tr><td>${l.date}</td><td>${m}</td><td><span class="badge ${cls}">${l.type}</span></td><td>${l.details}</td><td>${l.pv>0?l.pv:'-'}</td><td><button onclick="deleteLog(${l.id})" style="color:red;border:none;background:none"><i class="fas fa-trash"></i></button></td></tr>`;
+        }).join('') : '<tr><td colspan="6" style="text-align:center">無紀錄</td></tr>';
+    }
+    function populateMonthSelect() {
+        const s = document.getElementById('dashMonthSelect'); s.innerHTML='';
+        for(let i=1;i<=12;i++) {
+            let v = `2026-${i.toString().padStart(2,'0')}`;
+            let opt=document.createElement('option'); opt.value=v; opt.text=`2026年 ${i}月`; s.appendChild(opt);
+        }
+        let now=new Date().toISOString().slice(0,7); if(now.startsWith('2026')) s.value=now;
+    }
+    function calculateMonthlyStats(monthStr) {
+        let stats = {}; members.forEach(m=>{stats[m.id]={id:m.id, name:m.name, pv:0, newcomers:[], hasLearning:false, bonus:0}});
+        logs.filter(l=>l.date.startsWith(monthStr)).forEach(l=>{
+            if(!stats[l.memberId]) stats[l.memberId]={id:l.memberId, name:l.memberId, pv:0, newcomers:[], hasLearning:false, bonus:0};
+            if(l.type==='sales') stats[l.memberId].pv += l.pv;
+            if(l.type==='newcomer') stats[l.memberId].newcomers.push(l.newcomerData);
+            if(l.type==='learning') stats[l.memberId].hasLearning = true;
+        });
+        let res = [];
+        for(let id in stats) {
+            let d = stats[id];
+            if(d.pv===0 && d.newcomers.length===0 && !d.hasLearning) continue;
+            let c = calculateBonusLogic(d.pv, d.pv*50, d.newcomers.length>0, d.newcomers, d.hasLearning);
+            res.push({...d, bonus:c.total, isGraduated:c.isGraduated, detailsText:c.detailsText});
+        }
+        res.sort((a,b)=>b.bonus-a.bonus);
+        return res;
+    }
+    function calculateBonusLogic(pv, bv, isRec, news, hasLearn) {
+        if(pv>=1000) return {total:0, isGraduated:true, detailsText:"已畢業", breakdown:{base:0,new:0,learn:0}};
+        let rate = (pv>=600) ? (isRec?0.02:0.01) : (isRec?0.04:0.03);
+        let rateTxt = (pv>=600) ? (isRec?"6%+2%":"6%+1%") : (isRec?"4%":"3%");
+        let base = bv * rate;
+        let nBonus = 0; news.forEach(n=> nBonus += n.bv*0.01);
+        let sub = base + nBonus;
+        let lBonus = hasLearn ? sub*0.03 : 0;
+        let txt = `R:${rateTxt}`; if(news.length) txt+=`|新+${Math.round(nBonus)}`; if(hasLearn) txt+=`|學+3%`;
+        return {total:Math.floor(sub+lBonus), isGraduated:false, detailsText:txt, breakdown:{base, new:nBonus, learn:lBonus}};
+    }
+    function renderDashboard() {
+        const m = document.getElementById('dashMonthSelect').value;
+        const stats = calculateMonthlyStats(m);
+        document.getElementById('totalPVDisplay').innerText = stats.reduce((a,b)=>a+b.pv,0).toLocaleString();
+        document.getElementById('totalBonusDisplay').innerText = "$"+stats.reduce((a,b)=>a+b.bonus,0).toLocaleString();
+        document.getElementById('activeMembersDisplay').innerText = `${stats.length}/${members.length}`;
+        const tb = document.querySelector('#rankingTable tbody');
+        tb.innerHTML = stats.length ? stats.slice(0,10).map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.pv.toLocaleString()}</td><td style="font-size:0.8rem;color:#666">${s.detailsText}</td><td style="font-weight:bold;color:#ff9900">${s.isGraduated?"畢業":'$'+s.bonus.toLocaleString()}</td></tr>`).join('') : '<tr><td colspan="5" style="text-align:center">無資料</td></tr>';
+    }
+    function runSimulation() {
+        let pv=parseFloat(document.getElementById('calcPV').value)||0;
+        let bv=parseFloat(document.getElementById('calcBV').value)||0;
+        let part=parseFloat(document.getElementById('calcPartners').value)||0;
+        let nbv=parseFloat(document.getElementById('calcNewcomerBV').value)||0;
+        let learn=document.getElementById('calcHasLearned').checked;
+        let news=[]; if(nbv>0) news.push({bv:nbv});
+        let res = calculateBonusLogic(pv, bv, part>0, news, learn);
+        if(res.isGraduated) { document.getElementById('simGraduateMsg').style.display='block'; document.getElementById('simValTotal').innerText="畢業"; }
+        else { document.getElementById('simGraduateMsg').style.display='none'; document.getElementById('simValTotal').innerText=res.total.toLocaleString(); }
+    }
+    function exportData(){
+        const d = {members, logs, version:"Pro_2026_v2.6"};
+        const url = URL.createObjectURL(new Blob([JSON.stringify(d)],{type:"application/json"}));
+        const a=document.createElement('a'); a.href=url; a.download=`NewStar_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+    }
+    function importData(inp){
+        const f=inp.files[0]; if(!f)return;
+        const r=new FileReader(); r.onload=e=>{
+            try{ const d=JSON.parse(e.target.result); if(d.members&&d.logs&&confirm("覆蓋資料?")){members=d.members;logs=d.logs;saveToLocal();location.reload();} }catch(e){alert("錯誤");}
+        }; r.readAsText(f);
+    }
+    function clearAllData(){if(prompt("輸入DELETE確認")==='DELETE'){localStorage.clear();location.reload();}}
+    function exportPDF(){const e=document.getElementById('dashboard');html2pdf().set({margin:0.2,filename:'Report.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2},jsPDF:{unit:'in',format:'a4',orientation:'landscape'}}).from(e).save();}
+</script>
+</body>
+</html>
