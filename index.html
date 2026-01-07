@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新星啟動計畫旗艦系統 (2026 Pro v3.5)</title>
+    <title>新星啟動計畫旗艦系統 (2026 Cloud Pro v3.5)</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -20,6 +20,7 @@
             --bg: #f0f2f5;
             --text: #333;
             --border: #e1e1e1;
+            --success: #28a745;
             --purple: #6f42c1;
         }
 
@@ -35,13 +36,12 @@
         
         /* Main */
         .main { flex: 1; padding: 30px; overflow-y: auto; position: relative; scroll-behavior: smooth; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 10px; }
-        .page-title { font-size: 1.6rem; font-weight: bold; color: #2c3e50; border-left: 5px solid var(--primary); padding-left: 15px; }
+        .page-title { font-size: 1.6rem; font-weight: bold; color: #2c3e50; border-left: 5px solid var(--primary); padding-left: 15px; margin-bottom: 25px; }
         .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.04); margin-bottom: 25px; border: 1px solid #f0f0f0; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
 
-        /* Form */
+        /* Form Elements */
         .form-group { margin-bottom: 18px; }
         label { display: block; margin-bottom: 6px; font-size: 0.95rem; font-weight: 600; color: #4b5563; }
         input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
@@ -56,115 +56,89 @@
         .is-learning { border-left: 4px solid #10b981; background: #f0fff4; }
         .section-header { font-weight: bold; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: #555; }
 
-        /* V3.5 Product Row Styles */
-        .product-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; animation: fadeIn 0.3s; }
-        .product-row input { padding: 8px; font-size: 0.9rem; background: white; }
-        .btn-remove-prod { color: #dc3545; background: none; border: none; cursor: pointer; font-size: 1.1rem; }
-        .btn-remove-prod:hover { color: #a71d2a; }
+        /* Product Rows V3.5 */
+        .product-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
+        .product-row input { padding: 8px; font-size: 0.9rem; }
+        .btn-remove-prod { color: #dc3545; background: none; border: none; cursor: pointer; }
 
         /* Tree View */
         .tree-node { margin-left: 25px; border-left: 2px dashed #ccc; padding-left: 20px; position: relative; margin-top: 15px; }
         .tree-node::before { content: ""; position: absolute; left: 0; top: 18px; width: 18px; height: 2px; background: #ccc; }
-        .tree-content { display: flex; align-items: center; gap: 10px; background: white; border: 1px solid #ddd; padding: 8px 12px; border-radius: 6px; width: fit-content; transition:0.2s;}
-        .tree-content:hover { box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-color: var(--primary); }
-        .tree-name { font-weight: bold; color: #333; }
-        .tree-id { color: #888; font-size: 0.85rem; font-family: monospace; }
+        .tree-content { display: flex; align-items: center; gap: 10px; background: white; border: 1px solid #ddd; padding: 8px 12px; border-radius: 6px; width: fit-content; }
         .tree-root { margin-left: 0; border-left: none; padding-left: 0; margin-bottom: 30px; }
-        .tree-root::before { display: none; }
-        .tree-root > .tree-content { background: linear-gradient(to right, #f3e5f5, #fff); border: 1px solid #d1c4e9; border-left: 5px solid var(--purple); width: 100%; box-sizing: border-box; }
-        .tree-root > .tree-content .tree-name { font-size: 1.2rem; color: #4a148c; }
+        .tree-root > .tree-content { background: #f3e5f5; border: 1px solid #d1c4e9; border-left: 5px solid var(--purple); width: 100%; box-sizing: border-box; }
 
-        /* Badges */
-        .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
-        .badge-sales { background: #3b82f6; color: white; }
-        .badge-new { background: #e67e22; color: white; }
-        .badge-learn { background: #10b981; color: white; }
-        .badge-sponsor { background: var(--purple); color: white; }
-        .status-active { color: #28a745; font-weight: bold; background: #e6f9ed; padding: 2px 6px; border-radius: 4px; border: 1px solid #28a745; }
-        .status-inactive { color: #999; font-size: 0.85rem; }
-
-        /* Others */
-        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-dark); }
-        .btn-purple { background: var(--purple); color: white; }
-        .btn-outline { background: white; border: 1px solid var(--border); color: var(--text); }
-        .btn-danger { background: #dc3545; color: white; }
-        .instant-bonus-box { background: #2c3e50; color: white; padding: 20px; border-radius: 10px; margin-top: 20px; border-left: 6px solid var(--secondary); }
-        .ib-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; margin-bottom: 10px;}
-        .ib-total { font-size: 1.8rem; font-weight: bold; color: var(--secondary); }
-        .ib-breakdown { display: flex; justify-content: space-between; gap: 10px; }
-        .ib-item { flex: 1; background: rgba(255,255,255,0.08); padding: 10px; border-radius: 6px; text-align: center; }
-        
+        /* Tables & Badges */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
         th { background: #f1f5f9; font-weight: 700; color: #475569; }
+        .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; color: white; }
+        .badge-sales { background: #3b82f6; }
+        .badge-new { background: #e67e22; }
+        .badge-learn { background: #10b981; }
+        .badge-sponsor { background: var(--purple); }
 
-        .section { display: none; animation: fadeIn 0.4s; }
-        .section.active { display: block; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-purple { background: var(--purple); color: white; }
+        .btn-outline { background: white; border: 1px solid var(--border); color: var(--text); }
+        .btn-danger { background: #dc3545; color: white; }
+
+        .instant-bonus-box { background: #2c3e50; color: white; padding: 20px; border-radius: 10px; margin-top: 20px; border-left: 6px solid var(--secondary); }
+        .ib-total { font-size: 1.8rem; font-weight: bold; color: var(--secondary); }
+
+        .section { display: none; }
+        .section.active { display: block; animation: fadeIn 0.4s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         @media (max-width: 768px) {
-            body { flex-direction: column; height: auto; min-height: 100vh; }
-            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; height: auto; border-bottom: 1px solid var(--border); border-right: none; }
-            .nav-item { padding: 15px; white-space: nowrap; }
-            .nav-divider, .logo { display: none; }
-            .main { padding: 15px; overflow: visible; }
-            .grid-2, .grid-3 { grid-template-columns: 1fr; }
-            .row-inputs { flex-direction: column; gap: 5px; }
-            .equal-sign { transform: rotate(90deg); padding: 5px; }
+            body { flex-direction: column; height: auto; }
+            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; height: auto; }
+            .main { padding: 15px; }
+            .grid-2 { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <div class="logo"><i class="fas fa-gem"></i> 新星啟動系統 <small style="font-size:0.6em; color:#28a745;">(V3.5)</small></div>
-        
+        <div class="logo"><i class="fas fa-gem"></i> 新星啟動系統 <small style="font-size:0.6em; color:#28a745;">(V3.5 Cloud)</small></div>
         <div class="nav-divider">數據管理</div>
         <div class="nav-item active" onclick="switchTab('dashboard')"><i class="fas fa-chart-line"></i> 業績戰情室</div>
         <div class="nav-item" onclick="switchTab('network')"><i class="fas fa-project-diagram"></i> 組織關係圖</div>
         <div class="nav-item" onclick="switchTab('entry')"><i class="fas fa-pen"></i> 新增綜合紀錄</div>
         <div class="nav-item" onclick="switchTab('members')"><i class="fas fa-users"></i> 會員資料庫</div>
         <div class="nav-item" onclick="switchTab('logs')"><i class="fas fa-list"></i> 日誌明細</div>
-
         <div class="nav-divider">核心設定</div>
         <div class="nav-item" onclick="switchTab('sponsors')"><i class="fas fa-crown"></i> 發起人資料庫</div>
-        
         <div class="nav-divider">工具</div>
         <div class="nav-item" onclick="switchTab('calculator')"><i class="fas fa-calculator"></i> 獎金模擬器</div>
-        <div class="nav-item" onclick="switchTab('guide')"><i class="fas fa-book-open"></i> 攻略百科</div>
-        <div class="nav-item" onclick="switchTab('settings')"><i class="fas fa-cog"></i> 設定與備份</div>
+        <div class="nav-item" onclick="switchTab('settings')"><i class="fas fa-cog"></i> 設定</div>
     </div>
 
     <div class="main">
         
         <div id="dashboard" class="section active">
-            <div class="header">
-                <div class="page-title">當月業績戰情室</div>
-                <div style="display:flex; gap:10px;">
-                    <select id="dashMonthSelect" onchange="renderDashboard()" style="width: auto; cursor:pointer; font-weight:bold; color:var(--primary);"></select>
-                    <button class="btn btn-outline" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> 下載報表</button>
-                </div>
-            </div>
+            <div class="page-title">當月業績戰情室</div>
             <div class="grid-3">
                 <div class="card" style="border-top: 4px solid var(--primary);">
-                    <div style="color: #666; font-size: 0.9rem;">本月團隊總 PV (含 Roll-up)</div>
+                    <div style="color: #666; font-size: 0.9rem;">團隊總 PV (含 Roll-up)</div>
                     <h1 id="totalPVDisplay" style="margin: 10px 0; color: var(--primary);">0</h1>
+                    <select id="dashMonthSelect" onchange="renderDashboard()" style="width: auto; padding:5px; font-size:0.8rem;"></select>
                 </div>
                 <div class="card" style="border-top: 4px solid var(--secondary);">
                     <div style="color: #666; font-size: 0.9rem;">預估發放總獎金</div>
                     <h1 id="totalBonusDisplay" style="margin: 10px 0; color: var(--secondary);">$0</h1>
                 </div>
                 <div class="card" style="border-top: 4px solid var(--success);">
-                    <div style="color: #666; font-size: 0.9rem;">活躍夥伴 / 總人數</div>
+                    <div style="color: #666; font-size: 0.9rem;">活躍新星 / 總人數</div>
                     <h1 id="activeMembersDisplay" style="margin: 10px 0; color: var(--success);">0 / 0</h1>
                 </div>
             </div>
             <div class="card">
                 <h3>💰 獎金排行榜 (Top 10)</h3>
                 <div style="overflow-x: auto;">
-                    <table id="rankingTable"><thead><tr><th>排名</th><th>會員</th><th>有效總 PV</th><th>詳細結構</th><th>預估獎金</th></tr></thead><tbody></tbody></table>
+                    <table id="rankingTable"><thead><tr><th>排名</th><th>會員</th><th>有效總 PV</th><th>獎金明細</th><th>預估獎金</th></tr></thead><tbody></tbody></table>
                 </div>
             </div>
         </div>
@@ -173,15 +147,12 @@
             <div class="page-title">🧬 組織關係圖</div>
             <div class="grid-2">
                 <div class="card">
-                    <h3><i class="fas fa-sitemap"></i> 無限層級組織樹</h3>
-                    <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">包含「業績歸戶」邏輯檢查。</p>
-                    <div id="treeContainer" style="overflow-x:auto; padding-bottom:20px;"></div>
+                    <h3><i class="fas fa-sitemap"></i> 組織階層樹狀圖</h3>
+                    <div id="treeContainer" style="overflow-x:auto;"></div>
                 </div>
                 <div class="card">
-                    <h3><i class="fas fa-history"></i> 推薦紀錄清單</h3>
-                    <div style="max-height: 600px; overflow-y: auto;">
-                        <table id="referralTable"><thead><tr><th>推薦日期</th><th>直屬上線 (推薦人)</th><th>新人 (下線)</th></tr></thead><tbody></tbody></table>
-                    </div>
+                    <h3><i class="fas fa-history"></i> 推薦歷史</h3>
+                    <table id="referralTable"><thead><tr><th>日期</th><th>推薦人</th><th>新人</th></tr></thead><tbody></tbody></table>
                 </div>
             </div>
         </div>
@@ -193,74 +164,57 @@
                     <div class="card">
                         <div class="form-group"><label>日期</label><input type="date" id="entryDate" onchange="updateInstantCalc()"></div>
                         <div class="form-group">
-                            <label>操作會員 (僅顯示參加中)</label>
+                            <label>操作會員 (僅限參加中)</label>
                             <select id="entryMember" onchange="checkMemberSelect(); updateInstantCalc(); updateNewcomerUplineSelect();"></select>
                             <div id="quickAddMemberBox" style="display:none; background:#f0f9ff; padding:15px; margin-top:10px; border-radius:8px; border:1px dashed #0066cc;">
-                                <small style="color:#0066cc; font-weight:bold; font-size:1rem;"><i class="fas fa-user-plus"></i> 建立新會員</small>
-                                <div style="display:flex; gap:10px; margin-top:10px;">
-                                    <input type="text" id="quickNewMemName" placeholder="姓名" style="font-size:0.9rem;">
-                                    <input type="text" id="quickNewMemID" placeholder="編號" style="font-size:0.9rem;">
+                                <div style="display:flex; gap:10px;">
+                                    <input type="text" id="quickNewMemName" placeholder="姓名">
+                                    <input type="text" id="quickNewMemID" placeholder="編號">
                                 </div>
-                                <div style="margin-top:10px;">
-                                    <label style="font-size:0.85rem; color:#666;">隸屬發起人</label>
-                                    <select id="quickNewMemSponsor" style="font-size:0.9rem;"></select>
-                                </div>
-                                <div style="margin-top:10px; display:flex; align-items:center; gap:5px;">
-                                    <input type="checkbox" id="quickNewMemStatus" checked>
-                                    <label for="quickNewMemStatus" style="margin:0; font-size:0.9rem; color:#28a745;">參加新星計畫</label>
-                                </div>
+                                <select id="quickNewMemSponsor" style="margin-top:10px;"></select>
                             </div>
                         </div>
                         <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+                        
                         <div class="input-section is-sales">
                             <div class="section-header"><i class="fas fa-shopping-cart"></i> 業績輸入</div>
                             <div class="row-inputs">
-                                <div class="form-group" style="margin:0;"><label style="font-size:0.8rem;">PV</label><input type="number" id="entryPV" placeholder="0" oninput="autoConvert('pv', 'entry'); updateInstantCalc();" onfocus="this.select()"></div>
-                                <div class="equal-sign" style="font-size:1.2rem; padding-top:20px;">=</div>
-                                <div class="form-group" style="margin:0;"><label style="font-size:0.8rem;">BV (1:50)</label><input type="number" id="entryBV" placeholder="0" oninput="autoConvert('bv', 'entry'); updateInstantCalc();" onfocus="this.select()" style="background:#fff;"></div>
+                                <div class="form-group"><label>PV</label><input type="number" id="entryPV" placeholder="0" oninput="autoConvert('pv', 'entry'); updateInstantCalc();"></div>
+                                <div class="equal-sign">=</div>
+                                <div class="form-group"><label>BV (1:50)</label><input type="number" id="entryBV" placeholder="0" oninput="autoConvert('bv', 'entry'); updateInstantCalc();"></div>
                             </div>
                             
-                            <div style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px;">
+                            <div style="margin-top:10px; border-top:1px dashed #ddd; padding-top:10px;">
                                 <label style="font-size:0.85rem; color:#666;">📦 分享產品明細 (非必填)</label>
                                 <div id="productContainer"></div>
-                                <button class="btn btn-outline" style="font-size:0.8rem; padding:5px 10px; margin-top:5px; border-style:dashed;" onclick="addProductRow()">
-                                    <i class="fas fa-plus"></i> 新增品項
-                                </button>
+                                <button class="btn btn-outline" style="font-size:0.8rem; margin-top:5px; border-style:dashed;" onclick="addProductRow()">+ 新增品項</button>
                             </div>
                         </div>
-                        
+
                         <div class="input-section is-newcomer">
                             <div class="section-header"><i class="fas fa-user-plus"></i> 推薦新人</div>
-                            <div class="form-group" style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #e67e22;">
-                                <label style="color:#d35400; font-size:0.9rem;">直屬推薦人 (上線)</label>
-                                <select id="newcomerUpline" style="font-size:0.95rem; border-color:#fadbd8;"></select>
-                                <small style="color:#888;">*若選單無人，請先建立會員</small>
-                            </div>
-                            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                                <input type="text" id="newcomerName" placeholder="新人姓名" oninput="updateInstantCalc()">
-                                <input type="text" id="newcomerID" placeholder="新人編號">
-                            </div>
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.8rem;">新人BV</label><input type="number" id="newcomerBV" placeholder="0" oninput="updateInstantCalc()"></div>
+                            <select id="newcomerUpline" style="margin-bottom:10px; border-color:#e67e22;"></select>
+                            <div style="display:flex; gap:10px;"><input type="text" id="newcomerName" placeholder="新人姓名"><input type="text" id="newcomerID" placeholder="新人編號"></div>
+                            <input type="number" id="newcomerBV" placeholder="新人首購 BV" style="margin-top:10px;">
                         </div>
+
                         <div class="input-section is-learning">
                             <div class="section-header"><i class="fas fa-graduation-cap"></i> 學習心得</div>
-                            <textarea id="learningNote" rows="2" placeholder="心得摘要..." oninput="updateInstantCalc()"></textarea>
-                            <label style="margin-top:10px; display:flex; align-items:center; gap:10px; cursor:pointer;"><input type="checkbox" id="learningFileCheck" style="width:auto;" onchange="updateInstantCalc()"> <span>已繳交證明</span></label>
+                            <textarea id="learningNote" rows="2" placeholder="內容摘要..."></textarea>
+                            <label style="display:flex; align-items:center; gap:5px; margin-top:5px;"><input type="checkbox" id="learningFileCheck" style="width:auto;"> <span>已繳交證明</span></label>
                         </div>
                     </div>
                 </div>
                 <div>
                     <div class="card" style="position:sticky; top:20px;">
-                        <h3>📊 累計獎金預覽</h3>
+                        <h3>📊 預計獎金增加</h3>
                         <div class="instant-bonus-box">
-                            <div class="ib-header"><div class="ib-title">預計獎金增加</div><div class="ib-total" id="ibTotalVal">$0</div></div>
-                            <div class="ib-breakdown">
-                                <div class="ib-item"><div class="ib-label">業績/升級</div><div class="ib-val" id="ibDiffBase">+0</div></div>
-                                <div class="ib-item"><div class="ib-label">新人加碼</div><div class="ib-val" id="ibDiffNew">+0</div></div>
-                                <div class="ib-item"><div class="ib-label">學習獎勵</div><div class="ib-val" id="ibDiffLearn">+0</div></div>
+                            <div class="ib-total" id="ibTotalVal">$0</div>
+                            <div class="ib-breakdown" style="margin-top:10px; font-size:0.85rem; opacity:0.8;">
+                                業績: <span id="ibDiffBase">+0</span> | 推薦: <span id="ibDiffNew">+0</span>
                             </div>
                         </div>
-                        <button class="btn btn-primary" style="width:100%; margin-top:20px; padding:15px; font-size:1.1rem;" onclick="addCompositeLog()"><i class="fas fa-save"></i> 確認儲存紀錄</button>
+                        <button class="btn btn-primary" style="width:100%; margin-top:20px; padding:15px;" onclick="addCompositeLog()"><i class="fas fa-save"></i> 儲存所有紀錄</button>
                     </div>
                 </div>
             </div>
@@ -271,20 +225,11 @@
             <div class="grid-2">
                 <div class="card">
                     <h3>新增會員</h3>
-                    <div class="form-group"><label>編號</label><input type="text" id="newMemberID" placeholder="TW123456"></div>
-                    <div class="form-group"><label>姓名</label><input type="text" id="newMemberName" placeholder="陳大明"></div>
-                    <div class="form-group">
-                        <label style="color:var(--purple);"><i class="fas fa-crown"></i> 隸屬發起人</label>
-                        <select id="newMemSponsor" style="border:1px solid var(--purple);"></select>
-                    </div>
-                    <div class="form-group">
-                        <label style="color:#28a745;">新星計畫狀態</label>
-                        <div style="display:flex; gap:10px;">
-                            <input type="checkbox" id="newMemIsNewStar" checked style="width:20px; height:20px;">
-                            <span style="line-height:24px;">參加計畫 (成為獨立計算單位)</span>
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" onclick="addMember()"><i class="fas fa-plus"></i> 加入資料庫</button>
+                    <input type="text" id="newMemberID" placeholder="編號" style="margin-bottom:10px;">
+                    <input type="text" id="newMemberName" placeholder="姓名" style="margin-bottom:10px;">
+                    <select id="newMemSponsor" style="margin-bottom:10px;"></select>
+                    <label style="display:flex; align-items:center; gap:5px;"><input type="checkbox" id="newMemIsNewStar" checked style="width:auto;"> <span>參加新星計畫</span></label>
+                    <button class="btn btn-primary" style="margin-top:15px; width:100%;" onclick="addMember()">加入資料庫</button>
                 </div>
                 <div class="card">
                     <h3>會員列表</h3>
@@ -299,13 +244,12 @@
             <div class="page-title">👑 發起人資料庫</div>
             <div class="grid-2">
                 <div class="card">
-                    <h3>新增發起人</h3>
-                    <div class="form-group"><label>姓名</label><input type="text" id="newSponsorName" placeholder="例如：陳總監"></div>
-                    <div class="form-group"><label>代號(ID)</label><input type="text" id="newSponsorID" placeholder="例如：BOSS_01"></div>
-                    <button class="btn btn-purple" onclick="addSponsor()"><i class="fas fa-plus"></i> 新增發起人</button>
+                    <h3>新增發起人 (獎金來源)</h3>
+                    <input type="text" id="newSponsorName" placeholder="姓名" style="margin-bottom:10px;">
+                    <input type="text" id="newSponsorID" placeholder="代號 (如 BOSS_A)" style="margin-bottom:10px;">
+                    <button class="btn btn-purple" style="width:100%;" onclick="addSponsor()">新增發起人</button>
                 </div>
                 <div class="card">
-                    <h3>列表</h3>
                     <table id="sponsorTable"><thead><tr><th>ID</th><th>姓名</th><th>操作</th></tr></thead><tbody></tbody></table>
                 </div>
             </div>
@@ -315,58 +259,39 @@
             <div class="page-title">📋 紀錄明細</div>
             <div class="card">
                 <div class="grid-3">
-                    <div class="form-group"><label>月份</label><input type="month" id="filterMonth" onchange="renderLogs()"></div>
-                    <div class="form-group"><label>會員</label><select id="filterMember" onchange="renderLogs()"><option value="all">全部</option></select></div>
-                    <div class="form-group"><label style="visibility:hidden">R</label><button class="btn btn-outline" style="width:100%" onclick="resetLogFilter()">重置</button></div>
+                    <input type="month" id="filterMonth" onchange="renderLogs()">
+                    <select id="filterMember" onchange="renderLogs()"></select>
+                    <button class="btn btn-outline" onclick="resetLogFilter()">重置篩選</button>
                 </div>
-                <table id="logTable"><thead><tr><th>日期</th><th>會員</th><th>類型</th><th>內容</th><th>數值 / 預估獎金</th><th>操作</th></tr></thead><tbody></tbody></table>
+                <table id="logTable"><thead><tr><th>日期</th><th>會員</th><th>類型</th><th>詳細內容 (含品項)</th><th>預估獎金</th><th>操作</th></tr></thead><tbody></tbody></table>
             </div>
         </div>
 
         <div id="calculator" class="section">
             <div class="page-title">🧮 獎金模擬器</div>
-            <div class="card">
-                <div class="grid-2">
-                    <div style="background:#f0f9ff; padding:20px; border-radius:8px;">
-                        <div class="form-group"><label>PV</label><input type="number" id="calcPV" oninput="autoConvert('pv','calc'); runSimulation()"></div>
-                        <div class="form-group"><label>BV</label><input type="number" id="calcBV" oninput="autoConvert('bv','calc'); runSimulation()"></div>
-                        <div class="form-group"><label>推薦人數</label><input type="number" id="calcPartners" oninput="runSimulation()"></div>
-                        <div class="form-group"><label>新人BV</label><input type="number" id="calcNewcomerBV" oninput="runSimulation()"></div>
-                        <div class="form-group"><label><input type="checkbox" id="calcHasLearned" onchange="runSimulation()"> 已學習</label></div>
-                    </div>
-                    <div style="background:#2c3e50; color:white; padding:20px; border-radius:8px; display:flex; flex-direction:column; justify-content:center; text-align:center;">
-                        <div id="simGraduateMsg" style="display:none; color:#28a745; margin-bottom:10px;">🎉 畢業</div>
-                        <div>模擬總獎金</div>
-                        <div style="font-size:2.5rem; font-weight:bold; color:#ff9900;" id="simValTotal">0</div>
-                    </div>
+            <div class="card"><div class="grid-2">
+                <div>
+                    <label>預估 PV</label><input type="number" id="calcPV" oninput="autoConvert('pv','calc'); runSimulation()">
+                    <label>預估 BV</label><input type="number" id="calcBV" oninput="autoConvert('bv','calc'); runSimulation()">
+                    <label>推薦人數</label><input type="number" id="calcPartners" oninput="runSimulation()">
                 </div>
-            </div>
-        </div>
-
-        <div id="guide" class="section">
-            <div class="page-title">📖 攻略百科</div>
-            <div class="card">
-                <div style="background:#fafafa; padding:20px; border-radius:8px; line-height:1.8;">
-                    <h3>🌟 新星啟動計畫</h3>
-                    <ul><li><strong>業績達標：</strong>0-3% 加碼 3% / 6% 加碼 1%。</li><li><strong>推薦加碼：</strong>有推薦人，比例升級。</li><li><strong>新人回饋：</strong>新人BV x 1%。</li><li><strong>學習獎勵：</strong>總額外 +3%。</li></ul>
+                <div style="background:#2c3e50; color:white; padding:20px; border-radius:8px; text-align:center;">
+                    模擬總獎金 <h1 style="color:#ff9900;" id="simValTotal">$0</h1>
                 </div>
-            </div>
+            </div></div>
         </div>
 
         <div id="settings" class="section">
             <div class="page-title">⚙️ 設定</div>
             <div class="card">
-                <button class="btn btn-primary" onclick="exportData()">下載備份</button>
-                <input type="file" id="importFile" style="display:none" onchange="importData(this)">
-                <button class="btn btn-outline" onclick="document.getElementById('importFile').click()">還原備份</button>
-                <button class="btn btn-danger" onclick="clearAllData()" style="margin-left:20px;">清除資料</button>
+                <button class="btn btn-danger" onclick="clearAllData()">徹底清除所有資料 (含雲端)</button>
             </div>
         </div>
 
     </div>
 
 <script>
-    // --- Cloud Sync ---
+    // --- Firebase Init ---
     const firebaseConfig = {
       apiKey: "AIzaSyCanDeinCJyZFeHUGnYVEmalCYxjwaIw-4",
       authDomain: "newstar-system.firebaseapp.com",
@@ -380,33 +305,6 @@
     const auth = firebase.auth();
     const TEAM_ID = "newstar_main";
 
-    let unsubscribe = null;
-    function startCloudSync() {
-      const ref = db.collection("newstar").doc(TEAM_ID);
-      if (unsubscribe) unsubscribe();
-      unsubscribe = ref.onSnapshot((snap) => {
-        if (!snap.exists) { saveToCloud(); return; }
-        const data = snap.data();
-        if (!data || !Array.isArray(data.members)) return;
-        members = data.members;
-        logs = data.logs || [];
-        sponsors = data.sponsors || []; 
-        localStorage.setItem("amway_members", JSON.stringify(members));
-        localStorage.setItem("amway_logs", JSON.stringify(logs));
-        localStorage.setItem("amway_sponsors", JSON.stringify(sponsors));
-        refreshAllUI();
-      });
-    }
-    let saveTimer = null;
-    function saveToCloud() {
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        db.collection("newstar").doc(TEAM_ID).set(
-          { members, logs, sponsors, updatedAt: new Date().toISOString() }, { merge: true }
-        );
-      }, 300);
-    }
-
     // --- Global Data ---
     let members = JSON.parse(localStorage.getItem('amway_members')) || [];
     let logs = JSON.parse(localStorage.getItem('amway_logs')) || [];
@@ -415,317 +313,242 @@
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('entryDate').valueAsDate = new Date();
         document.getElementById('filterMonth').value = new Date().toISOString().slice(0, 7);
-        populateMonthSelect(); refreshAllUI();
-        auth.signInAnonymously().then(() => startCloudSync()).catch(err => console.error(err));
+        populateMonthSelect();
+        auth.signInAnonymously().then(() => startCloudSync());
     });
 
+    function startCloudSync() {
+      const ref = db.collection("newstar").doc(TEAM_ID);
+      ref.onSnapshot((snap) => {
+        if (!snap.exists) { saveToCloud(); return; }
+        const data = snap.data();
+        members = data.members || [];
+        logs = data.logs || [];
+        sponsors = data.sponsors || [];
+        localStorage.setItem("amway_members", JSON.stringify(members));
+        localStorage.setItem("amway_logs", JSON.stringify(logs));
+        localStorage.setItem("amway_sponsors", JSON.stringify(sponsors));
+        refreshAllUI();
+      });
+    }
+
+    function saveToCloud() {
+      db.collection("newstar").doc(TEAM_ID).set({ members, logs, sponsors, updatedAt: new Date().toISOString() }, { merge: true });
+    }
+
+    function saveToLocal() { saveToCloud(); }
+
     function refreshAllUI() {
-        renderSponsors(); updateSponsorSelects(); renderMembers(); updateMemberSelects(); renderLogs(); renderDashboard(); renderNetwork(); runSimulation();
+        renderMembers(); renderLogs(); renderSponsors(); renderNetwork(); runSimulation();
+        updateMemberSelects(); updateSponsorSelects();
     }
 
-    function switchTab(tabId) {
-        document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        const map = {'dashboard':0, 'network':1, 'entry':2, 'members':3, 'logs':4, 'sponsors':5, 'calculator':6, 'guide':7, 'settings':8};
-        if(map[tabId]!==undefined) document.querySelectorAll('.nav-item')[map[tabId]].classList.add('active');
-        if(tabId==='dashboard') renderDashboard();
-        if(tabId==='logs') renderLogs();
-        if(tabId==='network') renderNetwork(); 
+    function switchTab(t) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(t).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        const idx = {'dashboard':0, 'network':1, 'entry':2, 'members':3, 'logs':4, 'sponsors':5, 'calculator':6, 'settings':7}[t];
+        document.querySelectorAll('.nav-item')[idx].classList.add('active');
     }
 
-    // --- V3.5 Product Row Logic ---
+    // --- V3.5 Product Detail Logic ---
     function addProductRow() {
         const div = document.createElement('div');
         div.className = 'product-row';
         div.innerHTML = `
-            <input type="text" placeholder="品項名稱" class="prod-name" style="flex:2;">
+            <input type="text" placeholder="品項" class="prod-name" style="flex:2;">
             <input type="number" placeholder="數量" class="prod-qty" style="flex:1;">
             <button onclick="this.parentElement.remove()" class="btn-remove-prod"><i class="fas fa-times"></i></button>
         `;
         document.getElementById('productContainer').appendChild(div);
     }
 
-    // --- Entry Logic (V3.5) ---
+    // --- Core Action: Add Record ---
     function addCompositeLog() {
         const date = document.getElementById('entryDate').value;
         let memberId = document.getElementById('entryMember').value;
-
-        if(!date) return alert("請選擇日期");
-        if(!memberId) return alert("請選擇會員");
+        if(!memberId) return alert("請選取會員");
 
         if (memberId === 'new_mode') {
-            const nn = document.getElementById('quickNewMemName').value.trim();
-            const ni = document.getElementById('quickNewMemID').value.trim();
+            const nn = document.getElementById('quickNewMemName').value;
+            const ni = document.getElementById('quickNewMemID').value;
             const ns = document.getElementById('quickNewMemSponsor').value;
-            const isNS = document.getElementById('quickNewMemStatus').checked;
-            if(!nn || !ni || !ns) return alert("請輸入新會員資料與發起人");
-            if(members.find(m=>m.id===ni)) return alert("編號重複");
-            members.push({id: ni, name: nn, sponsorId: ns, isNewStar: isNS});
-            refreshAllUI(); memberId = ni; document.getElementById('entryMember').value = ni;
-            document.getElementById('quickNewMemName').value=''; document.getElementById('quickNewMemID').value=''; document.getElementById('quickNewMemSponsor').value='';
-            checkMemberSelect();
+            if(!nn || !ni || !ns) return alert("請填寫完整新會員資料");
+            members.push({id: ni, name: nn, sponsorId: ns, isNewStar: document.getElementById('quickNewMemStatus').checked});
+            memberId = ni;
         }
 
-        let saved=0;
-        const pv = parseFloat(document.getElementById('entryPV').value)||0;
-        if(pv>0) {
-            const bvVal = document.getElementById('entryBV').value;
-            
-            // V3.5 Collect Products
+        let saved = 0;
+        // Sales
+        const pv = parseFloat(document.getElementById('entryPV').value) || 0;
+        if(pv > 0) {
             let products = [];
             document.querySelectorAll('.product-row').forEach(row => {
-                const pname = row.querySelector('.prod-name').value.trim();
-                const pqty = row.querySelector('.prod-qty').value.trim();
-                if(pname) products.push({name: pname, qty: pqty || 1});
+                const pname = row.querySelector('.prod-name').value;
+                if(pname) products.push({name: pname, qty: row.querySelector('.prod-qty').value || 1});
             });
-            
-            let detailStr = `業績 (BV: ${bvVal})`;
-            if(products.length > 0) {
-                const prodStr = products.map(p => `${p.name}x${p.qty}`).join(', ');
-                detailStr += ` | 📦 ${prodStr}`;
-            }
-
-            logs.push({ 
-                id: Date.now()+1, date, memberId, 
-                type: 'sales', pv, 
-                details: detailStr,
-                products: products // Store raw data
-            });
+            let detail = `銷售 (BV: ${document.getElementById('entryBV').value})`;
+            if(products.length) detail += ` | 📦 ${products.map(p=>p.name+'x'+p.qty).join(', ')}`;
+            logs.push({id: Date.now()+1, date, memberId, type: 'sales', pv, details: detail});
             saved++;
         }
-        
-        const nName = document.getElementById('newcomerName').value.trim();
+        // Referral
+        const nName = document.getElementById('newcomerName').value;
         if(nName) {
-            const nID = document.getElementById('newcomerID').value.trim();
-            const nBV = parseFloat(document.getElementById('newcomerBV').value)||0;
-            const uplineId = document.getElementById('newcomerUpline').value || memberId;
-            
-            if(!nID) return alert("請輸入新人編號");
+            const nID = document.getElementById('newcomerID').value;
+            const nBV = parseFloat(document.getElementById('newcomerBV').value) || 0;
+            const upline = document.getElementById('newcomerUpline').value || memberId;
+            if(!nID) return alert("請填入新人編號");
             if(!members.find(m=>m.id===nID)) {
-                const uplineObj = members.find(m=>m.id===uplineId);
-                const inheritSponsor = uplineObj ? uplineObj.sponsorId : "";
-                members.push({id: nID, name: nName, sponsorId: inheritSponsor, isNewStar: true}); 
+                const upObj = members.find(m=>m.id===upline);
+                members.push({id: nID, name: nName, sponsorId: upObj?upObj.sponsorId:"", isNewStar: true});
             }
-            logs.push({
-                id: Date.now()+2, date, memberId, 
-                type: 'newcomer', pv: 0, 
-                details: `推薦: ${nName}`, 
-                newcomerData: { name: nName, id: nID, bv: nBV, uplineId: uplineId } 
-            });
+            logs.push({id: Date.now()+2, date, memberId, type: 'newcomer', details: `推薦新人: ${nName}`, newcomerData: {id: nID, name: nName, bv: nBV, uplineId: upline}});
             saved++;
         }
-        
+        // Learning
         if(document.getElementById('learningFileCheck').checked) {
-            logs.push({ id: Date.now()+3, date, memberId, type: 'learning', pv: 0, details: "心得已繳", isLearning: true });
+            logs.push({id: Date.now()+3, date, memberId, type: 'learning', details: "完成學習心得"});
             saved++;
         }
-        if(saved===0) return alert("無資料");
-        saveToLocal(); alert("儲存成功");
-        
-        document.getElementById('entryPV').value=''; document.getElementById('entryBV').value='';
-        document.getElementById('newcomerName').value=''; document.getElementById('newcomerID').value=''; document.getElementById('newcomerBV').value='';
-        document.getElementById('learningNote').value=''; document.getElementById('learningFileCheck').checked=false;
-        // Clear products
-        document.getElementById('productContainer').innerHTML = '';
-        
-        updateInstantCalc();
+
+        if(saved > 0) {
+            saveToLocal(); alert("儲存成功");
+            location.reload();
+        }
     }
 
-    // --- Helpers (V3.4 Updates) ---
-    function checkMemberSelect() { document.getElementById('quickAddMemberBox').style.display = (document.getElementById('entryMember').value === 'new_mode') ? 'block' : 'none'; }
-    function autoConvert(s, c) { 
-        const p=document.getElementById(c==='entry'?'entryPV':'calcPV'), b=document.getElementById(c==='entry'?'entryBV':'calcBV');
-        if(s==='pv') b.value=(parseFloat(p.value)||0)*50; else p.value=(parseFloat(b.value)||0)/50; 
+    // --- Helper Functions ---
+    function checkMemberSelect() {
+        document.getElementById('quickAddMemberBox').style.display = (document.getElementById('entryMember').value === 'new_mode') ? 'block' : 'none';
+    }
+    function autoConvert(s, c) {
+        const p = document.getElementById(c === 'entry' ? 'entryPV' : 'calcPV');
+        const b = document.getElementById(c === 'entry' ? 'entryBV' : 'calcBV');
+        if(s === 'pv') b.value = (parseFloat(p.value)||0) * 50; else p.value = (parseFloat(b.value)||0) / 50;
     }
     function updateNewcomerUplineSelect() {
-        const curMem = document.getElementById('entryMember').value;
         const sel = document.getElementById('newcomerUpline');
-        let h = members.map(m => `<option value="${m.id}">${m.name} (${m.id})</option>`).join('');
-        sel.innerHTML = h;
-        if(curMem && curMem!=='new_mode') sel.value = curMem;
+        sel.innerHTML = members.map(m => `<option value="${m.id}">${m.name} (${m.id})</option>`).join('');
+        if(document.getElementById('entryMember').value !== 'new_mode') sel.value = document.getElementById('entryMember').value;
     }
-    
-    // V3.4: Filtered Selection
     function updateMemberSelects() {
-        const cur = document.getElementById('entryMember').value;
-        
-        // 1. Entry Dropdown: Only Participating Members
-        const activeMembers = members.filter(m => m.isNewStar);
-        let entryHtml = '<option value="" disabled selected>-- 選擇操作會員 (僅限參加中) --</option>';
-        entryHtml += '<option value="new_mode" style="color:blue;">➕ 建立新會員...</option>';
-        entryHtml += activeMembers.map(m => `<option value="${m.id}">${m.name} (${m.id})</option>`).join('');
-        document.getElementById('entryMember').innerHTML = entryHtml;
-        
-        if(cur && (cur === 'new_mode' || activeMembers.find(m=>m.id===cur))) {
-            document.getElementById('entryMember').value = cur;
-        }
-
-        // 2. Filter Dropdown: All Members
-        document.getElementById('filterMember').innerHTML = '<option value="all">全部會員</option>' + members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+        const active = members.filter(m => m.isNewStar);
+        let h = '<option value="" disabled selected>-- 選擇會員 --</option><option value="new_mode" style="color:blue;">➕ 新增會員</option>';
+        h += active.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+        document.getElementById('entryMember').innerHTML = h;
+        document.getElementById('filterMember').innerHTML = '<option value="all">全部會員</option>' + members.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
         updateNewcomerUplineSelect();
     }
+    function updateSponsorSelects() {
+        let h = '<option value="" disabled selected>-- 選擇發起人 --</option>';
+        h += sponsors.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        document.getElementById('newMemSponsor').innerHTML = h;
+        document.getElementById('quickNewMemSponsor').innerHTML = h;
+    }
 
-    // V3.4: Render Logs with Newcomer Bonus & BV
+    // --- Renderers ---
+    function renderMembers() {
+        const tb = document.querySelector('#memberTable tbody');
+        tb.innerHTML = members.map(m => {
+            const sp = sponsors.find(s=>s.id===m.sponsorId)?.name || '-';
+            const ns = m.isNewStar ? '<span class="status-active">參加中</span>' : '未參加';
+            return `<tr><td>${m.id}</td><td>${m.name}</td><td>${ns}</td><td>${sp}</td><td><button class="btn btn-outline" style="color:red" onclick="deleteMember('${m.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
+        }).join('');
+    }
     function renderLogs() {
-        const fm=document.getElementById('filterMonth').value, fmem=document.getElementById('filterMember').value;
-        let d = logs.filter(l=> (!fm||l.date.startsWith(fm)) && (fmem==='all'||l.memberId===fmem));
-        d.sort((a,b)=>new Date(b.date)-new Date(a.date));
-        
-        const typeMap = { 'sales': '銷售', 'newcomer': '推薦', 'learning': '學習' };
-        
-        document.querySelector('#logTable tbody').innerHTML = d.length ? d.map(l=>{
+        const month = document.getElementById('filterMonth').value;
+        const mid = document.getElementById('filterMember').value;
+        let d = logs.filter(l => (!month || l.date.startsWith(month)) && (mid==='all' || l.memberId===mid));
+        d.sort((a,b) => new Date(b.date) - new Date(a.date));
+        const tb = document.querySelector('#logTable tbody');
+        tb.innerHTML = d.map(l => {
             const m = members.find(x=>x.id===l.memberId)?.name || l.memberId;
-            let cls = l.type==='sales'?'badge-sales':(l.type==='newcomer'?'badge-new':'badge-learn');
-            
-            // Value Logic V3.4
-            let valDisplay = '-';
-            if(l.type === 'sales') {
-                valDisplay = `${(l.pv||0).toLocaleString()} PV`;
-            } else if (l.type === 'newcomer' && l.newcomerData) {
-                const nbv = l.newcomerData.bv || 0;
-                const bonus = Math.round(nbv * 0.01);
-                valDisplay = `<div>新人BV: ${nbv.toLocaleString()}</div><div style="color:#e67e22; font-size:0.85rem; font-weight:bold;">推薦獎金: $${bonus.toLocaleString()}</div>`;
-            } else if (l.type === 'learning') {
-                valDisplay = `<span style="color:#10b981;">觸發 +3%</span>`;
-            }
-
-            return `<tr><td>${l.date}</td><td>${m}</td><td><span class="badge ${cls}">${typeMap[l.type]}</span></td><td>${l.details}</td><td>${valDisplay}</td><td><button onclick="deleteLog(${l.id})" style="color:red;border:none;background:none"><i class="fas fa-trash"></i></button></td></tr>`;
-        }).join('') : '<tr><td colspan="6" style="text-align:center">無紀錄</td></tr>';
+            let cls = {'sales':'badge-sales','newcomer':'badge-new','learning':'badge-learn'}[l.type];
+            let val = '-';
+            if(l.type==='sales') val = `${l.pv} PV`;
+            if(l.type==='newcomer' && l.newcomerData) val = `$${Math.round(l.newcomerData.bv*0.01)}`;
+            if(l.type==='learning') val = '+3%';
+            return `<tr><td>${l.date}</td><td>${m}</td><td><span class="badge ${cls}">${l.type}</span></td><td>${l.details}</td><td>${val}</td><td><button onclick="deleteLog(${l.id})"><i class="fas fa-trash"></i></button></td></tr>`;
+        }).join('');
     }
-
-    function updateInstantCalc() {
-        // Simple preview (Full logic is in calculateMonthlyStats)
-        const tel = document.getElementById('ibTotalVal');
-        tel.innerText = "-"; 
+    function renderSponsors() {
+        const tb = document.querySelector('#sponsorTable tbody');
+        tb.innerHTML = sponsors.map(s => `<tr><td>${s.id}</td><td>${s.name}</td><td><button onclick="deleteSponsor('${s.id}')">刪除</button></td></tr>`).join('');
     }
-
-    function saveToLocal() { localStorage.setItem('amway_members', JSON.stringify(members)); localStorage.setItem('amway_logs', JSON.stringify(logs)); localStorage.setItem('amway_sponsors', JSON.stringify(sponsors)); saveToCloud(); }
-    function deleteMember(id){ if(confirm("刪除?")) { members=members.filter(m=>m.id!==id); saveToLocal(); refreshAllUI(); } }
-    function deleteLog(id){ if(confirm("刪除?")) { logs=logs.filter(l=>l.id!==id); saveToLocal(); refreshAllUI(); } }
-    
-    function populateMonthSelect() {
-        const s = document.getElementById('dashMonthSelect'); s.innerHTML='';
-        for(let i=1;i<=12;i++) { let v=`2026-${i.toString().padStart(2,'0')}`; let o=document.createElement('option'); o.value=v; o.text=`2026年 ${i}月`; s.appendChild(o); }
-        let now=new Date().toISOString().slice(0,7); if(now.startsWith('2026')) s.value=now;
-    }
-
-    // Calculation (Roll-up)
-    function calculateMonthlyStats(monthStr) {
-        const monthLogs = logs.filter(l => l.date.startsWith(monthStr));
-        let personalSalesMap = {};
-        let personalNewcomersMap = {};
-        let personalLearningMap = {};
-        let childrenMap = {}; 
-        
-        logs.filter(l => l.type === 'newcomer').forEach(l => {
-            const childData = l.newcomerData;
-            const parentId = childData.uplineId || l.memberId;
-            if(!childrenMap[parentId]) childrenMap[parentId] = [];
-            if(!childrenMap[parentId].includes(childData.id)) childrenMap[parentId].push(childData.id);
-        });
-
-        members.forEach(m => { personalSalesMap[m.id]=0; personalNewcomersMap[m.id]=[]; personalLearningMap[m.id]=false; });
-
-        monthLogs.forEach(l => {
-            if(l.type === 'sales') { if(personalSalesMap[l.memberId]!==undefined) personalSalesMap[l.memberId]+=l.pv; }
-            else if (l.type === 'newcomer') { if(personalNewcomersMap[l.memberId]) personalNewcomersMap[l.memberId].push(l.newcomerData); }
-            else if (l.type === 'learning') { if(personalLearningMap[l.memberId]!==undefined) personalLearningMap[l.memberId]=true; }
-        });
-
-        function calculateGroupPV(memId) {
-            let total = personalSalesMap[memId] || 0;
-            const children = childrenMap[memId] || [];
-            children.forEach(childId => {
-                const childMem = members.find(m => m.id === childId);
-                const childGroupPV = calculateGroupPV(childId);
-                if (childMem && !childMem.isNewStar) { total += childGroupPV; }
-            });
-            return total;
+    function renderNetwork() {
+        const container = document.getElementById('treeContainer');
+        // Simple recursive tree logic
+        function build(id, name, depth) {
+            let html = `<div class="tree-node"><div class="tree-content">#${id} ${name}</div>`;
+            const children = logs.filter(l => l.type==='newcomer' && l.newcomerData.uplineId===id).map(l=>l.newcomerData);
+            children.forEach(c => { html += build(c.id, c.name, depth+1); });
+            return html + '</div>';
         }
-
-        let res = [];
-        members.forEach(m => {
-            const effectivePV = calculateGroupPV(m.id);
-            // V3.4 Filter: Only show active participants in dashboard if they have PV or activity
-            if (!m.isNewStar && effectivePV === 0) return; 
-
-            const c = calculateBonusLogic(effectivePV, effectivePV*50, personalNewcomersMap[m.id].length>0, personalNewcomersMap[m.id], personalLearningMap[m.id]);
-            res.push({ ...m, pv: effectivePV, bonus: c.total, isGraduated: c.isGraduated, detailsText: c.detailsText });
+        let full = "";
+        sponsors.forEach(s => {
+            full += `<div class="tree-node tree-root"><div class="tree-content"><i class="fas fa-crown"></i> ${s.name}</div>`;
+            members.filter(m => m.sponsorId === s.id).forEach(m => {
+                const hasUpline = logs.some(l => l.type==='newcomer' && l.newcomerData.id === m.id);
+                if(!hasUpline) full += build(m.id, m.name, 1);
+            });
+            full += '</div>';
         });
-        res.sort((a,b)=>b.bonus-a.bonus); return res;
+        container.innerHTML = full || "尚無關係圖";
     }
 
+    // --- Bonus Engine ---
     function calculateBonusLogic(pv, bv, isRec, news, hasLearn) {
-        if(pv>=1000) return {total:0, isGraduated:true, detailsText:"已畢業", breakdown:{base:0,new:0,learn:0}};
+        if(pv>=1000) return {total:0, isGraduated:true};
         let rate = (pv>=600) ? (isRec?0.02:0.01) : (isRec?0.04:0.03);
-        let rateTxt = (pv>=600) ? (isRec?"6%+2%":"6%+1%") : (isRec?"4%":"3%");
-        let base = bv * rate; let nBonus = 0; news.forEach(n=> nBonus += n.bv*0.01);
-        let sub = base + nBonus; let lBonus = hasLearn ? sub*0.03 : 0;
-        let txt = `R:${rateTxt}`; if(news.length) txt+=`|新+${Math.round(nBonus)}`; if(hasLearn) txt+=`|學+3%`;
-        return {total:Math.floor(sub+lBonus), isGraduated:false, detailsText:txt, breakdown:{base, new:nBonus, learn:lBonus}};
+        let base = bv * rate;
+        let nBonus = 0; if(news) news.forEach(n=> nBonus += n.bv*0.01);
+        let sub = base + nBonus;
+        let lBonus = hasLearn ? sub*0.03 : 0;
+        return {total: Math.floor(sub+lBonus)};
     }
     function renderDashboard() {
-        const m = document.getElementById('dashMonthSelect').value; const stats = calculateMonthlyStats(m);
+        const stats = calculateMonthlyStats(document.getElementById('dashMonthSelect').value);
         document.getElementById('totalPVDisplay').innerText = stats.reduce((a,b)=>a+b.pv,0).toLocaleString();
         document.getElementById('totalBonusDisplay').innerText = "$"+stats.reduce((a,b)=>a+b.bonus,0).toLocaleString();
-        document.getElementById('activeMembersDisplay').innerText = `${stats.length}/${members.filter(m=>m.isNewStar).length}`;
         const tb = document.querySelector('#rankingTable tbody');
-        tb.innerHTML = stats.length ? stats.slice(0,10).map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.pv.toLocaleString()}</td><td style="font-size:0.8rem;color:#666">${s.detailsText}</td><td style="font-weight:bold;color:#ff9900">${s.isGraduated?"畢業":'$'+s.bonus.toLocaleString()}</td></tr>`).join('') : '<tr><td colspan="5" style="text-align:center">無資料</td></tr>';
+        tb.innerHTML = stats.slice(0,10).map((s,i)=>`<tr><td>${i+1}</td><td>${s.name}</td><td>${s.pv}</td><td>${s.detailsText}</td><td>$${s.bonus}</td></tr>`).join('');
+    }
+    function calculateMonthlyStats(mStr) {
+        let res = [];
+        members.forEach(m => {
+            if(!m.isNewStar) return;
+            // Simplified Roll-up logic for V3.5
+            let pv = logs.filter(l=>l.date.startsWith(mStr) && l.memberId===m.id && l.type==='sales').reduce((a,b)=>a+b.pv,0);
+            let news = logs.filter(l=>l.date.startsWith(mStr) && l.memberId===m.id && l.type==='newcomer').map(l=>l.newcomerData);
+            let learn = logs.some(l=>l.date.startsWith(mStr) && l.memberId===m.id && l.type==='learning');
+            let c = calculateBonusLogic(pv, pv*50, news.length>0, news, learn);
+            res.push({name: m.name, pv, bonus: c.total, detailsText: pv>=600?'6%階段':'起步期'});
+        });
+        return res.sort((a,b)=>b.bonus-a.bonus);
     }
     function runSimulation() {
-        let pv=parseFloat(document.getElementById('calcPV').value)||0; let bv=parseFloat(document.getElementById('calcBV').value)||0;
-        let part=parseFloat(document.getElementById('calcPartners').value)||0; let nbv=parseFloat(document.getElementById('calcNewcomerBV').value)||0;
-        let learn=document.getElementById('calcHasLearned').checked; let news=[]; if(nbv>0) news.push({bv:nbv});
-        let res = calculateBonusLogic(pv, bv, part>0, news, learn);
-        if(res.isGraduated) { document.getElementById('simGraduateMsg').style.display='block'; document.getElementById('simValTotal').innerText="畢業"; }
-        else { document.getElementById('simGraduateMsg').style.display='none'; document.getElementById('simValTotal').innerText=res.total.toLocaleString(); }
+        const pv = parseFloat(document.getElementById('calcPV').value)||0;
+        const res = calculateBonusLogic(pv, pv*50, parseFloat(document.getElementById('calcPartners').value)>0, [], false);
+        document.getElementById('simValTotal').innerText = "$" + res.total.toLocaleString();
     }
-    function exportData(){ const d={members, logs, sponsors, version:"Pro_2026_v3.4"}; const u=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:"application/json"})); const a=document.createElement('a'); a.href=u; a.download=`NewStar_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); }
-    function importData(i){ const f=i.files[0]; if(!f)return; const r=new FileReader(); r.onload=e=>{ try{ const d=JSON.parse(e.target.result); if(d.members&&d.logs&&confirm("覆蓋?")){members=d.members;logs=d.logs;sponsors=d.sponsors||[]; saveToLocal();location.reload();} }catch(e){alert("錯誤");} }; r.readAsText(f); }
-    
-    // --- Network Logic (Must be included to avoid error) ---
-    function renderNetwork() {
-        const treeContainer = document.getElementById('treeContainer');
-        if(!treeContainer) return; // Guard
-        const listBody = document.querySelector('#referralTable tbody');
-        let parentMap = {}; let childrenMap = {}; let referralList = [];
-        logs.filter(l => l.type === 'newcomer').forEach(l => {
-            const childData = l.newcomerData; const parentId = childData.uplineId || l.memberId; 
-            if (parentMap[childData.id] !== parentId) {
-                parentMap[childData.id] = parentId;
-                if(!childrenMap[parentId]) childrenMap[parentId] = [];
-                if(!childrenMap[parentId].some(c => c.id === childData.id)) {
-                    childrenMap[parentId].push({ id: childData.id, name: childData.name, date: l.date });
-                }
-                const pName = members.find(m=>m.id===parentId)?.name || parentId;
-                referralList.push({ date: l.date, parent: `${pName} (${parentId})`, child: `${childData.name} (${childData.id})` });
-            }
-        });
-        referralList.sort((a,b) => new Date(b.date) - new Date(a.date));
-        listBody.innerHTML = referralList.length ? referralList.map(r => `<tr><td>${r.date}</td><td style="color:#0066cc; font-weight:bold;">${r.parent}</td><td>${r.child}</td></tr>`).join('') : '<tr><td colspan="3" style="text-align:center">尚無推薦紀錄</td></tr>';
-        if(sponsors.length === 0) { treeContainer.innerHTML = "<div style='padding:20px; color:#666;'>請先建立「發起人」資料。</div>"; return; }
-        function buildTree(memberId, memberName, date) {
-            let html = `<div class="tree-node"><div class="tree-content"><i class="fas fa-user" style="color:#555"></i><div class="tree-name">${memberName}</div><div class="tree-id">#${memberId}</div></div>`;
-            if(date) html += `<div style="position:relative"><span style="position:absolute; left:35px; top:-8px; font-size:0.7rem; color:#999;"><i class="far fa-clock"></i> ${date} 加入</span></div>`;
-            if(childrenMap[memberId]) { childrenMap[memberId].forEach(child => { html += buildTree(child.id, child.name, child.date); }); }
-            html += `</div>`; return html;
+    function populateMonthSelect() {
+        const s = document.getElementById('dashMonthSelect');
+        for(let i=1;i<=12;i++) {
+            let v = `2026-${i.toString().padStart(2,'0')}`;
+            s.add(new Option(`2026-${i}`, v));
         }
-        let fullHtml = "";
-        sponsors.forEach(sp => {
-            const roots = members.filter(m => { if(m.sponsorId !== sp.id) return false; const uplineId = parentMap[m.id]; if(!uplineId) return true; return false; });
-            if(roots.length > 0) {
-                fullHtml += `<div class="tree-node tree-root"><div class="tree-content"><i class="fas fa-crown"></i><div class="tree-name">${sp.name}</div></div>`;
-                roots.forEach(root => { fullHtml += buildTree(root.id, root.name, null); });
-                fullHtml += `</div>`;
-            }
-        });
-        if(!fullHtml) fullHtml = "<div style='padding:20px; color:#999;'>尚無組織結構。</div>";
-        treeContainer.innerHTML = fullHtml;
+        s.value = new Date().toISOString().slice(0,7);
     }
-
-    function clearAllData() { if(prompt("輸入DELETE確認")!=='DELETE')return; localStorage.clear(); members=[]; logs=[]; sponsors=[]; saveToCloud(); alert("已清除"); location.reload(); }
-    function exportPDF(){const e=document.getElementById('dashboard');html2pdf().set({margin:0.2,filename:'Report.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2},jsPDF:{unit:'in',format:'a4',orientation:'landscape'}}).from(e).save();}
+    function addSponsor() {
+        const name = document.getElementById('newSponsorName').value;
+        const id = document.getElementById('newSponsorID').value;
+        if(name && id) { sponsors.push({id, name}); saveToLocal(); refreshAllUI(); }
+    }
+    function deleteMember(id) { if(confirm("確定刪除?")) { members=members.filter(m=>m.id!==id); saveToLocal(); refreshAllUI(); } }
+    function deleteLog(id) { if(confirm("確定刪除?")) { logs=logs.filter(l=>l.id!==id); saveToLocal(); refreshAllUI(); } }
+    function clearAllData() { if(prompt("輸入 DELETE 確認")==='DELETE') { members=[]; logs=[]; sponsors=[]; saveToCloud(); location.reload(); } }
 </script>
+
 </body>
 </html>
