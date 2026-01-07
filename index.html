@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新星啟動計畫旗艦系統 (2026 Pro v2.6)</title>
+    <title>新星啟動計畫旗艦系統 (2026 Cloud Pro v2.9)</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
@@ -110,7 +115,7 @@
 <body>
 
     <div class="sidebar">
-        <div class="logo"><i class="fas fa-gem"></i> 新星啟動系統 Pro</div>
+        <div class="logo"><i class="fas fa-gem"></i> 新星啟動系統 <small style="font-size:0.6em; color:#28a745;">(雲端版)</small></div>
         
         <div class="nav-divider">數據管理</div>
         <div class="nav-item active" onclick="switchTab('dashboard')"><i class="fas fa-chart-line"></i> 業績戰情室</div>
@@ -170,7 +175,7 @@
                 <div class="card">
                     <h3><i class="fas fa-sitemap"></i> 推薦階層樹狀圖</h3>
                     <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">
-                        系統根據您在「日誌」中輸入的推薦紀錄，自動產生上下線關係。
+                        系統根據您在「日誌」中輸入的推薦紀錄，自動產生上下線關係。(雲端同步)
                     </p>
                     <div id="treeContainer" style="overflow-x:auto; padding-bottom:20px;">
                         </div>
@@ -255,7 +260,7 @@
             <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h3>會員列表</h3>
-                    <button class="btn btn-outline" onclick="document.getElementById('entry').click(); switchTab('entry');"><i class="fas fa-plus"></i> 去新增紀錄建立會員</button>
+                    <button class="btn btn-outline" onclick="switchTab('entry');"><i class="fas fa-plus"></i> 去新增紀錄建立會員</button>
                 </div>
                 <div style="max-height: 500px; overflow-y: auto;">
                     <table id="memberTable"><thead><tr><th>編號</th><th>姓名</th><th>操作</th></tr></thead><tbody></tbody></table>
@@ -318,6 +323,65 @@
     </div>
 
 <script>
+    // ================================
+    // Cloud Sync (Firebase Firestore)
+    // ================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCanDeinCJyZFeHUGnYVEmalCYxjwaIw-4",
+      authDomain: "newstar-system.firebaseapp.com",
+      projectId: "newstar-system",
+      storageBucket: "newstar-system.firebasestorage.app",
+      messagingSenderId: "889699172174",
+      appId: "1:889699172174:web:0ff42757035a879cb3281f"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const TEAM_ID = "newstar_main";
+
+    let unsubscribe = null;
+    function startCloudSync() {
+      const ref = db.collection("newstar").doc(TEAM_ID);
+      if (unsubscribe) unsubscribe();
+      unsubscribe = ref.onSnapshot((snap) => {
+        if (!snap.exists) {
+            // 修正: 第一次使用自動初始化雲端
+            saveToCloud();
+            return;
+        }
+        
+        const data = snap.data();
+        if (!data || !Array.isArray(data.members) || !Array.isArray(data.logs)) return;
+
+        members = data.members;
+        logs = data.logs;
+
+        localStorage.setItem("amway_members", JSON.stringify(members));
+        localStorage.setItem("amway_logs", JSON.stringify(logs));
+
+        // UI Refresh
+        if(typeof renderMembers === 'function') renderMembers();
+        if(typeof updateMemberSelects === 'function') updateMemberSelects();
+        if(typeof renderLogs === 'function') renderLogs();
+        if(typeof renderDashboard === 'function') renderDashboard();
+        if(typeof runSimulation === 'function') runSimulation();
+        if(typeof renderNetwork === 'function') renderNetwork(); 
+      });
+    }
+
+    let saveTimer = null;
+    function saveToCloud() {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        db.collection("newstar").doc(TEAM_ID).set(
+          { members, logs, updatedAt: new Date().toISOString() },
+          { merge: true }
+        );
+      }, 300);
+    }
+
     // --- Global Data ---
     let members = JSON.parse(localStorage.getItem('amway_members')) || [];
     let logs = JSON.parse(localStorage.getItem('amway_logs')) || [];
@@ -326,6 +390,11 @@
         document.getElementById('entryDate').valueAsDate = new Date();
         document.getElementById('filterMonth').value = new Date().toISOString().slice(0, 7);
         populateMonthSelect(); renderMembers(); updateMemberSelects(); renderLogs(); renderDashboard(); runSimulation();
+        
+        // Auto Login & Sync
+        auth.signInAnonymously()
+            .then(() => startCloudSync())
+            .catch(err => console.error("Firebase auth error:", err));
     });
 
     function switchTab(tabId) {
@@ -340,7 +409,7 @@
         if(tabId==='network') renderNetwork(); 
     }
 
-    // --- Network Tree Logic ---
+    // --- Network Tree ---
     function renderNetwork() {
         const treeContainer = document.getElementById('treeContainer');
         const listBody = document.querySelector('#referralTable tbody');
@@ -381,7 +450,7 @@
         }
     }
 
-    // --- Standard Logic ---
+    // --- Core Logic ---
     function checkMemberSelect() {
         const val = document.getElementById('entryMember').value;
         document.getElementById('quickAddMemberBox').style.display = (val === 'new_mode') ? 'block' : 'none';
@@ -456,28 +525,21 @@
         if(!date) return alert("請選擇日期");
         if(!memberId) return alert("請選擇會員");
 
-        // --- NEW: Sync Logic for Quick Add ---
+        // Sync Logic for Quick Add
         if (memberId === 'new_mode') {
             const newName = document.getElementById('quickNewMemName').value.trim();
             const newID = document.getElementById('quickNewMemID').value.trim();
             if(!newName || !newID) return alert("請輸入新會員資料");
             if(members.find(m=>m.id===newID)) return alert("編號重複");
             
-            // 1. Create member immediately
             members.push({id: newID, name: newName});
-            
-            // 2. Refresh lists (so dropdowns are updated)
             updateMemberSelects();
             renderMembers();
-            
-            // 3. Set the current select to this new ID automatically
             document.getElementById('entryMember').value = newID;
             memberId = newID;
-            
-            // 4. Clear quick add inputs & hide box
             document.getElementById('quickNewMemName').value = '';
             document.getElementById('quickNewMemID').value = '';
-            checkMemberSelect(); // this will hide the box because value is no longer 'new_mode'
+            checkMemberSelect(); 
         }
 
         let savedCount = 0;
@@ -493,7 +555,6 @@
             const nBV = parseFloat(document.getElementById('newcomerBV').value) || 0;
             if(!nID) return alert("請輸入新人編號 (用於建立組織關係)");
             
-            // Auto-add newcomer to member list if not exists
             if(!members.find(m=>m.id===nID)) {
                 members.push({id: nID, name: nName});
             }
@@ -520,15 +581,13 @@
         document.getElementById('newcomerName').value = ''; document.getElementById('newcomerID').value = ''; document.getElementById('newcomerBV').value = '';
         document.getElementById('learningNote').value = ''; document.getElementById('learningFileCheck').checked = false;
         
-        // Keep the current member selected for continuous entry, or reset? 
-        // Let's keep it selected for convenience, but recalculate instant bonus (should be 0 change now)
         updateInstantCalc();
     }
 
     function saveToLocal() {
         localStorage.setItem('amway_members', JSON.stringify(members));
         localStorage.setItem('amway_logs', JSON.stringify(logs));
-        // Note: updateMemberSelects() moved to explicit call when needed to avoid resetting selection during typing
+        saveToCloud(); // Sync Trigger
     }
     
     function deleteMember(id){ if(confirm("刪除?")) { members=members.filter(m=>m.id!==id); saveToLocal(); updateMemberSelects(); renderMembers(); } }
@@ -540,25 +599,17 @@
     }
     
     function updateMemberSelects() {
-        // Save current selection if any
         const currentEntryVal = document.getElementById('entryMember').value;
         const currentFilterVal = document.getElementById('filterMember').value;
-
         let html = '<option value="" disabled selected>-- 選擇 --</option>';
         html += '<option value="new_mode" style="color:blue; font-weight:bold;">➕ 新增會員...</option>';
         html += members.map(m=>`<option value="${m.id}">${m.name} (${m.id})</option>`).join('');
-        
         const entrySel = document.getElementById('entryMember');
         entrySel.innerHTML = html;
-        if(currentEntryVal && currentEntryVal !== 'new_mode' && members.find(m=>m.id===currentEntryVal)) {
-            entrySel.value = currentEntryVal;
-        }
-
+        if(currentEntryVal && currentEntryVal !== 'new_mode' && members.find(m=>m.id===currentEntryVal)) entrySel.value = currentEntryVal;
         const filterSel = document.getElementById('filterMember');
         filterSel.innerHTML = '<option value="all">全部</option>' + members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
-        if(currentFilterVal && members.find(m=>m.id===currentFilterVal)) {
-            filterSel.value = currentFilterVal;
-        }
+        if(currentFilterVal && members.find(m=>m.id===currentFilterVal)) filterSel.value = currentFilterVal;
     }
 
     function renderLogs() {
@@ -629,7 +680,7 @@
         else { document.getElementById('simGraduateMsg').style.display='none'; document.getElementById('simValTotal').innerText=res.total.toLocaleString(); }
     }
     function exportData(){
-        const d = {members, logs, version:"Pro_2026_v2.6"};
+        const d = {members, logs, version:"Pro_2026_v2.9"};
         const url = URL.createObjectURL(new Blob([JSON.stringify(d)],{type:"application/json"}));
         const a=document.createElement('a'); a.href=url; a.download=`NewStar_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
     }
@@ -639,7 +690,24 @@
             try{ const d=JSON.parse(e.target.result); if(d.members&&d.logs&&confirm("覆蓋資料?")){members=d.members;logs=d.logs;saveToLocal();location.reload();} }catch(e){alert("錯誤");}
         }; r.readAsText(f);
     }
-    function clearAllData(){if(prompt("輸入DELETE確認")==='DELETE'){localStorage.clear();location.reload();}}
+    
+    // 修正: 徹底清除（含雲端）
+    function clearAllData() {
+      if (prompt("輸入DELETE確認") !== 'DELETE') return;
+
+      // 清本機
+      localStorage.removeItem('amway_members');
+      localStorage.removeItem('amway_logs');
+
+      // 清雲端
+      members = [];
+      logs = [];
+      saveToCloud();
+
+      alert("已清除（含雲端同步資料）");
+      location.reload();
+    }
+
     function exportPDF(){const e=document.getElementById('dashboard');html2pdf().set({margin:0.2,filename:'Report.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2},jsPDF:{unit:'in',format:'a4',orientation:'landscape'}}).from(e).save();}
 </script>
 </body>
