@@ -308,7 +308,7 @@ function renderPartners() {
     const term = localStorage.getItem('p_search') || '';
     const list = store.data.partners.filter(p => p.code.includes(term)||p.name.includes(term));
     document.getElementById('app').innerHTML = `
-        <header>${header('伙伴名單')} <button class="btn btn-primary" onclick="editPartner()">+ 新增</button></header>
+        <header>${header('夥伴名單')} <button class="btn btn-primary" onclick="editPartner()">+ 新增</button></header>
         <input class="form-control" style="max-width:300px;margin-bottom:15px" placeholder="🔍 搜尋 編號/姓名" value="${term}" oninput="localStorage.setItem('p_search',this.value);renderPartners()">
         <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>推薦人</th><th>發起人</th><th>狀態</th><th>操作</th></tr></thead><tbody>
         ${list.map(p => `<tr>
