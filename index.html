@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新星啟動計畫系統 (v3.5 邏輯核心版)</title>
+    <title>新星啟動計畫系統 (v3.6 完整修正版)</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -21,11 +21,10 @@
             --danger-bg: #fff0f0;  --danger-text: #e15f5f;
             --warning-bg: #fff8e1; --warning-text: #f39c12;
             --gray-bg: #f1f3f5;    --gray-text: #adb5bd;
-            --info-bg: #e3f2fd;    --info-text: #0984e3;
             
-            /* 獨立計畫專用色 (金/紫) */
-            --indep-border: #f1c40f;
+            /* 獨立計畫專用色 */
             --indep-bg: #fef9e7;
+            --indep-border: #f1c40f;
             
             /* 介面色 */
             --bg-body: #f4f6f8;
@@ -62,11 +61,10 @@
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; padding-bottom: 15px; border-bottom: 1px dashed var(--border); }
         .menu-btn { background: white; border: 1px solid var(--border); width: 36px; height: 36px; border-radius: var(--radius); cursor: pointer; color: var(--text-main); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: 0.2s; box-shadow: var(--shadow-sm); }
         h1 { font-size: 1.5rem; letter-spacing: -0.5px; }
-        .page-desc { display: block; margin-top: -10px; margin-bottom: 20px; color: var(--text-sub); font-size: 0.9rem; padding-left: 5px; }
-
+        
         /* UI Components */
         .card { background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 25px; margin-bottom: 25px; border: 1px solid var(--border); transition: 0.3s; }
-        .btn { padding: 9px 18px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 0.92rem; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 500; letter-spacing: 0.3px; line-height: 1.2; }
+        .btn { padding: 8px 16px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 0.92rem; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 500; letter-spacing: 0.3px; line-height: 1.2; }
         .btn:active { transform: translateY(1px); }
         .btn-primary { background: var(--accent); color: white; box-shadow: 0 2px 6px rgba(0,184,148,0.25); } .btn-primary:hover { background: var(--accent-hover); }
         .btn-danger { background: #fff; color: var(--danger-text); border: 1px solid #fab1a0; } .btn-danger:hover { background: var(--danger-bg); border-color: var(--danger-text); }
@@ -110,6 +108,9 @@
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(44, 62, 80, 0.6); backdrop-filter: blur(3px); }
         .modal-content { background-color: #fff; margin: 2vh auto; padding: 0; border: none; width: 95%; max-width: 1000px; border-radius: var(--radius-lg); max-height: 96vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .modal-header { padding: 18px 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .modal-header h2 { margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 10px; }
+        .close { font-size: 24px; cursor: pointer; color: #b2bec3; transition: 0.2s; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; } 
+        .close:hover { background: var(--gray-bg); color: var(--danger); }
         .modal-body { padding: 25px; overflow-y: auto; flex: 1; background: #fcfcfc; }
         
         .record-modal-grid { display: flex; gap: 30px; align-items: flex-start; }
@@ -168,6 +169,9 @@
         #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f4f7f6; display: flex; justify-content: center; align-items: center; z-index: 2000; }
         .spinner { border: 4px solid rgba(0,0,0,0.05); width: 48px; height: 48px; border-radius: 50%; border-left-color: var(--accent); animation: spin 0.8s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #sync-status { position: fixed; bottom: 20px; right: 20px; padding: 8px 16px; background: rgba(0,0,0,0.8); color: white; border-radius: 30px; font-size: 0.85rem; pointer-events: none; display: flex; align-items: center; gap: 8px; z-index: 999; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
+        .dot.connected { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
         
         @media (max-width: 768px) {
             body { flex-direction: column; overflow-y: auto; }
@@ -186,6 +190,7 @@
 <body>
 
 <div id="loading-screen"><div class="spinner"></div></div>
+<div id="sync-status"><div class="dot" id="sync-dot"></div><span id="sync-text">離線</span></div>
 
 <aside id="sidebar">
     <h2>🚀 新星啟動計畫</h2>
@@ -201,7 +206,7 @@
         <a onclick="router('settings')" id="nav-settings">🛠️ 系統設定</a>
         <a onclick="router('faq')" id="nav-faq">❓ 系統說明 (FAQ)</a>
     </nav>
-    <div class="footer">v3.5 邏輯核心版</div>
+    <div class="footer">v3.6 完整修正版</div>
 </aside>
 
 <main id="app"></main>
@@ -225,6 +230,12 @@ const store = {
     data: appData,
     init() {
         if (!isFirebaseReady) return;
+        const syncDot = document.getElementById('sync-dot');
+        const syncText = document.getElementById('sync-text');
+        db.ref(".info/connected").on("value", (snap) => {
+            if (snap.val() === true) { syncDot.classList.add('connected'); syncText.innerText = "已連線"; } 
+            else { syncDot.classList.remove('connected'); syncText.innerText = "離線"; }
+        });
         db.ref('AmwaySystem/v1').on('value', (snapshot) => {
             const val = snapshot.val();
             if (val) {
@@ -281,8 +292,6 @@ function getAttribution(partnerId) {
     // 2. Check Scope
     let isWithinScope = false;
     if (ownerId) {
-        // If owner is a partner (Independent), they are the root.
-        // If owner is system initiator, check configured roots.
         const ownerPartner = store.getPartner(ownerId);
         let roots = [];
         
@@ -293,18 +302,7 @@ function getAttribution(partnerId) {
             roots = scope.roots || [];
         }
 
-        // Check if partnerId is descendant of any root within 5 levels
-        // Simplified check: since we already traced up in 'path', check if any node in path is a root
-        // and if distance <= 5
-        
-        // However, 'path' only goes up to the cut. 
-        // We need to see if the top of the path connects to a root.
-        
-        // Correct approach:
-        // Find if partnerId is under any of the 'roots' with distance <= 5
-        // AND ensuring no other 'initiator_root' is in between (already handled by step 1 finding nearest owner)
-        
-        // Traverse up from partnerId again
+        // Traverse up again to check if connected to root within 5 levels
         let p = store.getPartner(partnerId);
         let d = 1;
         while(p && d <= 5) {
@@ -387,33 +385,34 @@ function renderDashboard() {
         </div>`;
 }
 
-/* 2. Partners (Add Role Setting) */
+/* 2. Partners */
 function renderPartners() {
     const term = localStorage.getItem('p_search') || '';
     const list = store.data.partners.filter(p => p.code.includes(term)||p.name.includes(term));
     app.innerHTML = `<header>${getHeaderHtml('夥伴名單')}</header>
     <div class="toolbar"><input type="text" placeholder="🔍 搜尋" value="${term}" oninput="localStorage.setItem('p_search',this.value);renderPartners()">
     <button class="btn btn-primary" onclick="editPartner()">+ 新增</button></div>
-    <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>角色</th><th>上線</th><th>發起人(預設)</th><th>狀態</th><th>操作</th></tr></thead><tbody>
+    <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>角色</th><th>上線</th><th>發起人</th><th>狀態</th><th>操作</th></tr></thead><tbody>
     ${list.map(p => `<tr><td>${p.code}</td><td>${p.name}</td>
     <td>${p.planRole==='initiator_root'?'<span class="status-badge status-indep">⭐ 獨立計畫</span>':'一般夥伴'}</td>
     <td>${store.getPartner(p.sponsorId)?.name||'-'}</td><td>${store.getInitiator(p.initiatorId)?.name||'-'}</td>
     <td><span class="status-badge ${p.status==='inactive'?'status-inactive':'status-active'}">${p.status==='active'?'啟用':'停用'}</span></td>
-    <td><button class="btn btn-secondary btn-sm" onclick="editPartner('${p.id}')">編輯</button></td></tr>`).join('')}</tbody></table></div>`;
+    <td><button class="btn btn-secondary btn-sm" onclick="editPartner('${p.id}')">編輯</button> <button class="btn btn-danger btn-sm" onclick="deletePartner('${p.id}')">刪除</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 function editPartner(id) {
     const p = id ? store.getPartner(id) : {id:'', code:'', name:'', sponsorId:'', initiatorId:'', status:'active', planRole:'none'};
     const partners = store.data.partners.filter(x => x.id !== p.id); const initiators = store.data.initiators;
     openModal(id?'編輯夥伴':'新增夥伴', `<form onsubmit="savePartner(event,'${id||''}')">
     <div class="row"><div class="col"><label>編號</label><input class="form-control" name="code" value="${p.code}" required></div><div class="col"><label>姓名</label><input class="form-control" name="name" value="${p.name}" required></div></div>
-    <div class="form-group"><label>計畫角色</label><select class="form-control" name="planRole"><option value="none" ${p.planRole!=='initiator_root'?'selected':''}>一般夥伴</option><option value="initiator_root" ${p.planRole==='initiator_root'?'selected':''}>⭐ 獨立計畫參與者 (自己承擔發放)</option></select><small class="text-sub">若設為獨立，其下線業績將歸屬於他，不再上繳。</small></div>
+    <div class="form-group"><label>計畫角色</label><select class="form-control" name="planRole"><option value="none" ${p.planRole!=='initiator_root'?'selected':''}>一般夥伴</option><option value="initiator_root" ${p.planRole==='initiator_root'?'selected':''}>⭐ 獨立計畫參與者</option></select></div>
     <div class="row"><div class="col"><label>推薦人</label><select class="form-control" name="sponsorId"><option value="">-- 無 --</option>${partners.map(o=>`<option value="${o.id}" ${o.id===p.sponsorId?'selected':''}>${o.code} ${o.name}</option>`).join('')}</select></div><div class="col"><label>發起人(若無獨立上線時)</label><select class="form-control" name="initiatorId" required><option value="">-- 請選擇 --</option>${initiators.map(o=>`<option value="${o.id}" ${o.id===p.initiatorId?'selected':''}>${o.name}</option>`).join('')}</select></div></div>
     <div class="form-group"><label>狀態</label><select class="form-control" name="status"><option value="active" ${p.status==='active'?'selected':''}>啟用</option><option value="inactive" ${p.status==='inactive'?'selected':''}>停用</option></select></div>
     <button type="submit" class="btn btn-primary" style="width:100%">儲存</button></form>`);
 }
 function savePartner(e,id) { e.preventDefault(); const d = Object.fromEntries(new FormData(e.target)); if(id){const i=store.data.partners.findIndex(x=>x.id===id);store.data.partners[i]={...store.data.partners[i],...d}}else{store.data.partners.push({...d,id:generateUUID()})} store.save(); closeModal(); }
+function deletePartner(id) { if(confirm('確定刪除？此動作無法復原。')){ store.data.records=store.data.records.filter(r=>r.partnerId!==id); store.data.partners=store.data.partners.filter(x=>x.id!==id); store.save(); renderPartners(); } }
 
-/* 3. Records (Show Owner) */
+/* 3. Records */
 function renderRecords() {
     const month = localStorage.getItem('r_month') || new Date().toISOString().slice(0, 7);
     const list = store.getRecordsByMonth(month).map(calculateRecord).filter(x=>x);
@@ -422,8 +421,7 @@ function renderRecords() {
     <div class="card"><table><thead><tr><th>夥伴</th><th>歸屬發起人</th><th>回饋</th><th>狀態</th><th>操作</th></tr></thead><tbody>
     ${list.map(r => {
         const owner = store.getInitiator(r.planOwnerId) || store.getPartner(r.planOwnerId);
-        const ownerName = owner ? owner.name : '<span style="color:red">無</span>';
-        return `<tr><td>${r.partnerName}</td><td>${ownerName}</td><td style="font-weight:bold;color:var(--primary)">${formatMoney(r.totalIncome)}</td>
+        return `<tr><td>${r.partnerName}</td><td>${owner?owner.name:'無'}</td><td style="font-weight:bold;color:var(--primary)">${formatMoney(r.totalIncome)}</td>
         <td>${!r.isEligible ? '<span class="status-badge status-inactive">不計</span>' : '<span class="status-badge status-active">計算中</span>'}</td>
         <td><button class="btn btn-secondary btn-sm" onclick="editRecord('${r.id}')">編輯</button></td></tr>`;
     }).join('')}</tbody></table></div>`;
@@ -460,7 +458,7 @@ function editRecord(id, month) {
                 </div>
                 <div class="record-preview-col"><div id="preview-box" class="preview-card"></div><div class="desktop-actions" style="margin-top:15px;"><button type="submit" class="btn btn-primary" style="width:100%">儲存</button></div></div>
             </div>
-            <div class="modal-actions-bar"><button type="button" class="btn btn-secondary" onclick="closeModalSafe()">關閉</button><button type="submit" class="btn btn-primary">儲存</button></div>
+            <div class="modal-actions-bar"><button type="button" class="btn btn-secondary" onclick="closeModalSafe()">關閉</button>${id?`<button type="button" class="btn btn-danger" onclick="deleteRecord('${id}')">刪除</button>`:''}<button type="submit" class="btn btn-primary">儲存</button></div>
         </form>`);
     
     document.getElementById('recordForm').addEventListener('input', markDirty);
@@ -472,7 +470,6 @@ function renderPreview() {
     const box = document.getElementById('preview-box');
     if(!box || !res) return;
     
-    // Owner Info
     const owner = store.getInitiator(res.planOwnerId) || store.getPartner(res.planOwnerId);
     const ownerName = owner ? owner.name : '無';
     const scopeMsg = res.isWithinScope ? '' : '<div style="color:#e74c3c;font-weight:bold;margin-top:5px;">❌ 超出輔導範圍 (3寬5深)</div>';
@@ -505,18 +502,17 @@ function saveRecord(e, id) {
     else { record.id = generateUUID(); store.data.records.push(record); }
     isModalDirty = false; store.save(); closeModal();
 }
+function deleteRecord(id) { if(confirm('確定刪除？')) { store.data.records = store.data.records.filter(r => r.id !== id); store.save(); closeModal(); router('records'); } }
 
-/* 5. Payout (Group by Real Owner) */
+/* 5. Payout */
 function renderPayout() {
     const month = localStorage.getItem('pay_month') || new Date().toISOString().slice(0, 7);
     let records = store.getRecordsByMonth(month).map(calculateRecord).filter(x=>x);
     
-    // Grouping Logic: By planOwnerId
     const groups = {};
-    
     records.forEach(r => {
         const ownerId = r.planOwnerId;
-        if (!ownerId) { // Orphan
+        if (!ownerId) { 
             if (!groups['none']) groups['none'] = { name: '未指定/異常', records: [], total:0, paid:0, unpaid:0 };
             groups['none'].records.push(r);
         } else {
@@ -551,7 +547,7 @@ function renderPayout() {
 function togglePaid(id, status) { const r = store.getRecord(id); r.payoutStatus = status==='unpaid'?'paid':'unpaid'; store.save(); renderPayout(); }
 function exportPayoutCSV(month) { const records = store.getRecordsByMonth(month).map(calculateRecord).filter(x=>x); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob(['\uFEFF月份,發起人,夥伴,金額,狀態\n'+records.map(r=>`${r.month},${r.planOwnerId},${r.partnerName},${r.starTotal},${r.payoutStatus}`).join('\n')], { type: 'text/csv;charset=utf-8;' })); link.download = `Payout_${month}.csv`; link.click(); }
 
-/* 6. Org Chart (Logic Updated) */
+/* 6. Org Chart */
 function renderOrgChart() {
     const month = localStorage.getItem('org_month') || new Date().toISOString().slice(0, 7);
     const partners = store.data.partners; const records = store.getRecordsByMonth(month).map(calculateRecord);
@@ -563,13 +559,10 @@ function renderOrgChart() {
         const r = node.record;
         let classes = ['node']; 
         let label = r ? formatMoney(r.totalIncome) : '無';
-        let tooltip = '';
-
-        // Style logic
+        
         if (node.planRole === 'initiator_root') classes.push('independent');
         if (r && !r.isWithinScope) classes.push('out-scope');
         
-        // Owner Check (Visual Aid)
         let ownerTag = '';
         if (r && r.planOwnerId) {
             const owner = store.getInitiator(r.planOwnerId) || store.getPartner(r.planOwnerId);
@@ -585,7 +578,7 @@ function renderOrgChart() {
     }
 
     app.innerHTML = `<header>${getHeaderHtml('組織關聯圖')}</header>
-    <div class="toolbar"><input type="month" value="${month}" onchange="localStorage.setItem('org_month',this.value);renderOrgChart();">
+    <div class="toolbar"><input type="month" value="${month}" style="max-width:150px" onchange="localStorage.setItem('org_month',this.value);renderOrgChart();">
     <select onchange="localStorage.setItem('active_scope_initiator',this.value);renderOrgChart();"><option value="">-- 全覽 --</option>${store.data.initiators.map(i=>`<option value="${i.id}" ${i.id===activeScopeId?'selected':''}>${i.name}</option>`).join('')}</select></div>
     <div class="org-container"><div class="tree"><ul>${roots.map(renderNode).join('')}</ul></div></div>`;
 }
@@ -598,9 +591,11 @@ function showNodeDetails(pid, month) {
 }
 
 /* Other Pages */
-function renderInitiators() { app.innerHTML = `<header>${getHeaderHtml('發起人管理')} <button class="btn btn-primary" onclick="editInitiator()">+ 新增</button></header><div class="card"><table><thead><tr><th>姓名</th><th>操作</th></tr></thead><tbody>${store.data.initiators.map(i=>`<tr><td>${i.name}</td><td><button class="btn btn-sm btn-secondary" onclick="editInitiator('${i.id}')">編輯</button></td></tr>`).join('')}</tbody></table></div>`; }
+function renderInitiators() { app.innerHTML = `<header>${getHeaderHtml('發起人管理')} <button class="btn btn-primary" onclick="editInitiator()">+ 新增</button></header><div class="card"><table><thead><tr><th>姓名</th><th>操作</th></tr></thead><tbody>${store.data.initiators.map(i=>`<tr><td>${i.name}</td><td><button class="btn btn-sm btn-secondary" onclick="editInitiator('${i.id}')">編輯</button> <button class="btn btn-danger btn-sm" onclick="deleteInitiator('${i.id}')">刪除</button></td></tr>`).join('')}</tbody></table></div>`; }
 function editInitiator(id) { const i = id?store.getInitiator(id):{id:'',code:'',name:''}; openModal(id?'編輯':'新增', `<form onsubmit="saveInitiator(event,'${id||''}')"><div class="form-group"><label>姓名</label><input class="form-control" name="name" value="${i.name}" required></div><button class="btn btn-primary" style="width:100%">儲存</button></form>`); }
 function saveInitiator(e,id) { e.preventDefault(); const d=Object.fromEntries(new FormData(e.target)); if(id){const x=store.data.initiators.findIndex(k=>k.id===id);store.data.initiators[x]={...store.data.initiators[x],...d}}else{store.data.initiators.push({...d,id:generateUUID()})} store.save(); closeModal(); }
+function deleteInitiator(id){if(confirm('刪除？')){store.data.partners.forEach(p=>{if(p.initiatorId===id)p.initiatorId=''});store.data.initiators=store.data.initiators.filter(i=>i.id!==id);store.save();renderInitiators();}}
+
 function renderVersions() { app.innerHTML = `<header>${getHeaderHtml('版本控管')}</header><div class="card"><p>版本管理功能與參數設定</p></div>`; }
 function renderSettings() { app.innerHTML = `<header>${getHeaderHtml('系統設定')}</header><div class="card"><button class="btn btn-danger" onclick="if(confirm('清空？')) db.ref('AmwaySystem/v1').remove();">清空資料</button></div>`; }
 function renderFAQ() { app.innerHTML = `<header>${getHeaderHtml('說明')}</header><div class="card"><p>邏輯說明：3寬5深、獨立計畫切割。</p></div>`; }
