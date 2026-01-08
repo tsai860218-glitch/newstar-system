@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新星啟動計畫系統 (v3.3 說明與防呆版)</title>
+    <title>新星啟動計畫系統 (v3.4 組織架構邏輯版)</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -48,7 +48,7 @@
         .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 500; }
         .btn:hover { transform: translateY(-1px); }
         .btn-primary { background: var(--accent); color: white; } .btn-primary:hover { background: var(--accent-hover); }
-        .btn-danger { background: var(--danger); color: white; } .btn-danger:hover { background: var(--danger-hover); }
+        .btn-danger { background: var(--danger); color: white; } .btn-danger:hover { background: #c0392b; }
         .btn-secondary { background: #95a5a6; color: white; } .btn-secondary:hover { background: #7f8c8d; }
         .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); } .btn-outline:hover { background: var(--accent); color: white; }
         
@@ -64,7 +64,6 @@
         .status-paid { background: #d4efdf; color: var(--success); }
         .status-unpaid { background: #fce4ec; color: #c0392b; }
         .status-month-inactive { background: #fff3e0; color: #e67e22; border: 1px solid #ffe0b2; }
-        .status-archived { background: #f0f0f0; color: #7f8c8d; }
 
         /* Tables */
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; }
@@ -102,25 +101,20 @@
         .preview-amount-big { font-size: 2.5rem; font-weight: 800; color: var(--success); text-align: right; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px; line-height: 1; }
         .preview-amount-big.zero { color: #bdc3c7; }
         .preview-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; color: #555; }
-        .preview-row.total { font-weight: 700; color: #000; border-top: 2px solid #eee; padding-top: 10px; margin-top: 10px; font-size: 1.1rem; }
         .preview-details { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; font-size: 0.85rem; color: #888; }
-        .preview-details h5 { margin: 0 0 5px 0; color: #555; font-size: 0.9rem; }
-        .preview-details div { margin-bottom: 3px; display: flex; justify-content: space-between; }
-        
         .status-tag { padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; background: #eee; font-weight: bold; }
 
-        /* 🔥 FAQ Accordion */
+        /* FAQ */
         .faq-item { border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; overflow: hidden; background: white; }
         .faq-question { padding: 15px; background: #fff; cursor: pointer; font-weight: 600; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
         .faq-question:hover { background: #f8f9fa; color: var(--accent); }
-        .faq-question::after { content: '+'; font-size: 1.2rem; color: #ccc; }
-        .faq-item.active .faq-question::after { content: '-'; color: var(--primary); }
         .faq-answer { display: none; padding: 15px; border-top: 1px solid #eee; color: #555; font-size: 0.95rem; line-height: 1.6; background: #fdfdfd; }
         .faq-item.active .faq-answer { display: block; }
         .faq-badge { background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
 
-        /* Org Chart Nodes */
+        /* 🔥 Org Chart Visuals - Updated for 3x5 Scope */
         .org-container { overflow: auto; padding: 40px 20px; height: 650px; background: white; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,0,0,0.03); position: relative; text-align: center; }
+        
         .tree ul { padding-top: 20px; position: relative; transition: all 0.5s; display: inline-flex; justify-content: center; }
         .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; transition: all 0.5s; }
         .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 1px solid #ccc; width: 50%; height: 20px; }
@@ -132,12 +126,14 @@
         .tree li:first-child::after { border-radius: 5px 0 0 0; }
         .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 1px solid #ccc; width: 0; height: 20px; }
 
-        .node { border: 2px solid #ccc; padding: 8px 12px; text-decoration: none; color: #333; font-size: 13px; display: inline-block; border-radius: 8px; transition: all 0.3s; min-width: 130px; position: relative; cursor: pointer; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .node { border: 2px solid #ccc; padding: 8px 12px; text-decoration: none; color: #333; font-size: 13px; display: inline-block; border-radius: 8px; transition: all 0.3s; min-width: 140px; position: relative; cursor: pointer; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .node:hover { transform: scale(1.05); z-index: 20; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
         .node .name { font-weight: 800; font-size: 14px; margin-bottom: 4px; display: block; }
         .node .status { font-size: 12px; font-weight: bold; }
-        .node .icon { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .node .level-badge { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #34495e; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .node .icon { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         
+        /* Node States */
         .node.unpaid { border-color: #e74c3c; background-color: #fdedec; }
         .node.unpaid .name { color: #c0392b; }
         .node.unpaid .status { color: #e74c3c; }
@@ -148,29 +144,32 @@
         .node.paid .status { color: #27ae60; }
         .node.paid .icon { background-color: #27ae60; }
         
-        /* 👤 夥伴停用 (全灰) */
         .node.inactive { border-color: #bdc3c7; background-color: #f0f0f0; color: #95a5a6; }
         .node.inactive .name { color: #7f8c8d; text-decoration: line-through; }
-        .node.inactive .status { color: #95a5a6; }
         
-        /* 🎓 畢業 */
         .node.graduate { border-color: #16a085; background-color: #e0f2f1; }
         .node.graduate .name { color: #0e6655; }
-        .node.graduate .status { color: #16a085; }
         .node.graduate .icon { background-color: #1abc9c; }
-        
-        /* 📅 本月停用 (Participation inactive) */
+
         .node.month-inactive { border: 2px dashed #95a5a6; background-color: #fff; }
-        .node.month-inactive .status { color: #95a5a6; font-weight: normal; }
-
         .node.no-record { border: 2px dashed #bdc3c7; background-color: white; opacity: 0.8; }
-        .node.no-record .status { color: #bdc3c7; font-weight: normal; }
-
-        .node.in-scope { box-shadow: 0 0 0 3px rgba(241, 196, 15, 0.3); }
+        
+        /* Scope & Independent System Styles */
         .node.scope-root { border: 3px solid #f1c40f; transform: scale(1.05); }
+        .node.out-of-scope { opacity: 0.5; filter: grayscale(1); border-style: dotted; }
+        .node.out-of-scope .level-badge { background: #95a5a6; }
+        
+        .node.independent-sys { border-color: #8e44ad; background-color: #f4ecf7; }
+        .node.independent-sys .name { color: #8e44ad; }
+        .node.independent-sys .level-badge { background: #8e44ad; }
+        .node.independent-sys::after { content: '⭐ 獨立發起人'; display: block; font-size: 10px; color: #8e44ad; margin-top: 3px; font-weight: bold; }
 
-        .node .tooltip { visibility: hidden; width: 180px; background-color: #333; color: #fff; text-align: left; border-radius: 6px; padding: 10px; position: absolute; z-index: 1; bottom: 120%; left: 50%; margin-left: -90px; opacity: 0; transition: opacity 0.3s; font-size: 11px; line-height: 1.4; pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .node .tooltip { visibility: hidden; width: 200px; background-color: #333; color: #fff; text-align: left; border-radius: 6px; padding: 10px; position: absolute; z-index: 100; bottom: 120%; left: 50%; margin-left: -100px; opacity: 0; transition: opacity 0.3s; font-size: 11px; line-height: 1.4; pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .node:hover .tooltip { visibility: visible; opacity: 1; }
+
+        .legend { margin-top: 15px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; font-size: 0.85rem; }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-box { width: 15px; height: 15px; border-radius: 3px; border: 1px solid #ccc; }
 
         /* Toolbar */
         .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: white; padding: 10px 15px; border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 20px; }
@@ -210,7 +209,7 @@
         <a onclick="router('settings')" id="nav-settings">🛠️ 系統設定</a>
         <a onclick="router('faq')" id="nav-faq">❓ 系統說明 (FAQ)</a>
     </nav>
-    <div class="footer">v3.3 說明與防呆版</div>
+    <div class="footer">v3.4 組織架構邏輯版</div>
 </aside>
 
 <main id="app"></main>
@@ -303,12 +302,10 @@ function calculateCore(r, partner) {
     const version = store.getVersion(r.planVersionId);
     const params = version.params;
     const myRate = getBonusPercent(r.gpv);
-    const legDetails = (r.legs || []).map(leg => ({ ...leg, bonus: 0 }));
-
+    
     let starTotal=0, baseBonus=0, recruitBonus=0, learningBonus=0;
     let isGraduated = r.gpv >= 1000;
     
-    // 🔥 優化定義：Partner Inactive (全停) OR Participation Inactive (當月停)
     let isPartnerInactive = partner.status === 'inactive';
     let isMonthlyInactive = r.participation === 'inactive';
     let isEligible = !isGraduated && !isMonthlyInactive && !isPartnerInactive;
@@ -323,7 +320,7 @@ function calculateCore(r, partner) {
         else { isEligible = false; }
 
         if (isEligible) {
-            const independentLegsBV = legDetails.filter(l => l.isIndependent).reduce((sum, l) => sum + (Number(l.bv)||0), 0);
+            const independentLegsBV = (r.legs||[]).filter(l => l.isIndependent).reduce((sum, l) => sum + (Number(l.bv)||0), 0);
             calcBaseBV = Math.max(0, (r.gpv * 50) - independentLegsBV);
             baseBonus = calcBaseBV * appliedRate;
             const newRecruitTotalBV = (r.newRecruits||[]).reduce((sum, nr) => sum + (Number(nr.bv)||0), 0);
@@ -336,7 +333,6 @@ function calculateCore(r, partner) {
 }
 function calculateRecord(r) { return calculateCore(r, store.getPartner(r.partnerId)); }
 function calculatePreview(r) { 
-    // 為了預覽，抓取當前選中的 partner (如果有的話)
     let p = store.getPartner(r.partnerId);
     if (!p) p = { name:'', code:'', initiatorId:'', status:'active' }; 
     return calculateCore(r, p); 
@@ -368,73 +364,11 @@ function renderDashboard() {
         </div>`;
 }
 
-/* 🆕 FAQ Page */
-function renderFAQ() {
-    app.innerHTML = `<header>${getHeaderHtml('系統說明 (FAQ)')}</header>
-    <span class="page-desc">本頁為內部管理與紀錄用途，說明系統各項狀態與操作邏輯，不影響安麗公司制度與資格。</span>
-    
-    <div class="faq-item">
-        <div class="faq-question" onclick="toggleFAQ(this)">【一】關於夥伴狀態 (啟用/停用)</div>
-        <div class="faq-answer">
-            <strong>Q：什麼是「夥伴啟用 / 停用」？</strong><br>
-            A：<br>
-            • <span class="faq-badge">啟用</span>：代表此夥伴目前仍列入「新星啟動計畫」的追蹤與計算。<br>
-            • <span class="faq-badge">停用</span>：代表此夥伴暫時不參與新星啟動計畫的獎金計算。<br><br>
-            <small style="color:#e74c3c">※ 注意：停用 ≠ 退出安麗，也不會刪除資料。僅影響本系統的內部管理與獎金試算。</small>
-        </div>
-    </div>
-
-    <div class="faq-item">
-        <div class="faq-question" onclick="toggleFAQ(this)">【二】關於「本月停用」</div>
-        <div class="faq-answer">
-            <strong>Q：夥伴是啟用，但本月顯示「停用」是什麼意思？</strong><br>
-            A：代表這位夥伴「人還在追蹤中」，但該月份選擇不參與新星啟動計畫計算（例如暫停、請假）。<br><br>
-            <strong>對照說明：</strong><br>
-            • 夥伴狀態：長期設定（人）<br>
-            • 本月停用：單月設定（這個月）
-        </div>
-    </div>
-
-    <div class="faq-item">
-        <div class="faq-question" onclick="toggleFAQ(this)">【三】關於獎金計算與顯示</div>
-        <div class="faq-answer">
-            <strong>Q：系統計算的是什麼獎金？</strong><br>
-            A：本系統僅計算「新星啟動計畫」的團隊激勵回饋，不等於安麗公司實際發放的月結獎金。<br><br>
-            <strong>Q：什麼情況「本月不計」？</strong><br>
-            • 夥伴已停用<br>
-            • 本月設定停用<br>
-            • 已畢業（達成設定門檻）<br>
-            • 檔位不符合新星計畫範圍
-        </div>
-    </div>
-
-    <div class="faq-item">
-        <div class="faq-question" onclick="toggleFAQ(this)">【四】組織關聯圖顏色說明</div>
-        <div class="faq-answer">
-            🔴 <strong>紅色</strong>：本月有金額，但尚未發放<br>
-            🟢 <strong>綠色</strong>：已發放完成<br>
-            ⚪ <strong>灰色</strong>：夥伴停用、本月停用或無紀錄<br>
-            🎓 <strong>畢業</strong>：已完成新星階段
-        </div>
-    </div>
-    
-    <div class="faq-item">
-        <div class="faq-question" onclick="toggleFAQ(this)">【五】操作小提醒</div>
-        <div class="faq-answer">
-            • 建立業績紀錄時，請確認月份與夥伴是否正確。<br>
-            • 建議每月發放前，使用「未發放篩選」快速檢查。<br>
-            • 所有紀錄皆保留在雲端資料庫，可隨時匯出 JSON 備份。
-        </div>
-    </div>`;
-}
-function toggleFAQ(el) { el.parentElement.classList.toggle('active'); }
-
 /* 2. Partners */
 function renderPartners() {
     const term = localStorage.getItem('p_search') || '';
     const list = store.data.partners.filter(p => p.code.includes(term)||p.name.includes(term));
     app.innerHTML = `<header>${getHeaderHtml('夥伴名單管理')}</header>
-    <span class="page-desc">啟用／停用僅影響「新星啟動計畫」的追蹤與獎金計算，不影響安麗資格，也不會刪除任何歷史資料。</span>
     <div class="toolbar"><input type="text" placeholder="🔍 搜尋" value="${term}" oninput="localStorage.setItem('p_search',this.value);renderPartners()">
     <button class="btn btn-primary" onclick="editPartner()">+ 新增</button></div>
     <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>推薦人</th><th>發起人</th><th>狀態</th><th>操作</th></tr></thead><tbody>
@@ -444,16 +378,17 @@ function renderPartners() {
 }
 function editPartner(id) {
     const p = id ? store.getPartner(id) : {id:'', code:'', name:'', sponsorId:'', initiatorId:'', status:'active'};
-    const partners = store.data.partners.filter(x => x.id !== p.id); const initiators = store.data.initiators;
+    const partners = store.data.partners.filter(x => x.id !== p.id);
+    const initiators = store.data.initiators;
     openModal(id?'編輯夥伴':'新增夥伴', `<form onsubmit="savePartner(event,'${id||''}')">
     <div class="row"><div class="col"><label>編號</label><input class="form-control" name="code" value="${p.code}" required></div><div class="col"><label>姓名</label><input class="form-control" name="name" value="${p.name}" required></div></div>
     <div class="form-group"><label>推薦人</label><select class="form-control" name="sponsorId"><option value="">-- 無 --</option>${partners.map(o=>`<option value="${o.id}" ${o.id===p.sponsorId?'selected':''}>${o.code} ${o.name}</option>`).join('')}</select></div>
-    <div class="form-group"><label>發起人</label><select class="form-control" name="initiatorId" required><option value="">-- 請選擇 --</option>${store.data.initiators.map(o=>`<option value="${o.id}" ${o.id===p.initiatorId?'selected':''}>${o.name}</option>`).join('')}</select></div>
+    <div class="form-group"><label>發起人</label><select class="form-control" name="initiatorId" required><option value="">-- 請選擇 --</option>${initiators.map(o=>`<option value="${o.id}" ${o.id===p.initiatorId?'selected':''}>${o.name}</option>`).join('')}</select></div>
     <div class="form-group"><label>狀態</label><select class="form-control" name="status"><option value="active" ${p.status==='active'?'selected':''}>啟用</option><option value="inactive" ${p.status==='inactive'?'selected':''}>停用</option></select></div>
     <button type="submit" class="btn btn-primary" style="width:100%">儲存</button></form>`);
 }
 function savePartner(e,id) { e.preventDefault(); const d = Object.fromEntries(new FormData(e.target)); if(store.data.partners.some(p=>p.code===d.code&&p.id!==id)) return alert('編號重複'); if(id){const i=store.data.partners.findIndex(x=>x.id===id);store.data.partners[i]={...store.data.partners[i],...d}}else{store.data.partners.push({...d,id:generateUUID()})} store.save(); closeModal(); }
-function deletePartner(id) { if(confirm('確定刪除？')){ store.data.records=store.data.records.filter(r=>r.partnerId!==id); store.data.partners=store.data.partners.filter(x=>x.id!==id); store.save(); renderPartners(); } }
+function deletePartner(id) { if(confirm('確定刪除？這將連動刪除該夥伴所有月紀錄，並將下線與發起人關聯清空。')){ store.data.records=store.data.records.filter(r=>r.partnerId!==id); store.data.partners.forEach(p=>{if(p.sponsorId===id)p.sponsorId='';}); store.data.partners=store.data.partners.filter(x=>x.id!==id); store.save(); renderPartners(); } }
 
 /* 3. Records */
 function renderRecords() {
@@ -470,23 +405,10 @@ function renderRecords() {
     <label><input type="checkbox" ${filters.includes('unpaid')?'checked':''} onchange="toggle('unpaid')"> 未發放</label>
     <button class="btn btn-primary" onclick="editRecord(null,'${month}')">＋ 紀錄</button></div>
     <div class="card"><table><thead><tr><th>夥伴</th><th>狀態</th><th>PV</th><th>回饋</th><th>發放</th><th>操作</th></tr></thead><tbody>
-    ${list.map(r => {
-        // 🔥 Badge Logic for Records
-        let pStatus = r.isPartnerInactive ? '<span class="status-badge status-inactive">已停用</span>' : '<span class="status-badge status-active">啟用</span>';
-        let mStatus = '';
-        if (r.isGraduated) mStatus = '<span class="status-badge status-active">🎓 畢業</span>';
-        else if (r.isMonthlyInactive) mStatus = '<span class="status-badge status-month-inactive">本月不計</span>';
-        else mStatus = '<span class="status-badge status-active">參與中</span>';
-
-        return `<tr>
-            <td>${r.partnerName}</td>
-            <td>${pStatus}${mStatus}</td>
-            <td>${r.gpv} <small>(${ (r.myRate*100).toFixed(0) }%)</small></td>
-            <td style="font-weight:bold">${formatMoney(r.totalIncome)}</td>
-            <td><span class="status-badge ${r.payoutStatus==='paid'?'status-paid':'status-unpaid'}">${r.payoutStatus==='paid'?'已發放':'未發放'}</span></td>
-            <td><button class="btn btn-secondary" onclick="editRecord('${r.id}')">編輯</button></td>
-        </tr>`;
-    }).join('')}</tbody></table></div>`;
+    ${list.map(r => `<tr><td>${r.partnerName}</td><td>${r.isPartnerInactive?'<span class="status-badge status-inactive">停用</span>':r.isGraduated?'<span class="status-badge status-active">🎓 畢業</span>':r.isMonthlyInactive?'<span class="status-badge status-month-inactive">本月不計</span>':'<span class="status-badge status-active">參與中</span>'}</td>
+    <td>${r.gpv}</td><td style="font-weight:bold">${formatMoney(r.totalIncome)}</td>
+    <td><span class="status-badge ${r.payoutStatus==='paid'?'status-paid':'status-unpaid'}">${r.payoutStatus==='paid'?'已發放':'未發放'}</span></td>
+    <td><button class="btn btn-secondary" onclick="editRecord('${r.id}')">編輯</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 
 let isModalDirty = false;
@@ -499,14 +421,7 @@ function editRecord(id, month) {
     if(r.payoutStatus==='paid' && id && !confirm('已發放，確定編輯？')) return;
     tempRecord = JSON.parse(JSON.stringify(r));
     
-    // 🔥 Partner Options: Include all, mark inactive
-    const partnerOptions = store.data.partners.map(p => {
-        let label = p.code + ' ' + p.name;
-        if(p.status === 'inactive') label += ' (停用)';
-        return `<option value="${p.id}" ${p.id===r.partnerId?'selected':''} style="${p.status==='inactive'?'color:gray':''}">${label}</option>`;
-    }).join('');
-    
-    // 版本選單
+    const partnerOptions = store.data.partners.map(p => `<option value="${p.id}" ${p.id===r.partnerId?'selected':''} style="${p.status==='inactive'?'color:gray':''}">${p.code} ${p.name} ${p.status==='inactive'?'(停用)':''}</option>`).join('');
     const versionOptions = store.data.versions.filter(v => !v.archived || v.id === r.planVersionId).map(v => `<option value="${v.id}" ${v.id===r.planVersionId?'selected':''}>${v.name} ${v.archived?'(封存)':''}</option>`).join('');
 
     const modalHtml = `
@@ -559,7 +474,6 @@ function renderPreview() {
     const res = calculatePreview(tempRecord);
     const box = document.getElementById('preview-box');
     if(!box || !res) return;
-    
     let statusHtml = '<span class="status-tag" style="background:#e8f8f5;color:#27ae60">🟢 可發放</span>';
     if(res.isPartnerInactive) statusHtml = '<span class="status-tag" style="background:#f0f0f0;color:#7f8c8d">⏸ 夥伴已停用</span>';
     else if(res.isMonthlyInactive) statusHtml = '<span class="status-tag" style="background:#fff3e0;color:#e67e22">⚪ 本月不計</span>';
@@ -571,41 +485,23 @@ function renderPreview() {
     ${(res.isEligible) ? `<div class="preview-row"><span>比例</span><span>${res.appliedRateText}</span></div>
     <div class="preview-row"><span>基礎</span><span>${formatMoney(res.baseBonus)}</span></div>
     <div class="preview-row"><span>新人</span><span>${formatMoney(res.recruitBonus)}</span></div>
-    <div class="preview-row"><span>學習</span><span>${formatMoney(res.learningBonus)}</span></div>
-    <div class="preview-details">
-        <div><span>檔位</span><span>${(res.myRate*100).toFixed(0)}%</span></div>
-        <div><span>基數BV</span><span>${Math.round(res.calcBaseBV)}</span></div>
-    </div>` : `<div style="text-align:center;color:#999;padding:10px;">${res.isPartnerInactive?'夥伴已停用':res.isMonthlyInactive?'本月不計':res.isGraduated?'已畢業':'非適用檔位'}</div>`}`;
+    <div class="preview-row"><span>學習</span><span>${formatMoney(res.learningBonus)}</span></div>` : `<div style="text-align:center;color:#999;">本月不符合條件</div>`}`;
 }
 
-function renderLegs() { document.getElementById('legs-container').innerHTML = tempRecord.legs.map((l, i) => `<div style="display:flex;gap:5px;margin-bottom:5px;"><input style="flex:2" class="form-control" placeholder="腿名" value="${l.name}" oninput="tempRecord.legs[${i}].name=this.value"><input style="flex:1.5" type="number" class="form-control" placeholder="PV" value="${l.pv}" oninput="tempRecord.legs[${i}].pv=Number(this.value)"><input style="flex:1.5" type="number" class="form-control" placeholder="BV" value="${l.bv}" oninput="tempRecord.legs[${i}].bv=Number(this.value);renderPreview()"><label style="flex:1;display:flex;align-items:center;font-size:0.8rem"><input type="checkbox" ${l.isIndependent?'checked':''} onchange="tempRecord.legs[${i}].isIndependent=this.checked;renderPreview()"> 獨立</label><button type="button" class="btn btn-danger" onclick="tempRecord.legs.splice(${i},1);renderLegs();renderPreview();markDirty()">X</button></div>`).join(''); }
+function renderLegs() { document.getElementById('legs-container').innerHTML = tempRecord.legs.map((l, i) => `<div style="display:flex;gap:5px;margin-bottom:5px;"><input style="flex:2" class="form-control" placeholder="腿名" value="${l.name}" oninput="tempRecord.legs[${i}].name=this.value"><input style="flex:1.5" type="number" class="form-control" placeholder="BV" value="${l.bv}" oninput="tempRecord.legs[${i}].bv=Number(this.value);renderPreview()"><label style="flex:1;display:flex;align-items:center;font-size:0.8rem"><input type="checkbox" ${l.isIndependent?'checked':''} onchange="tempRecord.legs[${i}].isIndependent=this.checked;renderPreview()"> 獨立</label><button type="button" class="btn btn-danger" onclick="tempRecord.legs.splice(${i},1);renderLegs();renderPreview();markDirty()">X</button></div>`).join(''); }
 function addLeg() { tempRecord.legs.push({ name: '', pv: 0, bv: 0, isIndependent: false }); renderLegs(); renderPreview(); markDirty(); }
 function renderRecruits() { document.getElementById('recruits-container').innerHTML = tempRecord.newRecruits.map((r, i) => `<div style="display:flex;gap:5px;margin-bottom:5px;"><input style="flex:2" class="form-control" placeholder="姓名" value="${r.name}" oninput="tempRecord.newRecruits[${i}].name=this.value"><input style="flex:1.5" type="number" class="form-control" placeholder="BV" value="${r.bv}" oninput="tempRecord.newRecruits[${i}].bv=Number(this.value);renderPreview()"><button type="button" class="btn btn-danger" onclick="tempRecord.newRecruits.splice(${i},1);renderRecruits();renderPreview();markDirty()">X</button></div>`).join(''); }
 function addRecruit() { tempRecord.newRecruits.push({ name: '', bv: 0 }); renderRecruits(); renderPreview(); markDirty(); }
 
 function saveRecord(e, id) {
     e.preventDefault(); const fd = new FormData(e.target);
-    const partnerId = fd.get('partnerId');
-    const month = tempRecord.month;
-    
-    // 防呆 1：重複檢查
-    if (!id) {
-        const exist = store.data.records.find(r => r.month === month && r.partnerId === partnerId);
-        if (exist) { if(confirm('本月已有紀錄！編輯？')) { closeModal(); setTimeout(() => editRecord(exist.id, month), 200); } return; }
-    }
-
-    // 🔥 防呆 2：停用檢查
+    const partnerId = fd.get('partnerId'); const month = tempRecord.month;
+    if (!id) { const exist = store.data.records.find(r => r.month === month && r.partnerId === partnerId); if (exist) { if(confirm('本月已有紀錄！編輯？')) { closeModal(); setTimeout(() => editRecord(exist.id, month), 200); } return; } }
     const p = store.getPartner(partnerId);
     if (p && p.status === 'inactive') {
-        if(confirm(`此夥伴 (${p.name}) 目前為【停用】狀態，本月不會計算新星獎金。\n\n是否要先將夥伴改為「啟用」？`)) {
-            p.status = 'active'; // 自動啟用
-            store.save(); // 先存夥伴狀態
-        } else {
-            // 否則保持停用，並強制本月 participation 為 inactive
-            tempRecord.participation = 'inactive';
-        }
+        if(confirm(`此夥伴 (${p.name}) 目前為【停用】狀態，本月不會計算新星獎金。\n\n是否要先將夥伴改為「啟用」？`)) { p.status = 'active'; store.save(); } 
+        else { tempRecord.participation = 'inactive'; }
     }
-
     const record = { ...tempRecord, partnerId, planVersionId: fd.get('planVersionId'), month, ppv: Number(fd.get('ppv')), pbv: Number(fd.get('pbv')), gpv: Number(fd.get('gpv')), note: fd.get('note'), payoutDate: fd.get('payoutDate'), payoutStatus: fd.get('payoutStatus') };
     if(id) { const idx = store.data.records.findIndex(r => r.id === id); store.data.records[idx] = record; }
     else { record.id = generateUUID(); store.data.records.push(record); }
@@ -642,68 +538,96 @@ function bulkMarkPaid(month) { const sel = Array.from(document.querySelectorAll(
 function togglePaid(id, status, month) { const r = store.getRecord(id); if(status === 'unpaid') { r.payoutStatus = 'paid'; r.payoutDate = getDefaultPayoutDate(month); } else if(confirm('取消發放？')) { r.payoutStatus = 'unpaid'; } store.save(); }
 function exportPayoutCSV(month) { const records = store.getRecordsByMonth(month).map(calculateRecord).filter(x=>x); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob(['\uFEFF月份,發起人,夥伴,金額,備註,狀態,日期\n'+records.map(r=>`${r.month},${store.getInitiator(r.initiatorId)?.name||''},${r.partnerName},${r.starTotal},${r.note||''},${r.payoutStatus},${r.payoutDate}`).join('\n')], { type: 'text/csv;charset=utf-8;' })); link.download = `Payout_${month}.csv`; link.click(); }
 
-/* 6. Org Chart (Optimized Visuals) */
+/* 6. Org Chart (Logic Updated: 3x5 Scope) */
 function renderOrgChart() {
     const month = localStorage.getItem('org_month') || new Date().toISOString().slice(0, 7);
     const mode = localStorage.getItem('org_mode') || 'status';
-    const partners = store.data.partners; const records = store.getRecordsByMonth(month).map(calculateRecord);
-    const partnerMap = {}; partners.forEach(p => { partnerMap[p.id] = { ...p, children: [], record: records.find(r => r && r.partnerId === p.id) }; });
-    const roots = []; partners.forEach(p => { if(p.sponsorId && partnerMap[p.sponsorId]) partnerMap[p.sponsorId].children.push(partnerMap[p.id]); else roots.push(partnerMap[p.id]); });
     const activeScopeId = localStorage.getItem('active_scope_initiator');
+
+    // 1. Build Hierarchy
+    const partners = store.data.partners; 
+    const records = store.getRecordsByMonth(month).map(calculateRecord);
+    const partnerMap = {}; 
     
+    partners.forEach(p => { 
+        partnerMap[p.id] = { ...p, children: [], record: records.find(r => r && r.partnerId === p.id) }; 
+    });
+
+    const roots = []; 
+    partners.forEach(p => { 
+        if(p.sponsorId && partnerMap[p.sponsorId]) {
+            // Check for self-circular logic
+            if(p.sponsorId !== p.id) partnerMap[p.sponsorId].children.push(partnerMap[p.id]);
+        } else { 
+            roots.push(partnerMap[p.id]); 
+        } 
+    });
+
+    // 2. Determine Scope Set (3-Wide, 5-Deep)
     let scopeSet = new Set();
+    let scopeRoots = [];
     if(activeScopeId) {
         const scope = store.getCoachingScope(activeScopeId);
-        if(scope.roots) {
-            function mark(pid, d) { if(d>5) return; scopeSet.add(pid); const p = partnerMap[pid]; if(p && p.children) p.children.forEach(c => mark(c.id, d+1)); }
-            scope.roots.forEach(rid => { if(partnerMap[rid]) mark(rid, 1); });
+        scopeRoots = scope.roots || [];
+        function markScope(pid, depth) {
+            if(depth > 5) return; // 5-Deep Limit
+            scopeSet.add(pid);
+            const node = partnerMap[pid];
+            if(node && node.children) {
+                node.children.forEach(child => markScope(child.id, depth + 1));
+            }
         }
+        // Start from roots defined in settings
+        scopeRoots.forEach(rid => { if(partnerMap[rid]) markScope(rid, 1); });
     }
 
-    function renderNode(node) {
+    // 3. Recursive Render
+    function renderNode(node, level = 1) {
         const r = node.record;
-        let classes = ['node']; if(scopeSet.has(node.id)) classes.push('in-scope');
-        if(activeScopeId && store.getCoachingScope(activeScopeId).roots.includes(node.id)) classes.push('scope-root');
         
-        let label = '', icon = '', subClass = '', tooltipHtml = '';
+        // --- Class Logic ---
+        let classes = ['node']; 
         
-        // 🔥 Org Chart Visual Logic
-        // 1. Partner Inactive (Highest Priority)
-        if (node.status === 'inactive') {
-            subClass = 'inactive'; icon = '⏸'; label = '停用';
-        } 
-        // 2. Has Record
-        else if (r) {
-            if (r.isMonthlyInactive) { 
-                subClass = 'month-inactive'; label = '本月停用'; 
-            } else if (r.isGraduated) {
-                subClass = 'graduate'; icon = '🎓'; label = '畢業';
-            } else if (r.payoutStatus === 'paid') {
-                subClass = 'paid'; icon = '✔'; label = '已發放';
-            } else if (r.totalIncome > 0) {
-                subClass = 'unpaid'; icon = '●'; label = '未發放'; 
-            } else {
-                subClass = 'no-record'; label = '無獎金';
-            }
-            if (mode === 'money' && !r.isMonthlyInactive) label = formatMoney(r.totalIncome);
+        // A. Independent System Logic: If this partner is ALSO an initiator in the system
+        const isIndepInitiator = store.data.initiators.some(i => i.id === node.initiatorId && node.id !== node.initiatorId); // Basic logic check, refined below:
+        // Better logic: Is this person defined in the 'initiators' list?
+        // Note: The prompt says "If a1 participates... independent".
+        // We check if this partner ID exists in the initiators array (meaning they have their own budget/team).
+        const isSelfInitiator = store.data.initiators.some(i => i.code === node.code); 
+        if(isSelfInitiator) classes.push('independent-sys');
 
-            tooltipHtml = `<div class="tooltip"><strong>${r.month}</strong><br>金額：${formatMoney(r.totalIncome)}<br>狀態：${r.payoutStatus==='paid'?'已發放':'未發放'}<br>備註：${r.note||'-'}</div>`;
-        } 
-        // 3. No Record
-        else {
-            subClass = 'no-record'; label = '本月無紀錄';
+        // B. Scope Logic
+        if(activeScopeId) {
+            if(scopeRoots.includes(node.id)) classes.push('scope-root');
+            if(!scopeSet.has(node.id)) classes.push('out-of-scope');
         }
 
+        // C. Status Logic
+        let label = '', icon = '', subClass = '', tooltipHtml = '';
+        if (node.status === 'inactive') {
+            subClass = 'inactive'; icon = '⏸'; label = '停用';
+        } else if (r) {
+            if (r.isMonthlyInactive) { subClass = 'month-inactive'; label = '本月停用'; }
+            else if (r.isGraduated) { subClass = 'graduate'; icon = '🎓'; label = '畢業'; }
+            else if (r.payoutStatus === 'paid') { subClass = 'paid'; icon = '✔'; label = '已發放'; }
+            else if (r.totalIncome > 0) { subClass = 'unpaid'; icon = '●'; label = '未發放'; }
+            else { subClass = 'no-record'; label = '無獎金'; }
+            if (mode === 'money' && !r.isMonthlyInactive) label = formatMoney(r.totalIncome);
+            tooltipHtml = `<div class="tooltip"><strong>${r.month}</strong><br>金額：${formatMoney(r.totalIncome)}<br>狀態：${r.payoutStatus==='paid'?'已發放':'未發放'}<br>備註：${r.note||'-'}</div>`;
+        } else {
+            subClass = 'no-record'; label = '本月無紀錄';
+        }
         classes.push(subClass);
 
         return `<li>
             <div class="${classes.join(' ')}" onclick="showNodeDetails('${node.id}','${month}')">
+                <span class="level-badge">${level}代</span>
                 ${icon ? `<div class="icon">${icon}</div>` : ''}
                 <div class="name">${node.name}</div>
                 <div class="status">${label}</div>
                 ${tooltipHtml}
             </div>
-            ${node.children.length > 0 ? `<ul>${node.children.map(renderNode).join('')}</ul>` : ''}
+            ${node.children.length > 0 ? `<ul>${node.children.map(c => renderNode(c, level + 1)).join('')}</ul>` : ''}
         </li>`;
     }
 
@@ -719,24 +643,68 @@ function renderOrgChart() {
         </select>
         <button class="btn btn-secondary" onclick="openScopeSettings()">⚙️ 設定範圍</button>
     </div>
-    <div class="org-container"><div class="tree"><ul>${roots.map(renderNode).join('')}</ul></div></div>`;
+    
+    <div class="legend">
+        <div class="legend-item"><div class="legend-box" style="border:3px solid #f1c40f"></div><span>第一代(3寬)</span></div>
+        <div class="legend-item"><div class="legend-box" style="opacity:0.5;filter:grayscale(1);border-style:dotted"></div><span>超出範圍(5深)</span></div>
+        <div class="legend-item"><div class="legend-box" style="border-color:#8e44ad;background:#f4ecf7"></div><span>獨立發起人</span></div>
+        <div class="legend-item"><div class="legend-box" style="background:#fdedec;border-color:#e74c3c"></div><span>未發放</span></div>
+        <div class="legend-item"><div class="legend-box" style="background:#e8f8f5;border-color:#27ae60"></div><span>已發放</span></div>
+    </div>
+
+    <div class="org-container"><div class="tree"><ul>${roots.map(n => renderNode(n, 1)).join('')}</ul></div></div>`;
 }
+
 function openScopeSettings() {
     const initiators = store.data.initiators;
-    openModal('設定輔導範圍', `<div class="form-group"><label>發起人</label><select id="scope-init-select" class="form-control" onchange="renderScopeSelector(this.value)"><option value="">-- 請選擇 --</option>${initiators.map(i=>`<option value="${i.id}">${i.name}</option>`).join('')}</select></div><div id="scope-selector-area"></div>`);
+    openModal('設定輔導範圍 (3寬5深)', `<div class="form-group"><label>選擇發起人</label><select id="scope-init-select" class="form-control" onchange="renderScopeSelector(this.value)"><option value="">-- 請選擇 --</option>${initiators.map(i=>`<option value="${i.id}">${i.name}</option>`).join('')}</select></div><div id="scope-selector-area" style="margin-top:15px;border-top:1px solid #eee;padding-top:15px;">請先選擇發起人...</div>`);
 }
+
 function renderScopeSelector(initId) {
     if(!initId) { document.getElementById('scope-selector-area').innerHTML = ''; return; }
     const scope = store.getCoachingScope(initId);
-    const partners = store.data.partners;
-    document.getElementById('scope-selector-area').innerHTML = `<p>勾選第一層輔導對象 (最多3位)：</p><div style="max-height:300px;overflow-y:auto;border:1px solid #ddd;padding:10px;">${partners.map(p=>`<div style="margin-bottom:5px;"><label><input type="checkbox" class="scope-root-check" value="${p.id}" ${scope.roots.includes(p.id)?'checked':''} onchange="if(document.querySelectorAll('.scope-root-check:checked').length>3){alert('最多3位');this.checked=false;}"> ${p.code} ${p.name}</label></div>`).join('')}</div><button class="btn btn-primary" style="margin-top:10px" onclick="saveScope('${initId}')">儲存</button>`;
+    
+    // Logic: List all PARTNERS who have this initiator set as their initiatorId
+    // AND who are likely "Level 1" (no sponsor or sponsor is not in this group? Simpler: Just list all potential starts)
+    // For simplicity in this UI, we allow selecting ANY partner to be a 'Root' for the scope visualization.
+    const candidates = store.data.partners.filter(p => p.initiatorId === initId);
+    
+    document.getElementById('scope-selector-area').innerHTML = `
+        <p><strong>請勾選 3 位第一代輔導對象：</strong><br><small style="color:#7f8c8d">系統將自動往下追蹤 5 代深度。</small></p>
+        <div style="max-height:300px;overflow-y:auto;border:1px solid #ddd;padding:10px;background:#fff;border-radius:6px;">
+            ${candidates.length === 0 ? '<div style="padding:10px;color:#999">此發起人尚無綁定夥伴</div>' : ''}
+            ${candidates.map(p => `
+                <div style="margin-bottom:8px;">
+                    <label style="display:flex;align-items:center;cursor:pointer">
+                        <input type="checkbox" class="scope-root-check" value="${p.id}" 
+                        ${scope.roots.includes(p.id)?'checked':''} 
+                        onchange="checkScopeLimit(this)"> 
+                        <span style="margin-left:8px;font-weight:500">${p.code} ${p.name}</span>
+                        ${p.sponsorId ? `<small style="color:#aaa;margin-left:5px">(上線: ${store.getPartner(p.sponsorId)?.name})</small>` : ''}
+                    </label>
+                </div>
+            `).join('')}
+        </div>
+        <button class="btn btn-primary" style="margin-top:15px;width:100%" onclick="saveScope('${initId}')">儲存設定</button>
+    `;
 }
+
+function checkScopeLimit(cb) {
+    const checked = document.querySelectorAll('.scope-root-check:checked');
+    if(checked.length > 3) {
+        alert('❌ 超出限制！\n根據規則，輔導範圍最多只能設定 3 位寬度 (第一代)。\n\n若有第 4 位，請將其設為獨立發起體系。');
+        cb.checked = false;
+    }
+}
+
 function saveScope(id) {
     const checked = Array.from(document.querySelectorAll('.scope-root-check:checked')).map(c => c.value);
     let idx = store.data.coachingScopes.findIndex(c => c.initiatorId === id);
-    if(idx === -1) store.data.coachingScopes.push({ initiatorId: id, roots: checked, depth: 5 }); else store.data.coachingScopes[idx].roots = checked;
+    if(idx === -1) store.data.coachingScopes.push({ initiatorId: id, roots: checked, depth: 5 }); 
+    else store.data.coachingScopes[idx].roots = checked;
     store.save(); closeModal(); renderOrgChart();
 }
+
 function showNodeDetails(pid, month) {
     const r = store.data.records.find(r => r.partnerId === pid && r.month === month);
     const p = store.getPartner(pid);
@@ -749,14 +717,14 @@ function showNodeDetails(pid, month) {
     </table><div style="margin-top:15px;text-align:right"><button class="btn btn-primary" onclick="closeModal(); router('records'); setTimeout(()=>editRecord('${r.id}', '${month}'), 100)">編輯</button></div>`);
 }
 
-/* 7. Initiators & Versions & Settings (Minimal updates) */
+/* 7. Initiators & Versions & Settings */
 function renderInitiators() {
     app.innerHTML = `<header>${getHeaderHtml('發起人管理')} <button class="btn btn-primary" onclick="editInitiator()">+ 新增</button></header>
     <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>操作</th></tr></thead><tbody>${store.data.initiators.map(i => `<tr><td>${i.code}</td><td>${i.name}</td><td><button class="btn btn-secondary" onclick="editInitiator('${i.id}')">編輯</button> <button class="btn btn-danger" onclick="deleteInitiator('${i.id}')">刪除</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 function editInitiator(id) { const i = id?store.getInitiator(id):{id:'',code:'',name:'',note:''}; openModal(id?'編輯':'新增', `<form onsubmit="saveInitiator(event,'${id||''}')"><div class="row"><div class="col form-group"><label>編號</label><input class="form-control" name="code" value="${i.code}" required></div><div class="col form-group"><label>姓名</label><input class="form-control" name="name" value="${i.name}" required></div></div><div class="form-group"><label>備註</label><input class="form-control" name="note" value="${i.note}"></div><button type="submit" class="btn btn-primary" style="width:100%">儲存</button></form>`); }
 function saveInitiator(e,id){e.preventDefault();const d=Object.fromEntries(new FormData(e.target));if(store.data.initiators.some(i=>i.code===d.code&&i.id!==id))return alert('重複');if(id){const x=store.data.initiators.findIndex(k=>k.id===id);store.data.initiators[x]={...store.data.initiators[x],...d}}else{store.data.initiators.push({...d,id:generateUUID()})}store.save();closeModal();}
-function deleteInitiator(id){if(confirm('刪除？')){store.data.partners.forEach(p=>{if(p.initiatorId===id)p.initiatorId=''});store.data.initiators=store.data.initiators.filter(i=>i.id!==id);store.save();renderInitiators();}}
+function deleteInitiator(id){if(confirm('刪除？這將移除該發起人的輔導設定，並將旗下夥伴設為未指定。')){store.data.partners.forEach(p=>{if(p.initiatorId===id)p.initiatorId=''});store.data.initiators=store.data.initiators.filter(i=>i.id!==id);store.data.coachingScopes=store.data.coachingScopes.filter(c=>c.initiatorId!==id);store.save();renderInitiators();}}
 
 function renderVersions() { app.innerHTML = `<header>${getHeaderHtml('版本控管')} <button class="btn btn-primary" onclick="editVersion()">+ 新增</button></header><div class="card"><table><thead><tr><th>名稱</th><th>狀態</th><th>操作</th></tr></thead><tbody>${store.data.versions.map(v => `<tr><td>${v.name}</td><td>${v.archived?'封存':'使用中'}</td><td><button class="btn btn-secondary" onclick="editVersion('${v.id}')">查看</button> ${!v.archived?`<button class="btn btn-danger" onclick="deleteVersion('${v.id}')">刪除</button>`:''}</td></tr>`).join('')}</tbody></table></div>`; }
 function editVersion(id) { const v = id?store.getVersion(id):{id:'',name:'New',createdAt:'',params:{...defaultPlanParams}}; const p=v.params; openModal(id?'版本':'新增', `<form onsubmit="saveVersion(event,'${id||''}')"><div class="form-group"><label>名稱</label><input class="form-control" name="name" value="${v.name}" required ${v.archived?'disabled':''}></div><fieldset><legend>參數</legend><div class="row"><div class="col"><label>0-3% 基礎</label><input type="number" step="0.01" name="rate_0_3_base" value="${p.rate_0_3_base}" class="form-control" ${v.archived?'disabled':''}></div><div class="col"><label>0-3% 推薦</label><input type="number" step="0.01" name="rate_0_3_rec" value="${p.rate_0_3_rec}" class="form-control" ${v.archived?'disabled':''}></div></div><div class="row"><div class="col"><label>6% 基礎</label><input type="number" step="0.01" name="rate_6_base" value="${p.rate_6_base}" class="form-control" ${v.archived?'disabled':''}></div><div class="col"><label>6% 推薦</label><input type="number" step="0.01" name="rate_6_rec" value="${p.rate_6_rec}" class="form-control" ${v.archived?'disabled':''}></div></div><div class="row"><div class="col"><label>新人回饋</label><input type="number" step="0.01" name="rate_recruit_bv" value="${p.rate_recruit_bv}" class="form-control" ${v.archived?'disabled':''}></div><div class="col"><label>學習加碼</label><input type="number" step="0.01" name="rate_learning" value="${p.rate_learning}" class="form-control" ${v.archived?'disabled':''}></div></div></fieldset>${!v.archived?'<button type="submit" class="btn btn-primary" style="width:100%">儲存</button>':''}</form>`); }
@@ -766,15 +734,18 @@ function deleteVersion(id){if(!confirm('刪除？'))return;const used=store.data
 function renderSettings() { app.innerHTML = `<header>${getHeaderHtml('系統設定')}</header><div class="card"><h3>📦 備份</h3><button class="btn btn-primary" onclick="exportData()">⬇️ 下載備份</button> <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">⬆️ 匯入還原</button><input type="file" id="importFile" style="display:none" onchange="importData(this)"></div><div class="card"><h3>⚠️ 危險</h3><button class="btn btn-danger" onclick="if(prompt('輸入 DELETE 確認')==='DELETE'){db.ref('AmwaySystem/v1').remove();location.reload();}">🔥 清除資料</button></div>`; }
 function exportData() { const l=document.createElement("a");l.href=URL.createObjectURL(new Blob([JSON.stringify(store.data,null,2)],{type:'application/json'}));l.download=`NewStarBackup_${new Date().toISOString().slice(0,10)}.json`;l.click();}
 function importData(input) { const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const d=JSON.parse(e.target.result);if(d.partners&&confirm('覆蓋資料？')){store.data=d;store.save();location.reload()}}catch(x){alert('格式錯誤')}};r.readAsText(f);}
+function renderFAQ() {
+    app.innerHTML = `<header>${getHeaderHtml('系統說明 (FAQ)')}</header>
+    <div class="faq-item"><div class="faq-question" onclick="toggleFAQ(this)">【一】輔導範圍規則 (3寬5深)</div><div class="faq-answer">本系統在組織關聯圖中，會根據您在「⚙️ 設定範圍」中勾選的第 1 代名單（最多 3 位），自動往下追蹤 5 代。<br>超過第 5 代的節點將以灰色顯示，代表超出輔導範圍。</div></div>
+    <div class="faq-item"><div class="faq-question" onclick="toggleFAQ(this)">【二】獨立發起人</div><div class="faq-answer">若某位夥伴本身也是系統中的「發起人」，其節點會標示「⭐ 獨立發起人」。其團隊獎金應由其自行發放，不列入上線的輔導範圍計算。</div></div>`;
+}
+function toggleFAQ(el) { el.parentElement.classList.toggle('active'); }
 
 /* Modal & CloseSafe */
 function openModal(title, content) { document.getElementById('modal-title').innerText = title; document.getElementById('modal-body').innerHTML = content; document.getElementById('modal').style.display = 'block'; }
 function closeModalSafe() { if(isModalDirty && !confirm('有未儲存變更，確定離開？')) return; isModalDirty = false; document.getElementById('modal').style.display = 'none'; }
 function closeModal() { document.getElementById('modal').style.display = 'none'; }
-
-// Remove standard onclick close, rely on closeModalSafe
 window.onclick = null; 
-
 </script>
 </body>
 </html>
