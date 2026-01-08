@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新星啟動計畫系統 (v3.7 修復版)</title>
+    <title>新星啟動計畫系統 (v3.9 修正版)</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -137,7 +137,7 @@
         <a onclick="router('versions')" id="nav-versions">⚙️ 計畫版本控管</a>
         <a onclick="router('settings')" id="nav-settings">🛠️ 系統設定</a>
     </nav>
-    <div class="footer">v3.7 修復版</div>
+    <div class="footer">v3.9 修正版</div>
 </aside>
 
 <main id="app"></main>
@@ -188,8 +188,14 @@ function openModal(title, content) {
     document.getElementById('modal-body').innerHTML = content;
     document.getElementById('modal').style.display = 'block';
 }
+window.checkLimit = function(el) {
+    if(document.querySelectorAll('.coach-chk:checked').length > 3) {
+        alert('❌ 最多只能選擇 3 位輔導夥伴');
+        el.checked = false;
+    }
+}
 
-// --- DATA STORE (Fix 1: Firebase Loading & Error Handler) ---
+// --- DATA STORE ---
 const defaultParams = { rate_0_3_base: 0.03, rate_0_3_rec: 0.04, rate_6_base: 0.01, rate_6_rec: 0.02, rate_recruit_bv: 0.01, rate_learning: 0.03 };
 let appData = { partners: [], initiators: [], records: [], versions: [] };
 const store = {
@@ -197,12 +203,10 @@ const store = {
     init() {
         if(!isReady) return;
         
-        // Timeout safeguard
         setTimeout(() => {
             const loadingEl = document.getElementById('loading');
             if (loadingEl && loadingEl.style.display !== 'none') {
                 loadingEl.style.display = 'none';
-                console.warn('Loading timeout - force hide');
             }
         }, 8000);
 
@@ -211,6 +215,11 @@ const store = {
             if(val) {
                 this.data = val;
                 ['partners','initiators','records','versions'].forEach(k => { if(!this.data[k]) this.data[k] = []; });
+                
+                // Ensure coachedPartnerIds exists
+                (this.data.initiators || []).forEach(i => {
+                    if (!Array.isArray(i.coachedPartnerIds)) i.coachedPartnerIds = [];
+                });
             } else {
                 this.data.versions.push({id: uuid(), name:'預設版本', params:{...defaultParams}});
                 this.save();
@@ -219,9 +228,9 @@ const store = {
             const active = document.querySelector('aside nav a.active');
             router(active ? active.id.replace('nav-','') : 'dashboard');
         }, err => {
-            console.error('Firebase read error:', err);
+            console.error(err);
             document.getElementById('loading').style.display = 'none';
-            alert('⚠️ Firebase 讀取失敗：' + (err?.message || err));
+            alert('⚠️ 讀取失敗：' + err.message);
             router('dashboard');
         });
     },
@@ -308,7 +317,7 @@ function renderPartners() {
     const term = localStorage.getItem('p_search') || '';
     const list = store.data.partners.filter(p => p.code.includes(term)||p.name.includes(term));
     document.getElementById('app').innerHTML = `
-        <header>${header('夥伴名單')} <button class="btn btn-primary" onclick="editPartner()">+ 新增</button></header>
+        <header>${header('伙伴名單')} <button class="btn btn-primary" onclick="editPartner()">+ 新增</button></header>
         <input class="form-control" style="max-width:300px;margin-bottom:15px" placeholder="🔍 搜尋 編號/姓名" value="${term}" oninput="localStorage.setItem('p_search',this.value);renderPartners()">
         <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>推薦人</th><th>發起人</th><th>狀態</th><th>操作</th></tr></thead><tbody>
         ${list.map(p => `<tr>
@@ -410,7 +419,6 @@ function editRecord(id, month) {
         const pOpts = store.data.partners.map(p => `<option value="${p.id}" ${p.id===base.partnerId?'selected':''} style="${p.status==='inactive'?'color:gray':''}">${p.code} ${p.name} ${p.status==='inactive'?'(停用)':''}</option>`).join('');
         const vOpts = store.data.versions.map(v => `<option value="${v.id}" ${v.id===base.planVersionId?'selected':''} ${v.archived?'disabled':''}>${v.name}</option>`).join('');
 
-        // Fix 4: Add name="learningDone" to checkbox
         openModal(id?'編輯紀錄':'新增紀錄', `
             <form id="recForm" onsubmit="saveRecord(event, '${id||''}')">
                 <div class="record-modal-grid">
@@ -593,25 +601,47 @@ function exportCSV(m) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt],{type:'text/csv'})); a.download = `Payout_${m}.csv`; a.click();
 }
 
-// 5. INITIATORS
+// 5. INITIATORS (Modified: B & C)
 function renderInitiators() {
     document.getElementById('app').innerHTML = `
         <header>${header('發起人管理')} <button class="btn btn-primary" onclick="editInit()">+ 新增</button></header>
-        <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>操作</th></tr></thead><tbody>
-        ${store.data.initiators.map(i => `<tr><td>${i.code}</td><td>${i.name}</td><td>
-            <button class="btn btn-secondary" style="padding:4px 10px" onclick="editInit('${i.id}')">編輯</button>
-            <button class="btn btn-danger" style="padding:4px 10px" onclick="delInit('${i.id}')">刪除</button>
-        </td></tr>`).join('')}
+        <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>輔導名單 (最多3位)</th><th>操作</th></tr></thead><tbody>
+        ${store.data.initiators.map(i => {
+            const names = (i.coachedPartnerIds||[]).map(pid => {
+                const p = store.getPartner(pid);
+                return p ? `${p.code} ${p.name}` : '?';
+            }).join('、') || '-';
+            return `<tr><td>${i.code}</td><td>${i.name}</td><td>${names}</td><td>
+                <button class="btn btn-secondary" style="padding:4px 10px" onclick="editInit('${i.id}')">編輯</button>
+                <button class="btn btn-danger" style="padding:4px 10px" onclick="delInit('${i.id}')">刪除</button>
+            </td></tr>`;
+        }).join('')}
         </tbody></table></div>
     `;
 }
 function editInit(id) {
     try {
-        const i = id ? store.getInitiator(id) : {id:'', code:'', name:''};
+        const i = id ? store.getInitiator(id) : {id:'', code:'', name:'', coachedPartnerIds:[]};
+        
+        // C: Coach List Generation
+        const myPartners = store.data.partners.filter(p => p.initiatorId === id);
+        const coachHTML = myPartners.map(p => {
+            const checked = (i.coachedPartnerIds||[]).includes(p.id) ? 'checked' : '';
+            return `<div style="margin-bottom:5px"><label><input type="checkbox" class="coach-chk" value="${p.id}" ${checked} onchange="checkLimit(this)"> ${p.code} ${p.name}</label></div>`;
+        }).join('') || '<div style="color:#999;font-size:0.9rem">尚無綁定此發起人的夥伴</div>';
+
         openModal(id?'編輯':'新增', `
             <form onsubmit="saveInit(event, '${id||''}')">
                 <div class="row"><div class="col"><label>編號</label><input name="code" value="${i.code}" class="form-control" required></div>
                 <div class="col"><label>姓名</label><input name="name" value="${i.name}" class="form-control" required></div></div>
+                
+                <div class="card" style="margin-top:15px">
+                    <h4 style="margin:0 0 10px 0;font-size:1rem">輔導名單 (最多3位)</h4>
+                    <div style="max-height:150px;overflow-y:auto;border:1px solid #eee;padding:10px;border-radius:4px">
+                        ${coachHTML}
+                    </div>
+                </div>
+
                 <button class="btn btn-primary" style="width:100%;margin-top:15px">儲存</button>
             </form>
         `);
@@ -620,8 +650,17 @@ function editInit(id) {
 function saveInit(e, id) {
     e.preventDefault(); const fd = new FormData(e.target); const d = Object.fromEntries(fd);
     if(store.data.initiators.some(x=>x.code===d.code && x.id!==id)) return alert('重複');
-    if(id) { const idx = store.data.initiators.findIndex(x=>x.id===id); store.data.initiators[idx] = {...store.data.initiators[idx], ...d}; }
-    else { store.data.initiators.push({...d, id:uuid()}); }
+    
+    // D: Save Coached IDs
+    const coached = Array.from(document.querySelectorAll('.coach-chk:checked')).map(c=>c.value);
+    
+    if(id) { 
+        const idx = store.data.initiators.findIndex(x=>x.id===id); 
+        store.data.initiators[idx] = {...store.data.initiators[idx], ...d, coachedPartnerIds: coached}; 
+    }
+    else { 
+        store.data.initiators.push({...d, id:uuid(), coachedPartnerIds: coached}); 
+    }
     store.save(); closeModal(); renderInitiators();
 }
 function delInit(id) {
@@ -631,7 +670,7 @@ function delInit(id) {
     store.save(); renderInitiators();
 }
 
-// 6. ORG CHART (Minimalist - Fix 2: Variable Scope & Fix 3: showNode Logic)
+// 6. ORG CHART (Modified: E)
 function renderOrgChart() {
     try {
         const m = localStorage.getItem('org_m') || new Date().toISOString().slice(0,7);
@@ -657,36 +696,38 @@ function renderOrgChart() {
 
         if(viewerId) {
             const viewerInit = store.getInitiator(viewerId);
-            const viewerPartner = partners.find(p => p.code === viewerInit?.code);
-
-            if(viewerPartner && pMap[viewerPartner.id]) {
-                traverseScope(pMap[viewerPartner.id], 0, true);
-            }
+            // E: Start from Coached Partners list
+            const rootIds = viewerInit ? (viewerInit.coachedPartnerIds || []) : [];
+            
+            rootIds.forEach(rid => {
+                if(pMap[rid]) traverseScope(pMap[rid], 1, true);
+            });
         }
 
-        // Fix 2: Correct variable scope for status
+        // E: Fixed Traverse Logic
         function traverseScope(node, depth, isChainValid) {
             let currentStatus = null;
 
-            if (depth > 0) {
-                const isSelfInitiator = store.data.initiators.some(i => i.code === node.code);
-                currentStatus = 'out';
+            if (depth >= 1) {
+                // Breakaway check: if the node has an initiator AND it's not the viewer
+                const isBreakaway = !!node.initiatorId && node.initiatorId !== viewerId;
 
-                if (isSelfInitiator && node.id !== (store.getPartner(viewerId)?.id) && isChainValid) {
+                if (isBreakaway) {
                     currentStatus = 'breakaway';
                     isChainValid = false;
                 } else if (isChainValid) {
                     currentStatus = depth <= 5 ? 'in' : 'out';
+                } else {
+                    currentStatus = 'out';
                 }
 
                 scopeStatus[node.id] = currentStatus;
                 levels[node.id] = depth;
             }
 
-            node.children.forEach((child, idx) => {
+            node.children.forEach(child => {
                 let childValid = isChainValid;
                 if (currentStatus === 'breakaway') childValid = false;
-                if (depth === 0 && idx >= 3) childValid = false; // 根層 3寬
                 traverseScope(child, depth + 1, childValid);
             });
         }
@@ -742,7 +783,7 @@ function renderOrgChart() {
     } catch(e) { alert('組織圖渲染錯誤: ' + e.message); }
 }
 
-// Fix 3: Correct showNode logic to find record by partnerId + month
+// F: Fix showNode logic
 function showNode(partnerId, m) {
     const r = (store.data.records || []).find(x => x.partnerId === partnerId && x.month === m);
     
@@ -751,12 +792,10 @@ function showNode(partnerId, m) {
     } else if (confirm('無本月紀錄，要建立嗎？')) {
         editRecord(null, m);
         tempRec.partnerId = partnerId;
-        // Wait for modal to render then set value
         setTimeout(() => {
             const sel = document.querySelector('[name=partnerId]');
             if (sel) {
                 sel.value = partnerId;
-                // Need to update tempRec.partnerId as well if the select logic doesn't trigger automatically
                 tempRec.partnerId = partnerId; 
                 renderPreview();
                 markDirty();
