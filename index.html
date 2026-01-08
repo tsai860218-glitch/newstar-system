@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新星啟動計畫系統 (v3.7 修復版)</title>
+    <title>新星啟動計畫系統 (v4.1 獎金計算修正版)</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -105,7 +105,7 @@
         .node.in-scope { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.3); background: #e8f8f5; }
         .node.out-scope { border-color: #ddd; background: #f9f9f9; color: #aaa; opacity: 0.8; border-style: dashed; }
         .node.breakaway { border-color: #8e44ad; background: #f4ecf7; color: #8e44ad; }
-        .node-badge { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); padding: 2px 6px; border-radius: 4px; font-size: 10px; color: white; background: #95a5a6; font-weight: bold; white-space: nowrap; }
+        .node-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); padding: 2px 6px; border-radius: 4px; font-size: 10px; color: white; background: #95a5a6; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .node.in-scope .node-badge { background: var(--accent); }
         .node.breakaway .node-badge { background: #8e44ad; }
 
@@ -137,7 +137,7 @@
         <a onclick="router('versions')" id="nav-versions">⚙️ 計畫版本控管</a>
         <a onclick="router('settings')" id="nav-settings">🛠️ 系統設定</a>
     </nav>
-    <div class="footer">v3.7 修復版</div>
+    <div class="footer">v4.1 獎金計算修正版</div>
 </aside>
 
 <main id="app"></main>
@@ -188,21 +188,24 @@ function openModal(title, content) {
     document.getElementById('modal-body').innerHTML = content;
     document.getElementById('modal').style.display = 'block';
 }
+window.checkLimit = function(el) {
+    if(document.querySelectorAll('.coach-chk:checked').length > 3) {
+        alert('❌ 最多只能選擇 3 位輔導夥伴');
+        el.checked = false;
+    }
+}
 
-// --- DATA STORE (Fix 1: Firebase Loading & Error Handler) ---
+// --- DATA STORE ---
 const defaultParams = { rate_0_3_base: 0.03, rate_0_3_rec: 0.04, rate_6_base: 0.01, rate_6_rec: 0.02, rate_recruit_bv: 0.01, rate_learning: 0.03 };
 let appData = { partners: [], initiators: [], records: [], versions: [] };
 const store = {
     data: appData,
     init() {
         if(!isReady) return;
-        
-        // Timeout safeguard
         setTimeout(() => {
             const loadingEl = document.getElementById('loading');
             if (loadingEl && loadingEl.style.display !== 'none') {
                 loadingEl.style.display = 'none';
-                console.warn('Loading timeout - force hide');
             }
         }, 8000);
 
@@ -211,6 +214,7 @@ const store = {
             if(val) {
                 this.data = val;
                 ['partners','initiators','records','versions'].forEach(k => { if(!this.data[k]) this.data[k] = []; });
+                (this.data.initiators || []).forEach(i => { if (!Array.isArray(i.coachedPartnerIds)) i.coachedPartnerIds = []; });
             } else {
                 this.data.versions.push({id: uuid(), name:'預設版本', params:{...defaultParams}});
                 this.save();
@@ -219,9 +223,9 @@ const store = {
             const active = document.querySelector('aside nav a.active');
             router(active ? active.id.replace('nav-','') : 'dashboard');
         }, err => {
-            console.error('Firebase read error:', err);
+            console.error(err);
             document.getElementById('loading').style.display = 'none';
-            alert('⚠️ Firebase 讀取失敗：' + (err?.message || err));
+            alert('⚠️ 讀取失敗：' + err.message);
             router('dashboard');
         });
     },
@@ -234,28 +238,53 @@ const store = {
 };
 store.init();
 
-// --- CALCULATION ---
+// --- CALCULATION (Fix: Graduation and Rate Logic) ---
 function calculate(r) {
     const p = store.getPartner(r.partnerId);
     if(!p) return null;
+    
     const v = store.getVersion(r.planVersionId);
     const params = v ? v.params : defaultParams;
-    const rate = getPercent(r.gpv);
     
-    let res = { ...r, partnerName: p.code+' '+p.name, initiatorId: p.initiatorId, myRate: rate, starTotal: 0, totalIncome: 0, isEligible: false, isGraduated: r.gpv>=1000, isPartnerInactive: p.status==='inactive', isMonthlyInactive: r.participation==='inactive' };
+    // 數值防呆
+    const gpv = Number(r.gpv) || 0;
+    const rate = getPercent(gpv);
+    
+    // 畢業修正：9% (0.09) 才算畢業
+    let res = { 
+        ...r, 
+        partnerName: p.code+' '+p.name, 
+        initiatorId: p.initiatorId, 
+        myRate: rate, 
+        starTotal: 0, 
+        totalIncome: 0, 
+        isEligible: false, 
+        isGraduated: rate >= 0.09, 
+        isPartnerInactive: p.status==='inactive', 
+        isMonthlyInactive: r.participation==='inactive' 
+    };
     
     if(!res.isGraduated && !res.isPartnerInactive && !res.isMonthlyInactive) {
         let applied = 0, txt = '';
         const hasRec = (r.newRecruits||[]).length > 0;
         
-        if(rate <= 0.03) { applied = hasRec ? params.rate_0_3_rec : params.rate_0_3_base; txt = '0-3%'; }
-        else if(rate === 0.06) { applied = hasRec ? params.rate_6_rec : params.rate_6_base; txt = '6%'; }
+        // 費率精準判定
+        if(rate === 0 || rate === 0.03) { 
+            applied = hasRec ? params.rate_0_3_rec : params.rate_0_3_base; 
+            txt = '0-3%'; 
+        }
+        else if(rate === 0.06) { 
+            applied = hasRec ? params.rate_6_rec : params.rate_6_base; 
+            txt = '6%'; 
+        }
         
         if(applied > 0) {
             res.isEligible = true;
             res.appliedRateText = txt + (hasRec?' (含推薦)':' (基礎)');
             const indepBV = (r.legs||[]).filter(l=>l.isIndependent).reduce((s,l)=>s+(Number(l.bv)||0),0);
-            res.baseBonus = Math.max(0, (r.gpv*50)-indepBV) * applied;
+            
+            // 計算使用數值化 gpv
+            res.baseBonus = Math.max(0, (gpv*50)-indepBV) * applied;
             res.recruitBonus = (r.newRecruits||[]).reduce((s,n)=>s+(Number(n.bv)||0),0) * params.rate_recruit_bv;
             res.learningBonus = r.learningDone ? (res.baseBonus + res.recruitBonus) * params.rate_learning : 0;
             res.starTotal = res.baseBonus + res.recruitBonus + res.learningBonus;
@@ -281,10 +310,7 @@ function router(pg) {
         else if(pg==='org') renderOrgChart();
         else if(pg==='versions') renderVersions();
         else if(pg==='settings') renderSettings();
-    } catch(e) {
-        console.error(e);
-        alert('頁面載入錯誤：' + e.message);
-    }
+    } catch(e) { console.error(e); alert('頁面載入錯誤：' + e.message); }
 }
 
 // 1. DASHBOARD
@@ -293,7 +319,6 @@ function renderDashboard() {
     const recs = store.getRecordsByMonth(m).map(calculate).filter(x=>x);
     const total = recs.reduce((s,r)=>s+r.starTotal,0);
     const unpaid = recs.filter(r=>r.payoutStatus!=='paid' && r.totalIncome>0).length;
-    
     document.getElementById('app').innerHTML = `
         <header>${header(`總覽 (${m})`)}</header>
         <div class="summary-row">
@@ -308,7 +333,7 @@ function renderPartners() {
     const term = localStorage.getItem('p_search') || '';
     const list = store.data.partners.filter(p => p.code.includes(term)||p.name.includes(term));
     document.getElementById('app').innerHTML = `
-        <header>${header('夥伴名單')} <button class="btn btn-primary" onclick="editPartner()">+ 新增</button></header>
+        <header>${header('伙伴名單')} <button class="btn btn-primary" onclick="editPartner()">+ 新增</button></header>
         <input class="form-control" style="max-width:300px;margin-bottom:15px" placeholder="🔍 搜尋 編號/姓名" value="${term}" oninput="localStorage.setItem('p_search',this.value);renderPartners()">
         <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>推薦人</th><th>發起人</th><th>狀態</th><th>操作</th></tr></thead><tbody>
         ${list.map(p => `<tr>
@@ -357,7 +382,7 @@ function savePartner(e, id) {
     store.save(); closeModal(); renderPartners();
 }
 function deletePartner(id) {
-    if(!confirm('確定刪除？這會影響上下線結構與歷史紀錄。')) return;
+    if(!confirm('確定刪除？')) return;
     store.data.partners = store.data.partners.filter(x=>x.id!==id);
     store.data.partners.forEach(p => { if(p.sponsorId===id) p.sponsorId=''; }); 
     store.data.records = store.data.records.filter(r=>r.partnerId!==id);
@@ -410,7 +435,6 @@ function editRecord(id, month) {
         const pOpts = store.data.partners.map(p => `<option value="${p.id}" ${p.id===base.partnerId?'selected':''} style="${p.status==='inactive'?'color:gray':''}">${p.code} ${p.name} ${p.status==='inactive'?'(停用)':''}</option>`).join('');
         const vOpts = store.data.versions.map(v => `<option value="${v.id}" ${v.id===base.planVersionId?'selected':''} ${v.archived?'disabled':''}>${v.name}</option>`).join('');
 
-        // Fix 4: Add name="learningDone" to checkbox
         openModal(id?'編輯紀錄':'新增紀錄', `
             <form id="recForm" onsubmit="saveRecord(event, '${id||''}')">
                 <div class="record-modal-grid">
@@ -431,7 +455,7 @@ function editRecord(id, month) {
                             <button type="button" class="btn btn-outline" onclick="addLeg()">+ 腿</button>
                         </div>
                         <div class="card">
-                            <label>新推薦 (用於計算推薦獎勵)</label>
+                            <label>新推薦 (填入編號會自動建立組織關係)</label>
                             <div id="recruitArea"></div>
                             <button type="button" class="btn btn-outline" onclick="addRec()">+ 新人</button>
                         </div>
@@ -472,16 +496,18 @@ function renderLegs() {
     `).join('');
 }
 function addLeg() { tempRec.legs.push({name:'',bv:0,isIndependent:false}); renderLegs(); renderPreview(); markDirty(); }
+// Updated renderRecs to include Code
 function renderRecs() {
     document.getElementById('recruitArea').innerHTML = tempRec.newRecruits.map((r,i)=>`
         <div style="display:flex;gap:5px;margin-bottom:5px">
-            <input placeholder="姓名" value="${r.name}" class="form-control" oninput="tempRec.newRecruits[${i}].name=this.value;markDirty()">
-            <input type="number" placeholder="BV" value="${r.bv}" class="form-control" oninput="tempRec.newRecruits[${i}].bv=Number(this.value);renderPreview();markDirty()">
+            <input placeholder="編號" value="${r.code||''}" class="form-control" style="flex:1" oninput="tempRec.newRecruits[${i}].code=this.value;markDirty()">
+            <input placeholder="姓名" value="${r.name}" class="form-control" style="flex:1.5" oninput="tempRec.newRecruits[${i}].name=this.value;markDirty()">
+            <input type="number" placeholder="BV" value="${r.bv}" class="form-control" style="flex:1" oninput="tempRec.newRecruits[${i}].bv=Number(this.value);renderPreview();markDirty()">
             <button type="button" class="btn btn-danger" onclick="tempRec.newRecruits.splice(${i},1);renderRecs();renderPreview();markDirty()">×</button>
         </div>
     `).join('');
 }
-function addRec() { tempRec.newRecruits.push({name:'',bv:0}); renderRecs(); renderPreview(); markDirty(); }
+function addRec() { tempRec.newRecruits.push({code:'',name:'',bv:0}); renderRecs(); renderPreview(); markDirty(); }
 function renderPreview() {
     const res = calculate(tempRec);
     const box = document.getElementById('previewBox');
@@ -511,6 +537,27 @@ function saveRecord(e, id) {
     const fd = new FormData(e.target);
     if(!id && store.data.records.some(r=>r.month===tempRec.month && r.partnerId===tempRec.partnerId)) return alert('此夥伴本月已有紀錄');
     
+    // Upsert New Recruits to Partners
+    const parent = store.getPartner(tempRec.partnerId);
+    if(parent) {
+        tempRec.newRecruits.forEach(rec => {
+            if(!rec.code || !rec.name) return;
+            let p = store.data.partners.find(x => x.code === rec.code);
+            if(!p) {
+                store.data.partners.push({
+                    id: uuid(), code: rec.code, name: rec.name,
+                    sponsorId: parent.id,
+                    initiatorId: parent.initiatorId || '',
+                    status: 'active'
+                });
+            } else {
+                if(!p.sponsorId) p.sponsorId = parent.id;
+                if(!p.initiatorId && parent.initiatorId) p.initiatorId = parent.initiatorId;
+                if(!p.name) p.name = rec.name;
+            }
+        });
+    }
+
     const final = { ...tempRec, ...Object.fromEntries(fd), 
         ppv: Number(fd.get('ppv')), gpv: Number(fd.get('gpv')), 
         learningDone: fd.get('learningDone')==='on' 
@@ -597,21 +644,42 @@ function exportCSV(m) {
 function renderInitiators() {
     document.getElementById('app').innerHTML = `
         <header>${header('發起人管理')} <button class="btn btn-primary" onclick="editInit()">+ 新增</button></header>
-        <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>操作</th></tr></thead><tbody>
-        ${store.data.initiators.map(i => `<tr><td>${i.code}</td><td>${i.name}</td><td>
-            <button class="btn btn-secondary" style="padding:4px 10px" onclick="editInit('${i.id}')">編輯</button>
-            <button class="btn btn-danger" style="padding:4px 10px" onclick="delInit('${i.id}')">刪除</button>
-        </td></tr>`).join('')}
+        <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>輔導名單 (最多3位)</th><th>操作</th></tr></thead><tbody>
+        ${store.data.initiators.map(i => {
+            const names = (i.coachedPartnerIds||[]).map(pid => {
+                const p = store.getPartner(pid);
+                return p ? `${p.code} ${p.name}` : '?';
+            }).join('、') || '-';
+            return `<tr><td>${i.code}</td><td>${i.name}</td><td>${names}</td><td>
+                <button class="btn btn-secondary" style="padding:4px 10px" onclick="editInit('${i.id}')">編輯</button>
+                <button class="btn btn-danger" style="padding:4px 10px" onclick="delInit('${i.id}')">刪除</button>
+            </td></tr>`;
+        }).join('')}
         </tbody></table></div>
     `;
 }
 function editInit(id) {
     try {
-        const i = id ? store.getInitiator(id) : {id:'', code:'', name:''};
+        const i = id ? store.getInitiator(id) : {id:'', code:'', name:'', coachedPartnerIds:[]};
+        
+        const myPartners = store.data.partners.filter(p => p.initiatorId === id);
+        const coachHTML = myPartners.map(p => {
+            const checked = (i.coachedPartnerIds||[]).includes(p.id) ? 'checked' : '';
+            return `<div style="margin-bottom:5px"><label><input type="checkbox" class="coach-chk" value="${p.id}" ${checked} onchange="checkLimit(this)"> ${p.code} ${p.name}</label></div>`;
+        }).join('') || '<div style="color:#999;font-size:0.9rem">尚無綁定此發起人的夥伴</div>';
+
         openModal(id?'編輯':'新增', `
             <form onsubmit="saveInit(event, '${id||''}')">
                 <div class="row"><div class="col"><label>編號</label><input name="code" value="${i.code}" class="form-control" required></div>
                 <div class="col"><label>姓名</label><input name="name" value="${i.name}" class="form-control" required></div></div>
+                
+                <div class="card" style="margin-top:15px">
+                    <h4 style="margin:0 0 10px 0;font-size:1rem">輔導名單 (最多3位)</h4>
+                    <div style="max-height:150px;overflow-y:auto;border:1px solid #eee;padding:10px;border-radius:4px">
+                        ${coachHTML}
+                    </div>
+                </div>
+
                 <button class="btn btn-primary" style="width:100%;margin-top:15px">儲存</button>
             </form>
         `);
@@ -620,8 +688,16 @@ function editInit(id) {
 function saveInit(e, id) {
     e.preventDefault(); const fd = new FormData(e.target); const d = Object.fromEntries(fd);
     if(store.data.initiators.some(x=>x.code===d.code && x.id!==id)) return alert('重複');
-    if(id) { const idx = store.data.initiators.findIndex(x=>x.id===id); store.data.initiators[idx] = {...store.data.initiators[idx], ...d}; }
-    else { store.data.initiators.push({...d, id:uuid()}); }
+    
+    const coached = Array.from(document.querySelectorAll('.coach-chk:checked')).map(c=>c.value);
+    
+    if(id) { 
+        const idx = store.data.initiators.findIndex(x=>x.id===id); 
+        store.data.initiators[idx] = {...store.data.initiators[idx], ...d, coachedPartnerIds: coached}; 
+    }
+    else { 
+        store.data.initiators.push({...d, id:uuid(), coachedPartnerIds: coached}); 
+    }
     store.save(); closeModal(); renderInitiators();
 }
 function delInit(id) {
@@ -631,7 +707,7 @@ function delInit(id) {
     store.save(); renderInitiators();
 }
 
-// 6. ORG CHART (Minimalist - Fix 2: Variable Scope & Fix 3: showNode Logic)
+// 6. ORG CHART (Updated Logic)
 function renderOrgChart() {
     try {
         const m = localStorage.getItem('org_m') || new Date().toISOString().slice(0,7);
@@ -642,6 +718,7 @@ function renderOrgChart() {
         const pMap = {};
         partners.forEach(p => { pMap[p.id] = { ...p, children:[], record: recs.find(r=>r && r.partnerId===p.id) }; });
         
+        // Tree strictly based on Sponsors
         const roots = [];
         partners.forEach(p => {
             if(p.sponsorId && pMap[p.sponsorId] && p.sponsorId !== p.id) {
@@ -651,57 +728,62 @@ function renderOrgChart() {
             }
         });
 
-        // Scope Logic
+        // Scope & Generation Logic
         const scopeStatus = {}; 
-        const levels = {};
+        const generations = {}; // Stores generation relative to viewer
 
         if(viewerId) {
             const viewerInit = store.getInitiator(viewerId);
-            const viewerPartner = partners.find(p => p.code === viewerInit?.code);
-
-            if(viewerPartner && pMap[viewerPartner.id]) {
-                traverseScope(pMap[viewerPartner.id], 0, true);
-            }
+            const rootIds = viewerInit ? (viewerInit.coachedPartnerIds || []) : [];
+            
+            rootIds.forEach(rid => {
+                if(pMap[rid]) traverseScope(pMap[rid], 1, true);
+            });
         }
 
-        // Fix 2: Correct variable scope for status
-        function traverseScope(node, depth, isChainValid) {
+        function traverseScope(node, gen, isChainValid) {
             let currentStatus = null;
 
-            if (depth > 0) {
-                const isSelfInitiator = store.data.initiators.some(i => i.code === node.code);
+            // Breakaway check: If partner has an initiator, and it's NOT the viewer
+            const isBreakaway = !!node.initiatorId && node.initiatorId !== viewerId;
+
+            if (isBreakaway) {
+                currentStatus = 'breakaway';
+                isChainValid = false;
+            } else if (isChainValid) {
+                currentStatus = gen <= 5 ? 'in' : 'out';
+                generations[node.id] = gen; // Only track generation if valid path
+            } else {
                 currentStatus = 'out';
-
-                if (isSelfInitiator && node.id !== (store.getPartner(viewerId)?.id) && isChainValid) {
-                    currentStatus = 'breakaway';
-                    isChainValid = false;
-                } else if (isChainValid) {
-                    currentStatus = depth <= 5 ? 'in' : 'out';
-                }
-
-                scopeStatus[node.id] = currentStatus;
-                levels[node.id] = depth;
             }
 
-            node.children.forEach((child, idx) => {
+            scopeStatus[node.id] = currentStatus;
+
+            node.children.forEach(child => {
                 let childValid = isChainValid;
                 if (currentStatus === 'breakaway') childValid = false;
-                if (depth === 0 && idx >= 3) childValid = false; // 根層 3寬
-                traverseScope(child, depth + 1, childValid);
+                traverseScope(child, gen + 1, childValid);
             });
         }
 
         function renderNode(node) {
             const r = node.record;
             const st = scopeStatus[node.id];
-            const lvl = levels[node.id];
+            const gen = generations[node.id];
             
             let cls = ['node'];
             let badge = '';
             
-            if(st === 'in') { cls.push('in-scope'); badge = `<div class="node-badge">${lvl}代</div>`; }
-            else if(st === 'breakaway') { cls.push('breakaway'); badge = `<div class="node-badge">獨立體系</div>`; }
-            else if(viewerId) { cls.push('out-scope'); } 
+            // Badge Logic
+            if(st === 'breakaway') { 
+                cls.push('breakaway'); 
+                badge = `<div class="node-badge" style="background:#8e44ad">獨立體系</div>`; 
+            } else if(st === 'in') { 
+                cls.push('in-scope'); 
+                if(gen) badge = `<div class="node-badge" style="background:var(--accent)">發起人第${gen}代</div>`;
+            } else if(viewerId) { 
+                cls.push('out-scope'); 
+            } 
 
             let info = '無紀錄';
             if(node.status==='inactive') info = '停用';
@@ -742,21 +824,17 @@ function renderOrgChart() {
     } catch(e) { alert('組織圖渲染錯誤: ' + e.message); }
 }
 
-// Fix 3: Correct showNode logic to find record by partnerId + month
 function showNode(partnerId, m) {
     const r = (store.data.records || []).find(x => x.partnerId === partnerId && x.month === m);
-    
     if (r) {
         editRecord(r.id);
     } else if (confirm('無本月紀錄，要建立嗎？')) {
         editRecord(null, m);
         tempRec.partnerId = partnerId;
-        // Wait for modal to render then set value
         setTimeout(() => {
             const sel = document.querySelector('[name=partnerId]');
             if (sel) {
                 sel.value = partnerId;
-                // Need to update tempRec.partnerId as well if the select logic doesn't trigger automatically
                 tempRec.partnerId = partnerId; 
                 renderPreview();
                 markDirty();
