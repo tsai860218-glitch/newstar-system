@@ -3,989 +3,1316 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新星啟動計畫系統 (v6.1 Product Edition)</title>
-    
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
+    <title>安麗月結獎金與新星啟動計畫管理系統</title>
     <style>
         :root {
-            --primary: #0066cc;
-            --primary-dark: #004c99;
-            --secondary: #ff9900;
-            --bg: #f0f2f5;
-            --text: #333;
-            --border: #e1e1e1;
-            --success: #28a745;
-            --danger: #dc3545;
-            --purple: #6f42c1;
-            --gray: #6c757d;
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #1abc9c;
+            --accent-hover: #16a085;
+            --danger: #e74c3c;
+            --warning: #f1c40f;
+            --success: #27ae60;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --border: #bdc3c7;
+            --shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
-        body { font-family: "Microsoft JhengHei", 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        * { box-sizing: border-box; font-family: "Segoe UI", "Microsoft JhengHei", sans-serif; }
+        body { margin: 0; display: flex; height: 100vh; background-color: #f4f7f6; color: #333; overflow: hidden; }
 
         /* Sidebar */
-        .sidebar { width: 260px; background: white; border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; z-index: 10;}
-        .logo { padding: 25px 20px; font-size: 1.3rem; font-weight: bold; color: var(--primary); border-bottom: 1px solid var(--border); background: #f8f9fa;}
-        .nav-item { padding: 16px 20px; cursor: pointer; transition: 0.2s; color: #555; display: flex; align-items: center; gap: 12px; font-weight: 500; }
-        .nav-item:hover { background: #eef7ff; color: var(--primary); }
-        .nav-item.active { background: #eef7ff; color: var(--primary); border-right: 4px solid var(--primary); font-weight: bold; }
-        .nav-divider { font-size: 0.8rem; color: #999; padding: 15px 20px 5px; text-transform: uppercase; font-weight: bold; margin-top: 10px;}
+        aside { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.3s; }
+        aside h2 { padding: 20px; margin: 0; font-size: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
+        aside nav { flex: 1; overflow-y: auto; padding-top: 10px; }
+        aside nav a { display: block; padding: 15px 20px; color: #bdc3c7; text-decoration: none; transition: 0.2s; border-left: 4px solid transparent; cursor: pointer; }
+        aside nav a:hover, aside nav a.active { background: var(--secondary); color: white; border-left-color: var(--accent); }
+        aside .footer { padding: 15px; font-size: 0.8rem; color: #7f8c8d; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); }
+
+        /* Main Content */
+        main { flex: 1; overflow-y: auto; padding: 20px; position: relative; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { margin: 0; color: var(--dark); font-size: 1.8rem; }
         
-        /* Main */
-        .main { flex: 1; padding: 30px; overflow-y: auto; position: relative; scroll-behavior: smooth; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 10px; }
-        .page-title { font-size: 1.6rem; font-weight: bold; color: #2c3e50; border-left: 5px solid var(--primary); padding-left: 15px; }
-        .card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.04); margin-bottom: 25px; border: 1px solid #f0f0f0; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; }
-
-        /* Inputs */
-        .form-group { margin-bottom: 18px; }
-        label { display: block; margin-bottom: 6px; font-size: 0.95rem; font-weight: 600; color: #4b5563; }
-        input, select, textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
-        .row-inputs { display: flex; gap: 15px; align-items: center; }
-        .row-inputs > div { flex: 1; }
-        .equal-sign { font-size: 1.5rem; color: #999; font-weight: bold; padding-top: 25px; }
-
-        /* Product Row Styles (New) */
-        .prod-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; animation: fadeIn 0.2s; }
-        .prod-row input { margin: 0; }
-
-        /* Tree View Styles */
-        .tree-node { margin-left: 30px; border-left: 2px dashed #ccc; padding-left: 15px; margin-top: 12px; position: relative; }
-        .tree-node::before { content: ""; position: absolute; left: 0; top: 14px; width: 15px; height: 2px; background: #ccc; }
-        .tree-content { display: inline-flex; align-items: center; gap: 8px; background: white; border: 1px solid #ddd; padding: 6px 12px; border-radius: 6px; font-size: 0.9rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        /* Components */
+        .card { background: white; border-radius: 8px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 20px; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: #95a5a6; color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
         
-        .tag { font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; color: white; font-weight: bold; }
-        .tag.in-scope { background: var(--success); }
-        .tag.out-scope { background: var(--gray); }
-        .tag.cut { background: var(--secondary); color: white; border-radius: 4px; margin-left: 5px; font-size: 0.7rem; padding: 1px 5px; } 
-        
-        .scope-status { font-size: 0.8rem; color: #666; margin-left: 5px; }
-        .scope-status.out { color: var(--danger); font-weight: bold; }
-        
-        /* View Switcher */
-        .view-switch { display:flex; background:#e9ecef; border-radius:8px; padding:4px; margin-bottom:15px; width:fit-content;}
-        .view-option { padding:8px 16px; cursor:pointer; border-radius:6px; font-size:0.9rem; font-weight:bold; color:#666; transition:0.2s;}
-        .view-option.active { background:white; color:var(--primary); box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: var(--secondary); }
+        .form-control { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 1rem; }
+        .form-control:focus { outline: none; border-color: var(--accent); }
+        .row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 200px; }
 
-        /* Coach Leg Selector */
-        .coach-leg-item { display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #eee; font-size:0.9rem;}
-        .coach-leg-item:last-child { border-bottom:none; }
-        .cl-check { transform: scale(1.2); cursor: pointer; }
-
-        /* Instant Bonus Box */
-        .instant-bonus-box {
-            background: #2c3e50; color: white; padding: 20px; border-radius: 10px; 
-            margin-top: 20px; border-left: 6px solid var(--secondary); box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        .ib-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; margin-bottom: 10px;}
-        .ib-total { font-size: 1.8rem; font-weight: bold; color: var(--secondary); }
-
-        /* Buttons & Table */
-        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-dark); }
-        .btn-outline { background: white; border: 1px solid var(--border); color: var(--text); }
-        .btn-danger { background: #dc3545; color: white; }
-        
+        /* Tables */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
-        th { background: #f1f5f9; font-weight: 700; color: #475569; }
-        .badge { padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; color: white; font-weight: bold; }
-        .badge-sales { background: #3b82f6; }
-        .badge-new { background: #e67e22; }
-        .badge-learn { background: #10b981; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8f9fa; font-weight: 600; color: var(--secondary); position: sticky; top: 0; }
+        tr:hover { background-color: #f1f1f1; }
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+        .status-active { background: #e8f8f5; color: var(--success); }
+        .status-inactive { background: #fdedec; color: var(--danger); }
+        .status-paid { background: #d4efdf; color: var(--success); }
+        .status-unpaid { background: #fce4ec; color: #c0392b; }
 
-        .section { display: none; animation: fadeIn 0.4s; }
-        .section.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Org Chart */
+        .org-container { overflow: auto; padding: 20px; height: 600px; background: white; border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.05); position: relative; }
+        .tree ul { padding-top: 20px; position: relative; transition: all 0.5s; display: flex; justify-content: center; }
+        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; transition: all 0.5s; }
+        .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 1px solid #ccc; width: 50%; height: 20px; }
+        .tree li::after { right: auto; left: 50%; border-left: 1px solid #ccc; }
+        .tree li:only-child::after, .tree li:only-child::before { display: none; }
+        .tree li:only-child { padding-top: 0; }
+        .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
+        .tree li:last-child::before { border-right: 1px solid #ccc; border-radius: 0 5px 0 0; }
+        .tree li:first-child::after { border-radius: 5px 0 0 0; }
+        .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 1px solid #ccc; width: 0; height: 20px; }
+        
+        .node { 
+            border: 1px solid #ccc; padding: 10px; text-decoration: none; color: #666; font-family: arial, verdana, tahoma; font-size: 12px; display: inline-block; 
+            background: white; border-radius: 5px; transition: all 0.3s; min-width: 120px; position: relative; cursor: pointer;
+        }
+        .node:hover { background: #e8f6f3; border-color: var(--accent); transform: scale(1.05); z-index: 10; }
+        .node .name { font-weight: bold; color: var(--dark); font-size: 14px; margin-bottom: 5px; }
+        .node .role { font-size: 11px; color: #888; margin-bottom: 3px; }
+        .node .metric { font-size: 11px; color: var(--primary); }
+        .node.in-scope { border: 2px solid var(--warning); background-color: #fcf3cf; }
+        .node.scope-root { border: 3px solid var(--warning); background-color: #f9e79f; box-shadow: 0 0 10px rgba(241, 196, 15, 0.5); }
+        .node.graduate { border-color: var(--success); }
+        .node.unpaid::after { content: '●'; color: var(--danger); position: absolute; top: 5px; right: 5px; font-size: 10px; }
 
-        @media (max-width: 768px) {
-            body { flex-direction: column; height: auto; min-height: 100vh; }
-            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; height: auto; border-bottom: 1px solid var(--border); border-right: none; }
-            .nav-item { padding: 15px; white-space: nowrap; }
-            .nav-divider, .logo { display: none; }
-            .main { padding: 15px; overflow: visible; }
-            .grid-2, .grid-3 { grid-template-columns: 1fr; }
-            .row-inputs { flex-direction: column; gap: 5px; }
-            .equal-sign { transform: rotate(90deg); padding: 5px; }
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 5vh auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 900px; border-radius: 8px; max-height: 90vh; overflow-y: auto; }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close:hover { color: black; }
+
+        /* Utility */
+        .hidden { display: none !important; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .divider { border-top: 1px solid #eee; margin: 20px 0; }
+        .money { font-family: monospace; font-weight: bold; }
+        .summary-box { background: var(--secondary); color: white; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: flex; justify-content: space-around; }
+        .summary-item div:first-child { font-size: 0.8rem; opacity: 0.8; }
+        .summary-item div:last-child { font-size: 1.5rem; font-weight: bold; }
+
+        @media print {
+            aside, .no-print { display: none; }
+            main { padding: 0; }
+            .card { box-shadow: none; border: 1px solid #ddd; }
         }
     </style>
 </head>
 <body>
 
-    <div class="sidebar">
-        <div class="logo"><i class="fas fa-gem"></i> 新星啟動計畫 <small style="font-size:0.6em; color:#ff9900;">(v6.1 Product)</small></div>
-        
-        <div class="nav-divider">數據管理</div>
-        <div class="nav-item active" onclick="switchTab('dashboard')"><i class="fas fa-chart-pie"></i> 戰情室 (節點切割)</div>
-        <div class="nav-item" onclick="switchTab('network')"><i class="fas fa-sitemap"></i> 組織與輔導圈</div>
-        <div class="nav-item" onclick="switchTab('entry')"><i class="fas fa-pen"></i> 業績登錄</div>
-        <div class="nav-item" onclick="switchTab('members')"><i class="fas fa-users"></i> 會員與輔導設定</div>
-        <div class="nav-item" onclick="switchTab('logs')"><i class="fas fa-list"></i> 日誌明細</div>
+<aside>
+    <h2>🚀 安麗獎金管理</h2>
+    <nav>
+        <a onclick="router('dashboard')" id="nav-dashboard" class="active">📊 總覽儀表板</a>
+        <a onclick="router('payout')" id="nav-payout">💰 本月發放總表</a>
+        <a onclick="router('partners')" id="nav-partners">👥 夥伴名單管理</a>
+        <a onclick="router('initiators')" id="nav-initiators">👔 發起人管理</a>
+        <a onclick="router('records')" id="nav-records">📝 月份業績紀錄</a>
+        <a onclick="router('org')" id="nav-org">🌳 組織關聯圖</a>
+        <a onclick="router('versions')" id="nav-versions">⚙️ 計畫版本控管</a>
+        <a onclick="router('settings')" id="nav-settings">🛠️ 系統設定</a>
+    </nav>
+    <div class="footer">內部專用系統 v1.0</div>
+</aside>
 
-        <div class="nav-divider">工具與系統</div>
-        <div class="nav-item" onclick="switchTab('calculator')"><i class="fas fa-calculator"></i> 獎金模擬器</div>
-        <div class="nav-item" onclick="switchTab('settings')"><i class="fas fa-cog"></i> 設定與備份</div>
+<main id="app">
+    </main>
+
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <div id="modal-body"></div>
     </div>
-
-    <div class="main">
-        
-        <div id="dashboard" class="section active">
-            <div class="header">
-                <div class="page-title">當月業績戰情室</div>
-                <div style="display:flex; gap:10px;">
-                    <select id="dashMonthSelect" onchange="renderDashboard()" style="width: auto; cursor:pointer; font-weight:bold; color:var(--primary);"></select>
-                    <button class="btn btn-outline" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
-                </div>
-            </div>
-            <div class="grid-3">
-                <div class="card" style="border-top: 4px solid var(--primary);">
-                    <div style="color: #666; font-size: 0.9rem;">團隊總 PV (新星切割制)</div>
-                    <h1 id="totalPVDisplay" style="margin: 10px 0; color: var(--primary);">0</h1>
-                </div>
-                <div class="card" style="border-top: 4px solid var(--secondary);">
-                    <div style="color: #666; font-size: 0.9rem;">預估發放總獎金</div>
-                    <h1 id="totalBonusDisplay" style="margin: 10px 0; color: var(--secondary);">$0</h1>
-                </div>
-                <div class="card" style="border-top: 4px solid var(--success);">
-                    <div style="color: #666; font-size: 0.9rem;">活躍新星夥伴</div>
-                    <h1 id="activeMembersDisplay" style="margin: 10px 0; color: var(--success);">0</h1>
-                </div>
-            </div>
-            <div class="card">
-                <h3>💰 獎金排行榜 (Hard Cut-off)</h3>
-                <div style="overflow-x: auto;">
-                    <table id="rankingTable">
-                        <thead><tr><th>排名</th><th>會員</th><th>有效 PV (切割後)</th><th>狀態</th><th>預估獎金</th></tr></thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="network" class="section">
-            <div class="page-title">🧬 組織圖與輔導圈檢測</div>
-            <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
-                    <div class="view-switch">
-                        <div class="view-option active" id="viewNet" onclick="setNetworkView('network')">顯示組織架構</div>
-                        <div class="view-option" id="viewScope" onclick="setNetworkView('scope')">顯示輔導範圍 (3x5)</div>
-                    </div>
-                </div>
-
-                <div id="scopeLegend" style="display:none; background:#fff3cd; color:#856404; padding:15px; border-radius:6px; font-size:0.9rem; margin-bottom:15px;">
-                    <i class="fas fa-exclamation-circle"></i> <b>輔導範圍檢測模式：</b><br>
-                    1. <b>橫向 (Coaching Legs)</b>：僅顯示發起人「人工勾選」的 3 位直屬重點線 (✅)。<br>
-                    2. <b>縱向 (Depth)</b>：自重點線向下計算至第 5 代 (Gen 5)。<br>
-                    3. <b>自立</b>：未被勾選的線、或深度超過第 5 代者標示為 ❌ (需自立發起)。
-                </div>
-                <div id="treeContainer" style="overflow-x:auto;"></div>
-            </div>
-        </div>
-
-        <div id="entry" class="section">
-            <div class="page-title">📝 業績與推薦登錄</div>
-            <div class="grid-2">
-                <div>
-                    <div class="card">
-                        <div class="form-group">
-                            <label>日期</label>
-                            <input type="date" id="entryDate" onchange="updateInstantCalc()">
-                        </div>
-                        <div class="form-group">
-                            <label>操作會員 (上線/業績歸屬人)</label>
-                            <select id="entryMember" onchange="checkMemberSelect(); updateInstantCalc();"></select>
-                            
-                            <div id="quickAddMemberBox" style="display:none; background:#f0f9ff; padding:10px; margin-top:10px; border-radius:6px; border:1px dashed #0066cc;">
-                                <small style="color:#0066cc; font-weight:bold;">➕ 建立新會員 (預設新星)</small>
-                                <div style="display:flex; gap:10px; margin-top:5px;">
-                                    <input type="text" id="quickNewMemName" placeholder="姓名">
-                                    <input type="text" id="quickNewMemID" placeholder="編號">
-                                </div>
-                                <select id="quickNewSponsor" style="margin-top:5px;"><option value="">選擇發起人(非必要)</option></select>
-                            </div>
-                        </div>
-                        <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
-                        
-                        <div class="input-section" style="background:#f8fbff; border-left:4px solid #3b82f6; padding:15px; border-radius:8px; margin-bottom:15px;">
-                            <div class="section-header" style="font-weight:bold; margin-bottom:10px;"><i class="fas fa-shopping-cart"></i> 個人業績輸入</div>
-                            <div class="row-inputs">
-                                <div class="form-group" style="margin:0;"><label style="font-size:0.8rem;">PV</label><input type="number" id="entryPV" placeholder="0" oninput="autoConvert('pv', 'entry'); updateInstantCalc();" onfocus="this.select()"></div>
-                                <div class="equal-sign">=</div>
-                                <div class="form-group" style="margin:0;"><label style="font-size:0.8rem;">BV (1:50)</label><input type="number" id="entryBV" placeholder="0" oninput="autoConvert('bv', 'entry'); updateInstantCalc();" onfocus="this.select()" style="background:#fff;"></div>
-                            </div>
-                            
-                            <div style="margin-top:15px; padding-top:10px; border-top:1px dashed #ccc;">
-                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                    <label style="margin:0; font-size:0.9rem; color:#555;">分享產品明細 (選填)</label>
-                                    <button class="btn btn-outline" style="padding:2px 8px; font-size:0.8rem;" onclick="addProductRow()">
-                                        <i class="fas fa-plus"></i> 新增品項
-                                    </button>
-                                </div>
-                                <div id="productRowsContainer">
-                                    </div>
-                            </div>
-                        </div>
-
-                        <div class="input-section" style="background:#fffaf5; border-left:4px solid #e67e22; padding:15px; border-radius:8px; margin-bottom:15px;">
-                            <div class="section-header" style="font-weight:bold; margin-bottom:10px;"><i class="fas fa-user-plus"></i> 推薦新人 (建立下線)</div>
-                            <div style="background:rgba(255,255,255,0.7); padding:8px; border-radius:4px; margin-bottom:10px;">
-                                <label style="display:flex; align-items:center; cursor:pointer; font-size:0.9rem;">
-                                    <input type="checkbox" id="exceptionMemoCheck" style="width:auto; margin-right:8px;" onchange="toggleExceptionMemo()">
-                                    <span>例外：實際上線非操作會員 (僅備註)</span>
-                                </label>
-                                <input type="text" id="exceptionMemoText" placeholder="輸入實際上線姓名與編號..." style="display:none; margin-top:5px; font-size:0.9rem;">
-                            </div>
-                            <div style="display:flex; gap:10px; margin-bottom:10px;">
-                                <input type="text" id="newcomerName" placeholder="新人姓名" oninput="updateInstantCalc()">
-                                <input type="text" id="newcomerID" placeholder="新人編號 (重要:建檔用)">
-                            </div>
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.8rem;">新人當月消費 BV</label><input type="number" id="newcomerBV" placeholder="0" oninput="updateInstantCalc()"></div>
-                        </div>
-
-                        <div class="input-section" style="background:#f0fff4; border-left:4px solid #10b981; padding:15px; border-radius:8px;">
-                            <div class="section-header" style="font-weight:bold; margin-bottom:10px;"><i class="fas fa-graduation-cap"></i> 學習心得</div>
-                            <label style="display:flex; align-items:center; gap:10px; cursor:pointer;"><input type="checkbox" id="learningFileCheck" style="width:auto;" onchange="updateInstantCalc()"> <span>已繳交證明 (觸發 +3% 獎勵)</span></label>
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <div class="card" style="position:sticky; top:20px;">
-                        <h3>📊 預覽試算</h3>
-                        <p style="font-size:0.9rem; color:#666;">基於切割制與當月累積：</p>
-                        <div class="instant-bonus-box">
-                            <div class="ib-header"><div class="ib-title">預計獎金增加</div><div class="ib-total" id="ibTotalVal">$0</div></div>
-                            <div style="text-align:center; opacity:0.8; font-size:0.9rem;" id="ibDetailText">--</div>
-                        </div>
-                        <button class="btn btn-primary" style="width:100%; margin-top:20px; padding:15px; font-size:1.1rem;" onclick="addCompositeLog()"><i class="fas fa-save"></i> 確認儲存紀錄</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="members" class="section">
-            <div class="page-title">👥 會員與輔導設定</div>
-            <div class="grid-2">
-                <div class="card">
-                    <h3>發起人與輔導線設定</h3>
-                    <div style="background:#eef7ff; padding:10px; border-radius:6px; margin-bottom:10px; font-size:0.85rem; color:#0066cc;">
-                        <i class="fas fa-info-circle"></i> <b>設定規則：</b> 請於下方列表勾選該發起人的「輔導重點線」。(最多3位)
-                    </div>
-                    <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <input type="text" id="spId" placeholder="ID">
-                        <input type="text" id="spName" placeholder="姓名">
-                        <button class="btn btn-primary" onclick="addSponsor()">新增</button>
-                    </div>
-                    <div id="sponsorListContainer" style="display:flex; flex-direction:column; gap:15px;"></div>
-                </div>
-                <div class="card">
-                    <h3>新星會員列表</h3>
-                    <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <input type="text" id="manualMemId" placeholder="ID">
-                        <input type="text" id="manualMemName" placeholder="姓名">
-                    </div>
-                    <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <select id="manualMemSponsor"><option value="">指定上線 (選填)</option></select>
-                        <button class="btn btn-primary" onclick="addMemberManual()">新增</button>
-                    </div>
-                    <div style="max-height: 500px; overflow-y: auto;">
-                        <table id="memberTable"><thead><tr><th>編號</th><th>姓名</th><th>上線</th><th>操作</th></tr></thead><tbody></tbody></table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="logs" class="section">
-            <div class="page-title">📋 詳細紀錄明細</div>
-            <div class="card">
-                <div class="grid-3">
-                    <div class="form-group"><label>月份</label><input type="month" id="filterMonth" onchange="renderLogs()"></div>
-                    <div class="form-group"><label>會員</label><select id="filterMember" onchange="renderLogs()"><option value="all">全部</option></select></div>
-                    <div class="form-group"><label style="visibility:hidden">R</label><button class="btn btn-outline" style="width:100%" onclick="resetLogFilter()">重置</button></div>
-                </div>
-                <table id="logTable"><thead><tr><th>日期</th><th>會員</th><th>類型</th><th>詳細內容</th><th>PV/BV</th><th>操作</th></tr></thead><tbody></tbody></table>
-            </div>
-        </div>
-
-        <div id="calculator" class="section">
-            <div class="page-title">🧮 獎金模擬器</div>
-            <div class="card">
-                <div class="grid-2">
-                    <div style="background:#f0f9ff; padding:20px; border-radius:8px;">
-                        <div class="form-group"><label>預估 PV</label><input type="number" id="calcPV" oninput="autoConvert('pv','calc'); runSimulation()"></div>
-                        <div class="form-group"><label>預估 BV</label><input type="number" id="calcBV" oninput="autoConvert('bv','calc'); runSimulation()"></div>
-                        <div class="form-group"><label>推薦人數 (僅算比例)</label><input type="number" id="calcPartners" oninput="runSimulation()"></div>
-                        <div class="form-group"><label>新人總 BV</label><input type="number" id="calcNewcomerBV" oninput="runSimulation()"></div>
-                        <div class="form-group"><label><input type="checkbox" id="calcHasLearned" onchange="runSimulation()"> 已學習 (+3%)</label></div>
-                    </div>
-                    <div style="background:#2c3e50; color:white; padding:20px; border-radius:8px; display:flex; flex-direction:column; justify-content:center; text-align:center;">
-                        <div id="simGraduateMsg" style="display:none; color:#28a745; margin-bottom:10px; font-size:1.2rem;">🏆 畢業 (Core+)</div>
-                        <div>模擬總獎金</div>
-                        <div style="font-size:2.5rem; font-weight:bold; color:#ff9900;" id="simValTotal">0</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="settings" class="section">
-            <div class="page-title">⚙️ 設定</div>
-            <div class="card">
-                <button class="btn btn-primary" onclick="exportData()">下載備份 JSON</button>
-                <input type="file" id="importFile" style="display:none" onchange="importData(this)">
-                <button class="btn btn-outline" onclick="document.getElementById('importFile').click()">還原備份</button>
-                <button class="btn btn-danger" onclick="clearAllData()" style="margin-left:20px;">清除所有資料 (Reset)</button>
-            </div>
-        </div>
-
-    </div>
+</div>
 
 <script>
-    // ================================
-    // 1. Firebase Configuration & Sync
-    // ================================
-    const firebaseConfig = {
-      apiKey: "AIzaSyCanDeinCJyZFeHUGnYVEmalCYxjwaIw-4",
-      authDomain: "newstar-system.firebaseapp.com",
-      projectId: "newstar-system",
-      storageBucket: "newstar-system.firebasestorage.app",
-      messagingSenderId: "889699172174",
-      appId: "1:889699172174:web:0ff42757035a879cb3281f"
-    };
+/**
+ * 核心資料結構與 LocalStorage 管理
+ */
+const DB_KEY = 'amway_bonus_sys_v1';
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const auth = firebase.auth();
-    const TEAM_ID = "newstar_v5_5_index"; // Keep same ID to maintain data
+const defaultPlanParams = {
+    rate_0_3_base: 0.03,
+    rate_0_3_rec: 0.04,
+    rate_6_base: 0.01,
+    rate_6_rec: 0.02,
+    rate_recruit_bv: 0.01,
+    rate_learning: 0.03
+};
 
-    // Global Data
-    let members = JSON.parse(localStorage.getItem('ns55_mems')) || [];
-    let logs = JSON.parse(localStorage.getItem('ns55_logs')) || [];
-    let sponsors = JSON.parse(localStorage.getItem('ns55_spons')) || [];
+const store = {
+    data: {
+        partners: [],   // { id, code, name, sponsorId, initiatorId, status, joinDate }
+        initiators: [], // { id, code, name, note }
+        records: [],    // { id, partnerId, month, ppv, pbv, gpv, legs:[], newRecruits:[], learningDone, status, payoutDate, payoutStatus, planVersionId, products:[], customFields:{} }
+        versions: [],   // { id, name, createdAt, params: {} }
+        coachingScopes: [], // { initiatorId, roots: [id, id, id], month: 'YYYY-MM' (optional, let's keep it global for now for simplicity or by month) } -> Let's do per initiator (global/latest)
+        customProductColumns: [] // ['單價', '備註']
+    },
+    init() {
+        const saved = localStorage.getItem(DB_KEY);
+        if (saved) {
+            this.data = JSON.parse(saved);
+        } else {
+            // 初始化預設版本
+            this.data.versions.push({
+                id: generateUUID(),
+                name: '預設版本 (Default)',
+                createdAt: new Date().toISOString(),
+                params: { ...defaultPlanParams }
+            });
+            this.save();
+        }
+        // Migration check if needed
+        if (!this.data.customProductColumns) this.data.customProductColumns = [];
+        if (!this.data.coachingScopes) this.data.coachingScopes = [];
+    },
+    save() {
+        localStorage.setItem(DB_KEY, JSON.stringify(this.data));
+    },
+    // Helpers
+    getPartner(id) { return this.data.partners.find(p => p.id === id); },
+    getInitiator(id) { return this.data.initiators.find(i => i.id === id); },
+    getRecord(id) { return this.data.records.find(r => r.id === id); },
+    getRecordsByMonth(month) { return this.data.records.filter(r => r.month === month); },
+    getVersion(id) { return this.data.versions.find(v => v.id === id) || this.data.versions[0]; },
+    getCoachingScope(initiatorId) { return this.data.coachingScopes.find(c => c.initiatorId === initiatorId) || { initiatorId, roots: [], depth: 5 }; }
+};
 
-    // Current View Mode for Network ('network' or 'scope')
-    let currentNetworkView = 'network';
+store.init();
 
-    // Initialization
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('entryDate').valueAsDate = new Date();
-        document.getElementById('filterMonth').value = new Date().toISOString().slice(0, 7);
-        populateMonthSelect();
-        
-        // Login & Sync
-        auth.signInAnonymously().then(() => startCloudSync()).catch(e => console.error(e));
-        
-        // Initial Render
-        refreshUI();
+// 工具函式
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+function formatMoney(num) {
+    return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(num);
+}
+
+function getBonusPercent(pv) {
+    if (pv >= 10000) return 0.21;
+    if (pv >= 7000) return 0.18;
+    if (pv >= 4000) return 0.15;
+    if (pv >= 2000) return 0.12;
+    if (pv >= 1000) return 0.09;
+    if (pv >= 600) return 0.06;
+    if (pv >= 200) return 0.03;
+    return 0;
+}
+
+// 核心計算邏輯
+function calculateRecord(record) {
+    const partner = store.getPartner(record.partnerId);
+    if (!partner) return null;
+
+    const version = store.getVersion(record.planVersionId);
+    const params = version.params;
+
+    // 1. 公司獎金
+    const myRate = getBonusPercent(record.gpv);
+    const personalBonus = record.pbv * myRate;
+
+    // 差額獎金
+    let diffBonusTotal = 0;
+    const legDetails = (record.legs || []).map(leg => {
+        const legRate = getBonusPercent(leg.pv);
+        const diffRate = Math.max(0, myRate - legRate);
+        const bonus = diffRate * leg.bv;
+        diffBonusTotal += bonus;
+        return { ...leg, legRate, diffRate, bonus };
     });
 
-    function startCloudSync() {
-      db.collection("newstar").doc(TEAM_ID).onSnapshot((snap) => {
-        if (!snap.exists) { saveToCloud(); return; } 
-        const data = snap.data();
-        if(data) {
-            members = data.members || [];
-            logs = data.logs || [];
-            sponsors = data.sponsors || [];
-            // Migration for old data without coachingLegs
-            sponsors.forEach(s => { if(!s.coachingLegs) s.coachingLegs = []; });
-            saveToLocal(false); 
-            refreshUI();
+    const companyTotal = personalBonus + diffBonusTotal;
+
+    // 2. 新星計畫
+    // 條件：PV < 1000 且 參與狀態 != 'inactive'
+    let starTotal = 0;
+    let baseBonus = 0;
+    let recruitBonus = 0;
+    let learningBonus = 0;
+    let isGraduated = record.gpv >= 1000;
+    let isEligible = !isGraduated && record.participation !== 'inactive';
+
+    if (isEligible) {
+        // 判斷回饋率
+        let hasRecruit = (record.newRecruits || []).length > 0;
+        let appliedRate = 0;
+        
+        if (myRate <= 0.03) {
+            appliedRate = hasRecruit ? params.rate_0_3_rec : params.rate_0_3_base;
+        } else if (myRate === 0.06) {
+            appliedRate = hasRecruit ? params.rate_6_rec : params.rate_6_base;
         }
-      });
+        // 若 PV rate > 6% (即 9%以上) 會被視為畢業，這裡邏輯已在 isGraduated 排除
+        
+        // 計算基數：小組BV - 獨立參與腿的BV
+        let baseBV = record.gpv * 50; // 預設用小組PV轉BV，或使用 record.gbv (假設 record.gbv = record.gpv * 50)
+        // 更精確：使用輸入的 Group BV (假設 UI 有提供，若無則 PV*50)
+        // 這裡我們假設系統邏輯以 GPV 為主，但若有紀錄獨立 BV 欄位更好。
+        // 為了相容，我們重新計算 Group BV = Personal BV + Sum(Legs BV)
+        // 但通常使用者輸入 "Group PV/BV"，這裡簡化：Base BV = Group PV * 50
+        // 扣除獨立腿
+        const independentLegsBV = legDetails.filter(l => l.isIndependent).reduce((sum, l) => sum + (Number(l.bv) || 0), 0);
+        
+        // 修正：小組BV應以使用者輸入為準，若無則算。
+        // 在 UI 中我們讓使用者輸入 Group PV，自動推算 Group BV。
+        // 實際上差額獎金計算需要精確的 BV。
+        // 這裡假設：參與新星計算的基數 = (Group PV * 50) - 獨立腿 BV。
+        // **修正邏輯**：使用 record.gpv * 50 作為總小組BV估算 (或若有輸入GBV欄位)
+        
+        const totalGroupBV = record.gpv * 50; 
+        const calcBaseBV = Math.max(0, totalGroupBV - independentLegsBV);
+        
+        baseBonus = calcBaseBV * appliedRate;
+
+        // 新人消費回饋
+        const newRecruitTotalBV = (record.newRecruits || []).reduce((sum, r) => sum + (Number(r.bv)||0), 0);
+        recruitBonus = newRecruitTotalBV * params.rate_recruit_bv;
+
+        // 學習加碼
+        if (record.learningDone) {
+            learningBonus = (baseBonus + recruitBonus) * params.rate_learning;
+        }
+
+        starTotal = baseBonus + recruitBonus + learningBonus;
     }
 
-    function saveToCloud() {
-        db.collection("newstar").doc(TEAM_ID).set({ members, logs, sponsors, updatedAt: new Date().toISOString() }, { merge: true });
-    }
+    // 總收入
+    const totalIncome = companyTotal + starTotal;
+
+    return {
+        ...record,
+        partnerName: partner.name + ' ' + partner.code,
+        initiatorId: partner.initiatorId,
+        myRate,
+        personalBonus,
+        legDetails,
+        diffBonusTotal,
+        companyTotal,
+        isGraduated,
+        isEligible,
+        baseBonus,
+        recruitBonus,
+        learningBonus,
+        starTotal,
+        totalIncome
+    };
+}
+
+/**
+ * 路由與視圖渲染
+ */
+const app = document.getElementById('app');
+const navLinks = document.querySelectorAll('aside nav a');
+
+function router(page) {
+    navLinks.forEach(a => a.classList.remove('active'));
+    document.getElementById('nav-' + page).classList.add('active');
     
-    function saveToLocal(triggerCloud = true) {
-        localStorage.setItem('ns55_mems', JSON.stringify(members));
-        localStorage.setItem('ns55_logs', JSON.stringify(logs));
-        localStorage.setItem('ns55_spons', JSON.stringify(sponsors));
-        if(triggerCloud) saveToCloud();
-    }
-
-    // ================================
-    // 2. Logic: Hard Cut & PV Calculation
-    // ================================
+    app.innerHTML = '';
     
-    function getPersonalPV(memId, monthStr) {
-        return logs.filter(l => l.memberId === memId && l.date.startsWith(monthStr) && l.type === 'sales')
-                   .reduce((acc, l) => acc + l.pv, 0);
+    switch(page) {
+        case 'dashboard': renderDashboard(); break;
+        case 'payout': renderPayout(); break;
+        case 'partners': renderPartners(); break;
+        case 'initiators': renderInitiators(); break;
+        case 'records': renderRecords(); break;
+        case 'org': renderOrgChart(); break;
+        case 'versions': renderVersions(); break;
+        case 'settings': renderSettings(); break;
+        default: renderDashboard();
     }
+}
 
-    function calculateEffectivePV(memId, monthStr, isRoot = true) {
-        const me = members.find(m => m.id === memId);
-        if (!me) return 0;
+// 1. Dashboard
+function renderDashboard() {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const records = store.getRecordsByMonth(currentMonth).map(calculateRecord);
+    
+    const totalCompany = records.reduce((s, r) => s + r.companyTotal, 0);
+    const totalStar = records.reduce((s, r) => s + r.starTotal, 0);
+    const unpaidCount = records.filter(r => r.payoutStatus !== 'paid' && r.totalIncome > 0).length;
 
-        if (!isRoot && me.isNewStar) return 0;
+    app.innerHTML = `
+        <header>
+            <h1>📊 總覽儀表板 (${currentMonth})</h1>
+        </header>
+        <div class="row">
+            <div class="summary-box col" style="background:#2980b9">
+                <div class="summary-item"><div>公司獎金預估</div><div>${formatMoney(totalCompany)}</div></div>
+            </div>
+            <div class="summary-box col" style="background:#27ae60">
+                <div class="summary-item"><div>新星團隊回饋</div><div>${formatMoney(totalStar)}</div></div>
+            </div>
+            <div class="summary-box col" style="background:#c0392b">
+                <div class="summary-item"><div>待發放人數</div><div>${unpaidCount} 人</div></div>
+            </div>
+        </div>
 
-        let totalPV = getPersonalPV(memId, monthStr);
-        const directDownlines = members.filter(m => m.sponsorId === memId);
-        directDownlines.forEach(downline => {
-            totalPV += calculateEffectivePV(downline.id, monthStr, false);
-        });
+        <div class="card">
+            <h3>📝 系統說明</h3>
+            <p>歡迎使用內部月結獎金系統。</p>
+            <ul>
+                <li>請先至 <b>發起人管理</b> 與 <b>夥伴名單管理</b> 建立基本資料。</li>
+                <li>每月結算時，至 <b>月份業績紀錄</b> 輸入每位夥伴數據。</li>
+                <li>透過 <b>本月發放總表</b> 進行核銷與匯出。</li>
+            </ul>
+            <p style="color: #e74c3c; font-size: 0.9rem;">⚠️ 免責聲明：本系統僅供內部試算與紀錄，實際獎金以公司公告為準。</p>
+        </div>
+    `;
+}
 
-        return totalPV;
-    }
+// 2. Partners
+function renderPartners() {
+    const list = store.data.partners;
+    const initiators = store.data.initiators;
+    
+    let html = `
+        <header>
+            <h1>👥 夥伴名單管理</h1>
+            <button class="btn btn-primary" onclick="editPartner()">+ 新增夥伴</button>
+        </header>
+        <div class="card">
+            <table>
+                <thead>
+                    <tr><th>編號</th><th>姓名</th><th>推薦人(上線)</th><th>發起人(出資)</th><th>狀態</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                ${list.map(p => {
+                    const sponsor = store.getPartner(p.sponsorId);
+                    const init = store.getInitiator(p.initiatorId);
+                    return `
+                    <tr>
+                        <td>${p.code}</td>
+                        <td>${p.name}</td>
+                        <td>${sponsor ? sponsor.code + ' ' + sponsor.name : '-'}</td>
+                        <td>${init ? init.code + ' ' + init.name : '<span style="color:red">未設定</span>'}</td>
+                        <td><span class="status-badge ${p.status === 'inactive' ? 'status-inactive' : 'status-active'}">${p.status==='inactive'?'停用':'啟用'}</span></td>
+                        <td>
+                            <button class="btn btn-secondary" onclick="editPartner('${p.id}')">編輯</button>
+                        </td>
+                    </tr>
+                    `
+                }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+    app.innerHTML = html;
+}
 
-    function calcBonus(pv, bv, isRec, newcomers, hasLearn) {
-        if (pv >= 1000) return { total: 0, isGraduated: true, text: "畢業 (Core+)" };
-        let rate = (pv >= 600) ? (isRec ? 0.02 : 0.01) : (isRec ? 0.04 : 0.03);
-        let rateTxt = (pv >= 600) ? (isRec ? "6%+2%" : "6%+1%") : (isRec ? "4%" : "3%");
-        let base = bv * rate;
-        let nBonus = 0;
-        if (newcomers) newcomers.forEach(n => nBonus += n.bv * 0.01);
-        let sub = base + nBonus;
-        let lBonus = hasLearn ? sub * 0.03 : 0;
-        return { total: Math.floor(sub + lBonus), isGraduated: false, text: `R:${rateTxt}`, breakdown: { base, new: nBonus, learn: lBonus }};
-    }
+function editPartner(id) {
+    const p = id ? store.getPartner(id) : { id: '', code: '', name: '', sponsorId: '', initiatorId: '', status: 'active' };
+    const partners = store.data.partners.filter(x => x.id !== p.id); // Exclude self
+    const initiators = store.data.initiators;
 
-    // ================================
-    // 3. UI Actions & Entry
-    // ================================
+    const modalHtml = `
+        <h2>${id ? '編輯' : '新增'}夥伴</h2>
+        <form onsubmit="savePartner(event, '${id}')">
+            <div class="row">
+                <div class="col form-group">
+                    <label>編號 (Code) *</label>
+                    <input type="text" class="form-control" name="code" value="${p.code}" required>
+                </div>
+                <div class="col form-group">
+                    <label>姓名 *</label>
+                    <input type="text" class="form-control" name="name" value="${p.name}" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>推薦人 (上線)</label>
+                <select class="form-control" name="sponsorId">
+                    <option value="">-- 無 (頂層) --</option>
+                    ${partners.map(opt => `<option value="${opt.id}" ${opt.id === p.sponsorId ? 'selected' : ''}>${opt.code} ${opt.name}</option>`).join('')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>發起人 (出資者) *</label>
+                <select class="form-control" name="initiatorId" required>
+                    <option value="">-- 請選擇 --</option>
+                    ${initiators.map(opt => `<option value="${opt.id}" ${opt.id === p.initiatorId ? 'selected' : ''}>${opt.code} ${opt.name}</option>`).join('')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>狀態</label>
+                <select class="form-control" name="status">
+                    <option value="active" ${p.status === 'active' ? 'selected' : ''}>啟用</option>
+                    <option value="inactive" ${p.status === 'inactive' ? 'selected' : ''}>停用</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">儲存</button>
+        </form>
+    `;
+    openModal(modalHtml);
+}
 
-    function switchTab(tabId) {
-        document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        event.currentTarget.classList.add('active');
-        refreshUI();
-    }
+function savePartner(e, id) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
 
-    function refreshUI() {
-        updateMemberSelects();
-        renderMembers();
-        renderSponsors();
-        renderDashboard();
-        renderNetwork();
-        renderLogs();
-    }
-
-    function checkMemberSelect() {
-        const val = document.getElementById('entryMember').value;
-        document.getElementById('quickAddMemberBox').style.display = (val === 'new_mode') ? 'block' : 'none';
-    }
-
-    function toggleExceptionMemo() {
-        const chk = document.getElementById('exceptionMemoCheck').checked;
-        document.getElementById('exceptionMemoText').style.display = chk ? 'block' : 'none';
-    }
-
-    function autoConvert(source, context) {
-        let pvId = context==='entry'?'entryPV':'calcPV';
-        let bvId = context==='entry'?'entryBV':'calcBV';
-        const pvEl = document.getElementById(pvId), bvEl = document.getElementById(bvId);
-        if(source==='pv') bvEl.value = (parseFloat(pvEl.value)||0) * 50;
-        else pvEl.value = (parseFloat(bvEl.value)||0) / 50;
-    }
-
-    // [New] Product Row Helpers
-    function addProductRow() {
-        const div = document.createElement('div');
-        div.className = 'prod-row';
-        div.innerHTML = `
-            <input type="text" class="p-name" placeholder="品項名稱 (如:牙膏)" style="flex:2; font-size:0.9rem;">
-            <input type="number" class="p-qty" placeholder="數量" value="1" style="flex:1; font-size:0.9rem;">
-            <button onclick="this.parentElement.remove()" style="border:none; background:none; color:#dc3545; cursor:pointer; padding:5px;">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-        document.getElementById('productRowsContainer').appendChild(div);
-    }
-
-    function clearProductRows() {
-        document.getElementById('productRowsContainer').innerHTML = '';
-    }
-
-    function updateInstantCalc() {
-        const memId = document.getElementById('entryMember').value;
-        if (!memId || memId === 'new_mode') {
-            document.getElementById('ibTotalVal').innerText = "$ -";
-            document.getElementById('ibDetailText').innerText = "--";
-            return;
+    // Basic Validation
+    if (!data.code || !data.name) return alert('編號與姓名必填');
+    if (store.data.partners.some(p => p.code === data.code && p.id !== id)) return alert('編號重複');
+    
+    // Cycle check for sponsor
+    if (data.sponsorId) {
+        let current = data.sponsorId;
+        while (current) {
+            if (current === id) return alert('不可選擇下線作為推薦人 (循環參照)');
+            const parent = store.getPartner(current);
+            current = parent ? parent.sponsorId : null;
         }
-
-        const month = document.getElementById('entryDate').value.slice(0, 7);
-        const curEffPV = calculateEffectivePV(memId, month, true);
-        const addPV = parseFloat(document.getElementById('entryPV').value) || 0;
-        const addNBV = parseFloat(document.getElementById('newcomerBV').value) || 0;
-        
-        const existLogs = logs.filter(l => l.memberId === memId && l.date.startsWith(month));
-        const existNews = existLogs.filter(l => l.type === 'newcomer').map(l => l.newcomerData);
-        const existLearn = existLogs.some(l => l.type === 'learning');
-        
-        let simPV = curEffPV + addPV;
-        let simNews = [...existNews];
-        if (addNBV > 0) simNews.push({ bv: addNBV });
-        
-        const isRecNow = document.getElementById('newcomerName').value.trim() !== "" || existNews.length > 0;
-        const isLearnNow = document.getElementById('learningFileCheck').checked || existLearn;
-
-        const oldRes = calcBonus(curEffPV, curEffPV * 50, existNews.length > 0, existNews, existLearn);
-        const newRes = calcBonus(simPV, simPV * 50, isRecNow, simNews, isLearnNow);
-
-        if (newRes.isGraduated) {
-            document.getElementById('ibTotalVal').innerHTML = "<span style='font-size:0.6em; color:orange;'>🏆 達畢業門檻</span>";
-            document.getElementById('ibDetailText').innerText = "Core+ 制度啟動";
-        } else {
-            const diff = newRes.total - oldRes.total;
-            document.getElementById('ibTotalVal').innerText = (diff >= 0 ? "+$" : "-$") + Math.abs(diff).toLocaleString();
-            document.getElementById('ibDetailText').innerText = `預估總 PV: ${simPV.toLocaleString()}`;
-        }
     }
 
-    function addCompositeLog() {
-        const date = document.getElementById('entryDate').value;
-        let memberId = document.getElementById('entryMember').value;
+    if (id) {
+        const idx = store.data.partners.findIndex(p => p.id === id);
+        store.data.partners[idx] = { ...store.data.partners[idx], ...data };
+    } else {
+        store.data.partners.push({ ...data, id: generateUUID(), joinDate: new Date().toISOString() });
+    }
+    store.save();
+    closeModal();
+    renderPartners();
+}
 
-        if (!date) return alert("請選擇日期");
-        if (!memberId) return alert("請選擇會員");
+// 3. Initiators
+function renderInitiators() {
+    let html = `
+        <header>
+            <h1>👔 發起人管理</h1>
+            <button class="btn btn-primary" onclick="editInitiator()">+ 新增發起人</button>
+        </header>
+        <div class="card">
+            <table>
+                <thead><tr><th>編號</th><th>姓名</th><th>備註</th><th>操作</th></tr></thead>
+                <tbody>
+                ${store.data.initiators.map(i => `
+                    <tr>
+                        <td>${i.code}</td><td>${i.name}</td><td>${i.note||''}</td>
+                        <td><button class="btn btn-secondary" onclick="editInitiator('${i.id}')">編輯</button></td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+    app.innerHTML = html;
+}
 
-        if (memberId === 'new_mode') {
-            const newName = document.getElementById('quickNewMemName').value.trim();
-            const newID = document.getElementById('quickNewMemID').value.trim();
-            const spID = document.getElementById('quickNewSponsor').value;
-            if(!newName || !newID) return alert("請輸入新會員資料");
-            if(members.find(m=>m.id===newID)) return alert("編號重複");
-            members.push({ id: newID, name: newName, sponsorId: spID, isNewStar: true });
-            memberId = newID;
-            saveToLocal(true);
-            refreshUI();
-            document.getElementById('entryMember').value = memberId;
-            document.getElementById('quickNewMemName').value = '';
-            document.getElementById('quickNewMemID').value = '';
-            checkMemberSelect();
-        }
+function editInitiator(id) {
+    const i = id ? store.getInitiator(id) : { id:'', code:'', name:'', note:'' };
+    openModal(`
+        <h2>${id?'編輯':'新增'}發起人</h2>
+        <form onsubmit="saveInitiator(event, '${id}')">
+            <div class="row">
+                <div class="col form-group"><label>編號</label><input name="code" value="${i.code}" class="form-control" required></div>
+                <div class="col form-group"><label>姓名</label><input name="name" value="${i.name}" class="form-control" required></div>
+            </div>
+            <div class="form-group"><label>備註</label><input name="note" value="${i.note}" class="form-control"></div>
+            <button type="submit" class="btn btn-primary">儲存</button>
+        </form>
+    `);
+}
 
-        let savedCount = 0;
-        
-        // 1. Sales with Products
-        const pvVal = parseFloat(document.getElementById('entryPV').value) || 0;
-        if (pvVal > 0) {
-            const bvVal = parseFloat(document.getElementById('entryBV').value) || 0;
+function saveInitiator(e, id) {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target).entries());
+    if (store.data.initiators.some(i => i.code === data.code && i.id !== id)) return alert('編號重複');
+    
+    if (id) {
+        const idx = store.data.initiators.findIndex(i => i.id === id);
+        store.data.initiators[idx] = { ...store.data.initiators[idx], ...data };
+    } else {
+        store.data.initiators.push({ ...data, id: generateUUID() });
+    }
+    store.save();
+    closeModal();
+    renderInitiators();
+}
+
+// 4. Records
+function renderRecords() {
+    const today = new Date();
+    const defaultMonth = today.toISOString().slice(0, 7);
+    const month = localStorage.getItem('last_view_month') || defaultMonth;
+
+    const rawRecords = store.getRecordsByMonth(month);
+    const calculatedRecords = rawRecords.map(calculateRecord);
+
+    app.innerHTML = `
+        <header>
+            <h1>📝 月份業績紀錄</h1>
+            <div style="display:flex; gap:10px;">
+                <input type="month" id="record-month-select" value="${month}" class="form-control" onchange="changeRecordMonth(this.value)">
+                <button class="btn btn-primary" onclick="editRecord(null, '${month}')">+ 建立紀錄</button>
+            </div>
+        </header>
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>夥伴</th>
+                        <th>小組 PV</th>
+                        <th>公司獎金</th>
+                        <th>新星回饋</th>
+                        <th>合計</th>
+                        <th>發放狀態</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                ${calculatedRecords.length === 0 ? '<tr><td colspan="7" class="text-center">本月尚無紀錄</td></tr>' : 
+                  calculatedRecords.map(r => `
+                    <tr>
+                        <td>${r.partnerName}</td>
+                        <td>${r.gpv} <small>(${ (r.myRate*100).toFixed(0) }%)</small></td>
+                        <td>${formatMoney(r.companyTotal)}</td>
+                        <td>${r.isGraduated ? '<span class="status-badge status-active">畢業</span>' : formatMoney(r.starTotal)}</td>
+                        <td class="money">${formatMoney(r.totalIncome)}</td>
+                        <td>
+                            <span class="status-badge ${r.payoutStatus === 'paid' ? 'status-paid' : 'status-unpaid'}">
+                                ${r.payoutStatus === 'paid' ? '已發放' : '未發放'}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-secondary" onclick="editRecord('${r.id}')">編輯</button>
+                        </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function changeRecordMonth(m) {
+    localStorage.setItem('last_view_month', m);
+    renderRecords();
+}
+
+let tempRecord = {};
+function editRecord(id, month) {
+    const r = id ? store.getRecord(id) : {
+        id: '',
+        partnerId: '',
+        month: month,
+        ppv: 0, pbv: 0, gpv: 0,
+        legs: [],
+        newRecruits: [],
+        products: [],
+        learningDone: false,
+        participation: 'active',
+        payoutStatus: 'unpaid',
+        payoutDate: month + '-18',
+        planVersionId: store.data.versions[0].id // default to first/latest
+    };
+    
+    // 鎖定檢查
+    if (r.payoutStatus === 'paid' && id) {
+        if(!confirm('此紀錄已標記為「已發放」，編輯將解除鎖定。確定要繼續嗎？')) return;
+    }
+
+    tempRecord = JSON.parse(JSON.stringify(r));
+
+    const partners = store.data.partners.filter(p => p.status === 'active');
+    const versions = store.data.versions;
+    const customCols = store.data.customProductColumns;
+
+    const modalHtml = `
+        <h2>${id ? '編輯' : '新增'}業績紀錄 (${r.month})</h2>
+        <form id="recordForm" onsubmit="saveRecord(event, '${id}')">
+            <div class="row">
+                <div class="col form-group">
+                    <label>夥伴 *</label>
+                    <select class="form-control" name="partnerId" required onchange="tempRecord.partnerId=this.value">
+                        <option value="">-- 請選擇 --</option>
+                        ${partners.map(p => `<option value="${p.id}" ${p.id === r.partnerId ? 'selected' : ''}>${p.code} ${p.name}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col form-group">
+                    <label>適用計畫版本</label>
+                    <select class="form-control" name="planVersionId" required>
+                        ${versions.map(v => `<option value="${v.id}" ${v.id === r.planVersionId ? 'selected' : ''}>${v.name}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+
+            <fieldset style="border:1px solid #ddd; padding:10px; margin-bottom:15px;">
+                <legend>個人與小組業績</legend>
+                <div class="row">
+                    <div class="col form-group">
+                        <label>個人 PV</label>
+                        <input type="number" class="form-control" name="ppv" value="${r.ppv}" oninput="syncBV(this, 'pbv')">
+                    </div>
+                    <div class="col form-group">
+                        <label>個人 BV (PV x 50)</label>
+                        <input type="number" class="form-control" name="pbv" value="${r.pbv}" oninput="syncPV(this, 'ppv')">
+                    </div>
+                    <div class="col form-group">
+                        <label>小組 PV (決定獎金%)</label>
+                        <input type="number" class="form-control" name="gpv" value="${r.gpv}" required>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset style="border:1px solid #ddd; padding:10px; margin-bottom:15px;">
+                <legend>第一代腿 (差額獎金計算)</legend>
+                <div id="legs-container"></div>
+                <button type="button" class="btn btn-outline" onclick="addLeg()">+ 新增腿</button>
+            </fieldset>
+
+            <fieldset style="border:1px solid #ddd; padding:10px; margin-bottom:15px;">
+                <legend>新星計畫參數</legend>
+                 <div class="row">
+                    <div class="col form-group">
+                        <label>參與狀態</label>
+                        <select class="form-control" name="participation">
+                            <option value="active" ${r.participation==='active'?'selected':''}>本月參與</option>
+                            <option value="inactive" ${r.participation==='inactive'?'selected':''}>停用(僅領公司獎金)</option>
+                        </select>
+                    </div>
+                    <div class="col form-group">
+                        <label style="display:flex;align-items:center;height:100%;">
+                            <input type="checkbox" name="learningDone" ${r.learningDone ? 'checked' : ''} style="margin-right:5px;"> 完成學習任務 (加碼)
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label>新推薦會員清單</label>
+                    <div id="recruits-container"></div>
+                    <button type="button" class="btn btn-outline" onclick="addRecruit()">+ 新增新人</button>
+                </div>
+            </fieldset>
+
+            <fieldset style="border:1px solid #ddd; padding:10px; margin-bottom:15px;">
+                <legend>產品銷售明細 (選填) <button type="button" class="btn" style="font-size:0.8rem" onclick="addCustomCol()">+ 自訂欄位</button></legend>
+                <div id="products-container"></div>
+                <button type="button" class="btn btn-outline" onclick="addProduct()">+ 新增產品</button>
+            </fieldset>
             
-            // Collect Products
-            let productsShared = [];
-            document.querySelectorAll('#productRowsContainer .prod-row').forEach(row => {
-                const name = row.querySelector('.p-name').value.trim();
-                const qty = row.querySelector('.p-qty').value;
-                if(name) productsShared.push({ name, qty });
-            });
+            <div class="row">
+                <div class="col form-group">
+                    <label>發放日期</label>
+                    <input type="date" class="form-control" name="payoutDate" value="${r.payoutDate}">
+                </div>
+                 <div class="col form-group">
+                    <label>發放狀態</label>
+                    <select class="form-control" name="payoutStatus">
+                        <option value="unpaid" ${r.payoutStatus==='unpaid'?'selected':''}>未發放</option>
+                        <option value="paid" ${r.payoutStatus==='paid'?'selected':''}>已發放</option>
+                    </select>
+                </div>
+            </div>
 
-            logs.push({ 
-                id: Date.now(), 
-                date, 
-                memberId, 
-                type: 'sales', 
-                pv: pvVal, 
-                details: `一般業績 (BV: ${bvVal})`,
-                productsShared: productsShared 
-            });
-            clearProductRows();
-            savedCount++;
-        }
+            <button type="submit" class="btn btn-primary">儲存紀錄</button>
+        </form>
+    `;
+    openModal(modalHtml);
+    renderLegs();
+    renderRecruits();
+    renderProducts();
+}
 
-        const nName = document.getElementById('newcomerName').value.trim();
-        if (nName) {
-            const nID = document.getElementById('newcomerID').value.trim();
-            const nBV = parseFloat(document.getElementById('newcomerBV').value) || 0;
-            if (!nID) return alert("請輸入新人編號");
-            if (!members.find(m => m.id === nID)) members.push({ id: nID, name: nName, sponsorId: memberId, isNewStar: true });
-            let detailsTxt = `推薦: ${nName} (${nID})`;
-            if (document.getElementById('exceptionMemoCheck').checked) {
-                const memo = document.getElementById('exceptionMemoText').value.trim();
-                if(memo) detailsTxt += ` [備註實際推薦: ${memo}]`;
-            }
-            logs.push({ id: Date.now() + 1, date, memberId, type: 'newcomer', pv: 0, details: detailsTxt, newcomerData: { name: nName, id: nID, bv: nBV } });
-            savedCount++;
-        }
+function syncBV(el, targetName) {
+    const form = document.getElementById('recordForm');
+    const target = form.querySelector(`[name="${targetName}"]`);
+    target.value = el.value * 50;
+}
+function syncPV(el, targetName) {
+    const form = document.getElementById('recordForm');
+    const target = form.querySelector(`[name="${targetName}"]`);
+    target.value = el.value / 50;
+}
 
-        if (document.getElementById('learningFileCheck').checked) {
-            logs.push({ id: Date.now() + 2, date, memberId, type: 'learning', pv: 0, details: "已繳交學習證明", isLearning: true });
-            savedCount++;
-        }
+// Dynamic Fields Rendering
+function renderLegs() {
+    const container = document.getElementById('legs-container');
+    container.innerHTML = tempRecord.legs.map((l, i) => `
+        <div class="row" style="margin-bottom:5px; align-items:flex-end;">
+            <div class="col"><input placeholder="腿名" class="form-control" value="${l.name}" onchange="tempRecord.legs[${i}].name=this.value"></div>
+            <div class="col"><input type="number" placeholder="PV" class="form-control" value="${l.pv}" onchange="tempRecord.legs[${i}].pv=Number(this.value)"></div>
+            <div class="col"><input type="number" placeholder="BV" class="form-control" value="${l.bv}" onchange="tempRecord.legs[${i}].bv=Number(this.value)"></div>
+            <div class="col" style="flex:0.5; display:flex; align-items:center;">
+                <label><input type="checkbox" ${l.isIndependent?'checked':''} onchange="tempRecord.legs[${i}].isIndependent=this.checked"> 獨立</label>
+            </div>
+            <button type="button" class="btn btn-danger" onclick="removeLeg(${i})">X</button>
+        </div>
+    `).join('');
+}
+function addLeg() { tempRecord.legs.push({ name: '', pv: 0, bv: 0, isIndependent: false }); renderLegs(); }
+function removeLeg(i) { tempRecord.legs.splice(i, 1); renderLegs(); }
 
-        if (savedCount === 0) return alert("未輸入任何數值");
-        saveToLocal(true);
-        alert(`成功儲存 ${savedCount} 筆紀錄`);
-        document.getElementById('entryPV').value = ''; document.getElementById('entryBV').value = '';
-        document.getElementById('newcomerName').value = ''; document.getElementById('newcomerID').value = ''; document.getElementById('newcomerBV').value = '';
-        document.getElementById('exceptionMemoCheck').checked = false; toggleExceptionMemo();
-        document.getElementById('learningFileCheck').checked = false;
-        updateInstantCalc();
+function renderRecruits() {
+    const container = document.getElementById('recruits-container');
+    container.innerHTML = tempRecord.newRecruits.map((r, i) => `
+        <div class="row" style="margin-bottom:5px;">
+            <div class="col"><input placeholder="新人姓名" class="form-control" value="${r.name}" onchange="tempRecord.newRecruits[${i}].name=this.value"></div>
+            <div class="col"><input type="number" placeholder="BV" class="form-control" value="${r.bv}" onchange="tempRecord.newRecruits[${i}].bv=Number(this.value)"></div>
+            <button type="button" class="btn btn-danger" onclick="removeRecruit(${i})">X</button>
+        </div>
+    `).join('');
+}
+function addRecruit() { tempRecord.newRecruits.push({ name: '', bv: 0 }); renderRecruits(); }
+function removeRecruit(i) { tempRecord.newRecruits.splice(i, 1); renderRecruits(); }
+
+function renderProducts() {
+    const container = document.getElementById('products-container');
+    const cols = store.data.customProductColumns;
+    
+    // Header
+    let html = `<div style="display:flex; font-weight:bold; margin-bottom:5px;">
+        <div style="flex:2">品項</div>
+        <div style="flex:1">數量</div>
+        ${cols.map(c => `<div style="flex:1">${c}</div>`).join('')}
+        <div style="width:40px"></div>
+    </div>`;
+
+    html += tempRecord.products.map((p, i) => `
+        <div style="display:flex; margin-bottom:5px; gap:5px;">
+            <input style="flex:2" class="form-control" value="${p.name||''}" placeholder="品名" onchange="updateProd(${i}, 'name', this.value)">
+            <input type="number" style="flex:1" class="form-control" value="${p.qty||0}" placeholder="數量" onchange="updateProd(${i}, 'qty', this.value)">
+            ${cols.map(c => `
+                <input style="flex:1" class="form-control" value="${(p.custom||{})[c]||''}" onchange="updateProdCustom(${i}, '${c}', this.value)">
+            `).join('')}
+            <button type="button" class="btn btn-danger" style="width:40px" onclick="removeProduct(${i})">X</button>
+        </div>
+    `).join('');
+    container.innerHTML = html;
+}
+function addProduct() { tempRecord.products.push({ name: '', qty: 0, custom: {} }); renderProducts(); }
+function removeProduct(i) { tempRecord.products.splice(i, 1); renderProducts(); }
+function updateProd(i, f, v) { tempRecord.products[i][f] = v; }
+function updateProdCustom(i, field, val) { 
+    if(!tempRecord.products[i].custom) tempRecord.products[i].custom = {}; 
+    tempRecord.products[i].custom[field] = val; 
+}
+function addCustomCol() {
+    const name = prompt('請輸入新欄位名稱 (例如：單價)：');
+    if(name && !store.data.customProductColumns.includes(name)) {
+        store.data.customProductColumns.push(name);
+        store.save();
+        renderProducts();
     }
+}
 
-    // ================================
-    // 4. Dashboard
-    // ================================
+function saveRecord(e, id) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    const record = {
+        ...tempRecord,
+        partnerId: formData.get('partnerId'),
+        planVersionId: formData.get('planVersionId'),
+        month: tempRecord.month, // keep original month
+        ppv: Number(formData.get('ppv')),
+        pbv: Number(formData.get('pbv')),
+        gpv: Number(formData.get('gpv')),
+        participation: formData.get('participation'),
+        learningDone: formData.get('learningDone') === 'on',
+        payoutDate: formData.get('payoutDate'),
+        payoutStatus: formData.get('payoutStatus')
+    };
 
-    function renderDashboard() {
-        const month = document.getElementById('dashMonthSelect').value;
-        const tbody = document.querySelector('#rankingTable tbody');
-        let stats = [];
+    if (id) {
+        const idx = store.data.records.findIndex(r => r.id === id);
+        store.data.records[idx] = record;
+    } else {
+        record.id = generateUUID();
+        store.data.records.push(record);
+    }
+    store.save();
+    closeModal();
+    renderRecords();
+}
 
-        members.filter(m => m.isNewStar).forEach(m => {
-            const effPV = calculateEffectivePV(m.id, month, true);
-            const myLogs = logs.filter(l => l.memberId === m.id && l.date.startsWith(month));
-            const hasRec = myLogs.some(l => l.type === 'newcomer');
-            const hasLearn = myLogs.some(l => l.type === 'learning');
-            const news = myLogs.filter(l => l.type === 'newcomer').map(l => l.newcomerData);
+// 5. Payout Dashboard (本月發放總表)
+function renderPayout() {
+    const month = localStorage.getItem('last_payout_view_month') || new Date().toISOString().slice(0, 7);
+    const records = store.getRecordsByMonth(month).map(calculateRecord);
+    const initiators = store.data.initiators;
+    
+    // Group by Initiator
+    const groups = {};
+    initiators.forEach(init => {
+        groups[init.id] = { 
+            info: init, 
+            records: records.filter(r => r.initiatorId === init.id),
+            total: 0, paid: 0, unpaid: 0
+        };
+    });
+    // Add 'No Initiator' group
+    const orphanRecords = records.filter(r => !r.initiatorId);
+    if(orphanRecords.length > 0) groups['none'] = { info: { name: '未指定發起人', code: 'N/A' }, records: orphanRecords, total:0, paid:0, unpaid:0 };
 
-            const res = calcBonus(effPV, effPV * 50, hasRec, news, hasLearn);
-            let statusBadge = res.isGraduated ? '<span class="tag cut">已畢業</span>' : (effPV >= 600 ? '<span class="tag in-scope">6%</span>' : '起步期');
-
-            stats.push({ name: m.name, pv: effPV, bonus: res.total, status: statusBadge, text: res.text });
+    // Calculate totals
+    Object.values(groups).forEach(g => {
+        g.records.forEach(r => {
+            g.total += r.totalIncome;
+            if(r.payoutStatus === 'paid') g.paid += r.totalIncome;
+            else g.unpaid += r.totalIncome;
         });
+    });
 
-        stats.sort((a, b) => b.pv - a.pv);
-        document.getElementById('totalPVDisplay').innerText = stats.reduce((a, b) => a + b.pv, 0).toLocaleString();
-        document.getElementById('totalBonusDisplay').innerText = "$" + stats.reduce((a, b) => a + b.bonus, 0).toLocaleString();
-        document.getElementById('activeMembersDisplay').innerText = stats.length;
-        tbody.innerHTML = stats.length ? stats.map((s, i) => `<tr><td>${i + 1}</td><td>${s.name}</td><td style="color:#0066cc; font-weight:bold;">${s.pv.toLocaleString()}</td><td>${s.status}</td><td style="color:#ff9900; font-weight:bold;">${s.bonus > 0 ? '$'+s.bonus.toLocaleString() : '-'}</td></tr>`).join('') : '<tr><td colspan="5" style="text-align:center">無資料</td></tr>';
-    }
+    app.innerHTML = `
+        <header>
+            <h1>💰 本月應發放總表</h1>
+            <input type="month" value="${month}" class="form-control" style="width:auto" onchange="localStorage.setItem('last_payout_view_month', this.value); renderPayout();">
+        </header>
 
-    // ================================
-    // 5. Network (INDEX 5.5 Logic)
-    // ================================
+        <div class="row">
+             <div class="col">
+                <button class="btn btn-primary" onclick="bulkMarkPaid('${month}')">批次標記已發放</button>
+                <button class="btn btn-secondary" onclick="exportPayoutCSV('${month}')">匯出 CSV</button>
+             </div>
+        </div>
+        <br>
 
-    function setNetworkView(mode) {
-        currentNetworkView = mode;
-        document.getElementById('viewNet').classList.toggle('active', mode === 'network');
-        document.getElementById('viewScope').classList.toggle('active', mode === 'scope');
-        document.getElementById('scopeLegend').style.display = (mode === 'scope') ? 'block' : 'none';
-        renderNetwork();
-    }
+        ${Object.values(groups).filter(g => g.records.length > 0).map(g => `
+            <div class="card">
+                <h3 style="border-bottom:2px solid var(--accent); padding-bottom:10px; display:flex; justify-content:space-between;">
+                    <span>${g.info.code} ${g.info.name}</span>
+                    <span style="font-size:0.9rem">應付：${formatMoney(g.unpaid)} / 已付：${formatMoney(g.paid)}</span>
+                </h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="40"><input type="checkbox" onchange="toggleGroupCheck(this, '${g.info.id}')"></th>
+                            <th>夥伴</th>
+                            <th>狀態</th>
+                            <th>公司獎金</th>
+                            <th>團隊回饋</th>
+                            <th>總計</th>
+                            <th>發放狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${g.records.map(r => `
+                            <tr>
+                                <td><input type="checkbox" class="payout-check group-${g.info.id}" value="${r.id}" ${r.payoutStatus === 'paid' ? 'disabled' : ''}></td>
+                                <td>${r.partnerName}</td>
+                                <td>${r.participation === 'inactive' ? '<span class="status-badge status-inactive">停用</span>' : '參與'}</td>
+                                <td>${formatMoney(r.companyTotal)}</td>
+                                <td>${formatMoney(r.starTotal)}</td>
+                                <td class="money">${formatMoney(r.totalIncome)}</td>
+                                <td><span class="status-badge ${r.payoutStatus==='paid'?'status-paid':'status-unpaid'}">${r.payoutStatus==='paid'?'已發放':'未發放'}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `).join('')}
+    `;
+}
 
-    function renderNetwork() {
-        const container = document.getElementById('treeContainer');
-        let html = "";
-        if (sponsors.length === 0) {
-            container.innerHTML = "<div style='padding:20px; text-align:center; color:#999;'>請先新增發起人</div>";
-            return;
-        }
+function toggleGroupCheck(master, groupId) {
+    document.querySelectorAll(`.group-${groupId}`).forEach(c => {
+        if(!c.disabled) c.checked = master.checked;
+    });
+}
 
-        sponsors.forEach(sp => {
-            html += `<div style="background:#f8f9fa; padding:12px; border-left:4px solid var(--purple); margin-bottom:10px;">
-                        <i class="fas fa-crown" style="color:var(--purple);"></i> <b>發起人：${sp.name}</b>
-                        <small style="color:#666">(${sp.id})</small>
-                     </div>`;
-            const legs = members.filter(m => m.sponsorId === sp.id);
-            if(legs.length === 0) {
-                html += "<div style='color:#999; margin-left:20px;'>無下線組織</div>";
-            } else {
-                legs.forEach((leg) => {
-                    html += buildTreeHtml(leg, 1, sp); 
-                });
-            }
-        });
-        container.innerHTML = html;
-    }
+function bulkMarkPaid(month) {
+    const selected = Array.from(document.querySelectorAll('.payout-check:checked')).map(c => c.value);
+    if (selected.length === 0) return alert('請先勾選未發放的項目');
+    
+    if(!confirm(`確定將 ${selected.length} 筆紀錄標記為「已發放」？\n這將鎖定資料不可修改。`)) return;
 
-    // Recursive Tree Builder with 2 modes
-    function buildTreeHtml(member, currentGen, rootSponsor) {
-        if (currentNetworkView === 'network') {
-            return buildNodeHtml(member, null, null, currentGen, rootSponsor);
-        }
-        return buildScopeNode(member, currentGen, rootSponsor, true);
-    }
+    selected.forEach(id => {
+        const r = store.getRecord(id);
+        if (r) r.payoutStatus = 'paid';
+    });
+    store.save();
+    renderPayout();
+}
 
-    // Helper for recursion state
-    function buildScopeNode(member, gen, rootSponsor, isParentValid) {
-        if (currentNetworkView === 'network') {
-            let html = buildNodeHtml(member, false, null, gen);
-            const children = members.filter(m => m.sponsorId === member.id);
-            children.forEach(c => { html += buildScopeNode(c, gen + 1, rootSponsor, true); });
-            html += "</div>";
-            return html;
-        }
+function exportPayoutCSV(month) {
+    const records = store.getRecordsByMonth(month).map(calculateRecord);
+    let csv = '\uFEFF'; // BOM
+    csv += '月份,發起人,夥伴編號,夥伴姓名,參與狀態,發放狀態,發放日,公司獎金,團隊回饋,總合計,備註\n';
+    
+    records.forEach(r => {
+        const init = store.getInitiator(r.initiatorId);
+        const initName = init ? `${init.code} ${init.name}` : '未設定';
+        const partner = store.getPartner(r.partnerId);
+        csv += `${r.month},${initName},${partner.code},${partner.name},${r.participation},${r.payoutStatus},${r.payoutDate},${r.companyTotal},${r.starTotal},${r.totalIncome},\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Payout_${month}.csv`;
+    link.click();
+}
 
-        // Scope Mode Logic
-        let isNodeValid = false;
-        let statusText = "";
+// 6. Organization Chart (3-Wide 5-Deep Scope)
+function renderOrgChart() {
+    const month = localStorage.getItem('last_org_view_month') || new Date().toISOString().slice(0, 7);
+    const partners = store.data.partners;
+    const records = store.getRecordsByMonth(month).map(calculateRecord);
+    const initiators = store.data.initiators;
 
-        if (gen === 1) {
-            // Direct Leg Check
-            if (rootSponsor.coachingLegs && rootSponsor.coachingLegs.includes(member.id)) {
-                isNodeValid = true;
-            } else {
-                isNodeValid = false;
-                statusText = "自行發起 (未列入輔導)";
-            }
+    // Build Tree Structure
+    const partnerMap = {};
+    partners.forEach(p => {
+        partnerMap[p.id] = { ...p, children: [], record: records.find(r => r.partnerId === p.id) };
+    });
+    
+    const roots = [];
+    partners.forEach(p => {
+        if (p.sponsorId && partnerMap[p.sponsorId]) {
+            partnerMap[p.sponsorId].children.push(partnerMap[p.id]);
         } else {
-            // Deep Check
-            if (isParentValid) {
-                if (gen <= 5) {
-                    isNodeValid = true;
-                } else {
-                    isNodeValid = false;
-                    statusText = "自行輔導 (超出5代)";
+            roots.push(partnerMap[p.id]);
+        }
+    });
+
+    // Coaching Scope Logic
+    const activeScopeId = localStorage.getItem('active_scope_initiator');
+    let scopeSet = new Set();
+    
+    if (activeScopeId) {
+        const scope = store.getCoachingScope(activeScopeId);
+        if (scope.roots && scope.roots.length > 0) {
+            // BFS/DFS to mark scope
+            function mark(pid, depth) {
+                if (depth > 5) return;
+                scopeSet.add(pid);
+                const p = partnerMap[pid];
+                if(p && p.children) {
+                    p.children.forEach(c => mark(c.id, depth + 1));
                 }
-            } else {
-                isNodeValid = false; // Parent was already out
             }
+            scope.roots.forEach(rid => mark(rid, 1));
         }
+    }
 
-        let html = buildNodeHtml(member, true, isNodeValid, gen, statusText);
+    // Recursive Render
+    function renderNode(node) {
+        const r = node.record;
+        let classes = ['node'];
+        if (scopeSet.has(node.id)) classes.push('in-scope');
+        if (activeScopeId) {
+             const scope = store.getCoachingScope(activeScopeId);
+             if(scope.roots.includes(node.id)) classes.push('scope-root');
+        }
+        if (r && r.isGraduated) classes.push('graduate');
+        if (r && r.payoutStatus === 'unpaid' && r.totalIncome > 0) classes.push('unpaid');
+
+        let metric = r ? `${formatMoney(r.totalIncome)}` : '無紀錄';
+        if (r && r.participation === 'inactive') metric = '(停用)';
+
+        return `
+            <li>
+                <div class="${classes.join(' ')}" onclick="showNodeDetails('${node.id}', '${month}')">
+                    <div class="name">${node.code} ${node.name}</div>
+                    <div class="metric">${metric}</div>
+                </div>
+                ${node.children.length > 0 ? `<ul>${node.children.map(renderNode).join('')}</ul>` : ''}
+            </li>
+        `;
+    }
+
+    app.innerHTML = `
+        <header>
+            <h1>🌳 組織關聯圖</h1>
+            <div style="display:flex; gap:10px;">
+                <input type="month" value="${month}" class="form-control" style="width:auto" onchange="localStorage.setItem('last_org_view_month', this.value); renderOrgChart();">
+                <button class="btn btn-secondary" onclick="openScopeSettings()">🎯 設定輔導範圍</button>
+            </div>
+        </header>
         
-        const children = members.filter(m => m.sponsorId === member.id);
-        children.forEach(c => {
-            html += buildScopeNode(c, gen + 1, rootSponsor, isNodeValid);
+        <div style="margin-bottom:10px; padding:10px; background:white; border-radius:4px; display:flex; align-items:center; gap:15px;">
+            <span>顯示輔導範圍：</span>
+            <select class="form-control" style="width:auto" onchange="localStorage.setItem('active_scope_initiator', this.value); renderOrgChart();">
+                <option value="">-- 無 --</option>
+                ${initiators.map(i => `<option value="${i.id}" ${i.id === activeScopeId ? 'selected' : ''}>${i.name}</option>`).join('')}
+            </select>
+            <span style="font-size:0.8rem; color:#888;">黃框: 第一層重點(3位) | 黃底: 5代輔導範圍</span>
+        </div>
+
+        <div class="org-container">
+            <div class="tree">
+                <ul>
+                    ${roots.map(renderNode).join('')}
+                </ul>
+            </div>
+        </div>
+    `;
+}
+
+function openScopeSettings() {
+    const initiators = store.data.initiators;
+    const partners = store.data.partners;
+    
+    // UI logic to select initiator then select 3 roots
+    // Simplified for single file: Select Initiator -> Show List of checkboxes
+    
+    const modalHtml = `
+        <h2>設定輔導範圍 (3寬5深)</h2>
+        <div class="form-group">
+            <label>選擇發起人</label>
+            <select id="scope-init-select" class="form-control" onchange="renderScopeSelector(this.value)">
+                <option value="">-- 請選擇 --</option>
+                ${initiators.map(i => `<option value="${i.id}">${i.name}</option>`).join('')}
+            </select>
+        </div>
+        <div id="scope-selector-area"></div>
+    `;
+    openModal(modalHtml);
+}
+
+function renderScopeSelector(initId) {
+    if (!initId) { document.getElementById('scope-selector-area').innerHTML = ''; return; }
+    
+    const scope = store.getCoachingScope(initId);
+    const partners = store.data.partners;
+    
+    const html = `
+        <p>請選擇最多 3 位第一層輔導對象：</p>
+        <div style="max-height:300px; overflow-y:auto; border:1px solid #ddd; padding:10px;">
+            ${partners.map(p => `
+                <div style="margin-bottom:5px;">
+                    <label>
+                        <input type="checkbox" class="scope-root-check" value="${p.id}" 
+                        ${scope.roots.includes(p.id) ? 'checked' : ''}
+                        onchange="validateScopeLimit(this, '${initId}')">
+                        ${p.code} ${p.name}
+                    </label>
+                </div>
+            `).join('')}
+        </div>
+        <button class="btn btn-primary" style="margin-top:10px" onclick="saveScope('${initId}')">儲存設定</button>
+    `;
+    document.getElementById('scope-selector-area').innerHTML = html;
+}
+
+function validateScopeLimit(checkbox, initId) {
+    const checked = document.querySelectorAll('.scope-root-check:checked');
+    if (checked.length > 3) {
+        alert('最多只能選擇 3 位第一層輔導對象');
+        checkbox.checked = false;
+    }
+}
+
+function saveScope(initId) {
+    const checked = Array.from(document.querySelectorAll('.scope-root-check:checked')).map(c => c.value);
+    
+    let scopeIdx = store.data.coachingScopes.findIndex(c => c.initiatorId === initId);
+    if (scopeIdx === -1) {
+        store.data.coachingScopes.push({ initiatorId: initId, roots: checked, depth: 5 });
+    } else {
+        store.data.coachingScopes[scopeIdx].roots = checked;
+    }
+    store.save();
+    closeModal();
+    renderOrgChart(); // Refresh view
+}
+
+function showNodeDetails(pid, month) {
+    const r = store.data.records.find(rec => rec.partnerId === pid && rec.month === month);
+    const p = store.getPartner(pid);
+    if(!r) {
+        if(confirm(`${p.name} 本月無紀錄，要前往建立嗎？`)) {
+            closeModal();
+            router('records');
+            setTimeout(() => {
+                localStorage.setItem('last_view_month', month);
+                renderRecords();
+                editRecord(null, month);
+                // Pre-select partner in the form
+                tempRecord.partnerId = pid;
+                document.querySelector('[name="partnerId"]').value = pid;
+            }, 100);
+        }
+        return;
+    }
+    
+    const calc = calculateRecord(r);
+    
+    openModal(`
+        <h2>${p.code} ${p.name} - ${month}</h2>
+        <table class="table">
+            <tr><th>小組 PV</th><td>${calc.gpv}</td></tr>
+            <tr><th>個人獎金</th><td>${formatMoney(calc.personalBonus)}</td></tr>
+            <tr><th>差額獎金</th><td>${formatMoney(calc.diffBonusTotal)}</td></tr>
+            <tr><th>公司合計</th><td>${formatMoney(calc.companyTotal)}</td></tr>
+            <tr style="border-top:2px solid #ddd"><th>新星團隊回饋</th><td>${formatMoney(calc.starTotal)}</td></tr>
+            <tr style="background:#eee"><th>總收入</th><td style="font-weight:bold;color:red">${formatMoney(calc.totalIncome)}</td></tr>
+        </table>
+        <div style="margin-top:15px; text-align:right;">
+             <button class="btn btn-primary" onclick="closeModal(); router('records'); setTimeout(()=>editRecord('${r.id}', '${month}'), 100)">前往編輯</button>
+        </div>
+    `);
+}
+
+// 7. Plan Versions
+function renderVersions() {
+    app.innerHTML = `
+        <header>
+            <h1>⚙️ 計畫版本控管</h1>
+            <button class="btn btn-primary" onclick="editVersion()">+ 新增版本</button>
+        </header>
+        <div class="card">
+            <table>
+                <thead><tr><th>版本名稱</th><th>建立日期</th><th>操作</th></tr></thead>
+                <tbody>
+                    ${store.data.versions.map(v => `
+                        <tr>
+                            <td>${v.name}</td>
+                            <td>${new Date(v.createdAt).toLocaleDateString()}</td>
+                            <td><button class="btn btn-secondary" onclick="editVersion('${v.id}')">查看/編輯</button></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function editVersion(id) {
+    const v = id ? store.getVersion(id) : { 
+        id: '', name: '2026 QX 新制', createdAt: '', 
+        params: { ...defaultPlanParams } 
+    };
+    const p = v.params;
+
+    // Check usage
+    const isUsed = id && store.data.records.some(r => r.planVersionId === id);
+
+    openModal(`
+        <h2>${id ? '編輯' : '新增'}版本</h2>
+        ${isUsed ? '<p style="color:red">此版本已被紀錄使用，建議建立新版本而非修改。</p>' : ''}
+        <form onsubmit="saveVersion(event, '${id}')">
+            <div class="form-group"><label>版本名稱</label><input name="name" value="${v.name}" class="form-control" required></div>
+            
+            <h3>參數設定</h3>
+            <div class="row">
+                <div class="col form-group"><label>0-3% 基礎回饋率</label><input type="number" step="0.01" name="rate_0_3_base" value="${p.rate_0_3_base}" class="form-control"></div>
+                <div class="col form-group"><label>0-3% 有推薦回饋率</label><input type="number" step="0.01" name="rate_0_3_rec" value="${p.rate_0_3_rec}" class="form-control"></div>
+            </div>
+            <div class="row">
+                <div class="col form-group"><label>6% 基礎回饋率</label><input type="number" step="0.01" name="rate_6_base" value="${p.rate_6_base}" class="form-control"></div>
+                <div class="col form-group"><label>6% 有推薦回饋率</label><input type="number" step="0.01" name="rate_6_rec" value="${p.rate_6_rec}" class="form-control"></div>
+            </div>
+            <div class="row">
+                <div class="col form-group"><label>新人消費回饋率</label><input type="number" step="0.01" name="rate_recruit_bv" value="${p.rate_recruit_bv}" class="form-control"></div>
+                <div class="col form-group"><label>學習加碼率</label><input type="number" step="0.01" name="rate_learning" value="${p.rate_learning}" class="form-control"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">儲存版本</button>
+        </form>
+    `);
+}
+
+function saveVersion(e, id) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const params = {
+        rate_0_3_base: Number(formData.get('rate_0_3_base')),
+        rate_0_3_rec: Number(formData.get('rate_0_3_rec')),
+        rate_6_base: Number(formData.get('rate_6_base')),
+        rate_6_rec: Number(formData.get('rate_6_rec')),
+        rate_recruit_bv: Number(formData.get('rate_recruit_bv')),
+        rate_learning: Number(formData.get('rate_learning'))
+    };
+    
+    if (id) {
+        const idx = store.data.versions.findIndex(v => v.id === id);
+        store.data.versions[idx] = { ...store.data.versions[idx], name: formData.get('name'), params };
+    } else {
+        store.data.versions.unshift({ // Add to top
+            id: generateUUID(),
+            name: formData.get('name'),
+            createdAt: new Date().toISOString(),
+            params
         });
-        html += "</div>";
-        return html;
     }
+    store.save();
+    closeModal();
+    renderVersions();
+}
 
-    function buildNodeHtml(member, isScopeMode, isValid, gen, statusText="") {
-        const cutTag = member.isNewStar ? '<span class="tag cut">NewStar</span>' : '';
-        
-        let visual = "";
-        if (isScopeMode) {
-            const icon = isValid ? "✅" : "❌";
-            const cls = isValid ? "in-scope" : "out-scope";
-            const genLabel = isValid ? `Gen ${gen}` : `Gen ${gen}`;
-            const sText = statusText ? `<span class="scope-status out">${statusText}</span>` : `<span class="scope-status">輔導圈</span>`;
-            visual = `<span class="tag ${cls}">${icon} ${genLabel}</span> ${sText}`;
-        } else {
-            visual = `<span class="tag out-scope" style="background:#ddd; color:#555;">Gen ${gen}</span>`;
-        }
+// 8. Settings
+function renderSettings() {
+    app.innerHTML = `
+        <header><h1>🛠️ 系統設定</h1></header>
+        <div class="card">
+            <h3>資料備份與還原</h3>
+            <p>將所有系統資料匯出為 JSON 檔，或從 JSON 檔還原。</p>
+            <button class="btn btn-primary" onclick="exportData()">匯出備份 (JSON)</button>
+            <input type="file" id="importFile" style="display:none" onchange="importData(this)">
+            <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">匯入還原</button>
+            <br><br>
+            <button class="btn btn-danger" onclick="clearData()">⚠️ 清除所有資料</button>
+        </div>
+    `;
+}
 
-        return `<div class="tree-node">
-                    <div class="tree-content" style="${(isScopeMode && !isValid) ? 'opacity:0.6; background:#f0f0f0;' : ''}">
-                        ${visual}
-                        <b style="margin-left:5px;">${member.name}</b> <small style="color:#999">(${member.id})</small>
-                        ${cutTag}
-                    </div>`;
-    }
+function exportData() {
+    const blob = new Blob([JSON.stringify(store.data, null, 2)], { type: 'application/json' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Amway_Backup_${new Date().toISOString().slice(0,10)}.json`;
+    link.click();
+}
 
-    // ================================
-    // 6. Data & Sponsors Management
-    // ================================
-
-    function addSponsor() {
-        const id = document.getElementById('spId').value.trim();
-        const name = document.getElementById('spName').value.trim();
-        if(id && name) {
-            sponsors.push({id, name, coachingLegs: []}); // Init coachingLegs
-            saveToLocal(true);
-            document.getElementById('spId').value=''; document.getElementById('spName').value='';
-            refreshUI();
-        }
-    }
-
-    function renderSponsors() {
-        const container = document.getElementById('sponsorListContainer');
-        container.innerHTML = sponsors.map(sp => {
-            // Find direct downlines
-            const directs = members.filter(m => m.sponsorId === sp.id);
-            
-            // Build list of checkboxes for direct downlines
-            let legListHtml = "";
-            if(directs.length === 0) {
-                legListHtml = "<div style='padding:10px; color:#999; font-size:0.85rem;'>尚無直屬下線可設定</div>";
-            } else {
-                legListHtml = directs.map(d => {
-                    const isChecked = (sp.coachingLegs && sp.coachingLegs.includes(d.id)) ? "checked" : "";
-                    return `<div class="coach-leg-item">
-                                <span>${d.name} (${d.id})</span>
-                                <input type="checkbox" class="cl-check" ${isChecked} onchange="toggleCoachingLeg('${sp.id}', '${d.id}', this)">
-                            </div>`;
-                }).join('');
+function importData(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if(confirm('確定要還原資料嗎？現有資料將被覆蓋。')) {
+                store.data = data;
+                store.save();
+                location.reload();
             }
-
-            return `<div style="border:1px solid #ddd; border-radius:8px; overflow:hidden;">
-                        <div style="background:#f8f9fa; padding:10px; display:flex; justify-content:space-between; align-items:center;">
-                            <b>👑 ${sp.name}</b>
-                            <button class="btn btn-outline" style="padding:2px 6px; font-size:0.7rem; color:red;" onclick="deleteSponsor('${sp.id}')">移除</button>
-                        </div>
-                        <div style="background:white;">
-                            <div style="padding:8px; font-size:0.8rem; background:#fffbf0; border-bottom:1px solid #eee; color:#856404;">
-                                勾選列入輔導圈 (最多3位)
-                            </div>
-                            ${legListHtml}
-                        </div>
-                    </div>`;
-        }).join('');
-
-        // Update Selects
-        let opts = '<option value="">指定上線 (選填)</option>';
-        sponsors.forEach(s => opts += `<option value="${s.id}">👑 ${s.name}</option>`);
-        members.forEach(m => opts += `<option value="${m.id}">${m.name}</option>`);
-        document.getElementById('manualMemSponsor').innerHTML = opts;
-        document.getElementById('quickNewSponsor').innerHTML = opts;
-    }
-
-    function toggleCoachingLeg(sponsorId, memberId, checkbox) {
-        const sp = sponsors.find(s => s.id === sponsorId);
-        if(!sp) return;
-        if(!sp.coachingLegs) sp.coachingLegs = [];
-
-        if(checkbox.checked) {
-            if(sp.coachingLegs.length >= 3) {
-                alert("每個發起人最多只能設定 3 條輔導重點線！");
-                checkbox.checked = false;
-                return;
-            }
-            sp.coachingLegs.push(memberId);
-        } else {
-            sp.coachingLegs = sp.coachingLegs.filter(id => id !== memberId);
+        } catch(err) {
+            alert('檔案格式錯誤');
         }
-        saveToLocal(true);
-        if(document.getElementById('network').classList.contains('active')) renderNetwork();
-    }
+    };
+    reader.readAsText(file);
+}
 
-    function addMemberManual() {
-        const id = document.getElementById('manualMemId').value.trim();
-        const name = document.getElementById('manualMemName').value.trim();
-        const sp = document.getElementById('manualMemSponsor').value;
-        if(id && name) {
-            if(members.find(m=>m.id===id)) return alert("ID 重複");
-            members.push({id, name, sponsorId: sp, isNewStar: true});
-            saveToLocal(true);
-            refreshUI();
-            alert("新增成功");
-            document.getElementById('manualMemId').value=''; document.getElementById('manualMemName').value='';
-        }
+function clearData() {
+    if(prompt('請輸入 "DELETE" 確認清除所有資料') === 'DELETE') {
+        localStorage.removeItem(DB_KEY);
+        location.reload();
     }
+}
 
-    function deleteMember(id) {
-        if(confirm("確定刪除此會員？")) {
-            members = members.filter(m => m.id !== id);
-            // Also remove from coaching legs if present
-            sponsors.forEach(s => {
-                if(s.coachingLegs) s.coachingLegs = s.coachingLegs.filter(lid => lid !== id);
-            });
-            saveToLocal(true);
-            refreshUI();
-        }
-    }
+// UI Helper
+function openModal(content) {
+    document.getElementById('modal-body').innerHTML = content;
+    document.getElementById('modal').style.display = 'block';
+}
+function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+}
+window.onclick = function(event) {
+    if (event.target == document.getElementById('modal')) closeModal();
+}
 
-    function deleteSponsor(id) {
-        if(confirm("移除發起人？")) {
-            sponsors = sponsors.filter(s => s.id !== id);
-            saveToLocal(true);
-            refreshUI();
-        }
-    }
+// Initial Render
+router('dashboard');
 
-    function renderMembers() {
-        const tb = document.querySelector('#memberTable tbody');
-        tb.innerHTML = members.map(m => {
-            const up = members.find(u => u.id === m.sponsorId)?.name || sponsors.find(s => s.id === m.sponsorId)?.name || '-';
-            return `<tr><td>${m.id}</td><td>${m.name}</td><td>${up}</td><td><button class="btn btn-danger" style="padding:5px 10px; font-size:0.8rem;" onclick="deleteMember('${m.id}')"><i class="fas fa-trash"></i></button></td></tr>`;
-        }).join('');
-    }
-
-    function updateMemberSelects() {
-        let html = '<option value="" disabled selected>-- 選擇操作會員 --</option>';
-        html += '<option value="new_mode" style="color:blue; font-weight:bold;">➕ 新增會員...</option>';
-        members.forEach(m => { html += `<option value="${m.id}">${m.name} (${m.id})</option>`; });
-        const cur = document.getElementById('entryMember').value;
-        document.getElementById('entryMember').innerHTML = html;
-        if(cur && members.find(m=>m.id===cur)) document.getElementById('entryMember').value = cur;
-        const f = document.getElementById('filterMember');
-        f.innerHTML = '<option value="all">全部</option>' + members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
-    }
-
-    function renderLogs() {
-        const m = document.getElementById('filterMonth').value;
-        const mem = document.getElementById('filterMember').value;
-        let d = logs.filter(l => (!m || l.date.startsWith(m)) && (mem === 'all' || l.memberId === mem));
-        d.sort((a,b) => new Date(b.date) - new Date(a.date));
-        document.querySelector('#logTable tbody').innerHTML = d.map(l => {
-            const name = members.find(x => x.id === l.memberId)?.name || l.memberId;
-            let badge = l.type === 'sales' ? 'badge-sales' : (l.type === 'newcomer' ? 'badge-new' : 'badge-learn');
-            
-            // Product Display
-            let detailsDisplay = l.details;
-            if (l.type === 'sales' && l.productsShared && l.productsShared.length > 0) {
-                const prodStr = l.productsShared.map(p => `${p.name}×${p.qty}`).join('、');
-                detailsDisplay += `<div style="font-size:0.85rem; color:#666; margin-top:4px; background:#f1f5f9; padding:2px 6px; border-radius:4px; display:inline-block;"><i class="fas fa-box-open" style="margin-right:4px;"></i>分享：${prodStr}</div>`;
-            }
-
-            return `<tr><td>${l.date}</td><td>${name}</td><td><span class="badge ${badge}">${l.type}</span></td><td>${detailsDisplay}</td><td>${l.pv || '-'}</td><td><button onclick="deleteLog(${l.id})" style="color:red;border:none;background:none"><i class="fas fa-trash"></i></button></td></tr>`;
-        }).join('');
-    }
-    
-    function deleteLog(id) {
-        if(confirm("刪除此紀錄?")) {
-            logs = logs.filter(l => l.id !== id);
-            saveToLocal(true);
-            refreshUI();
-        }
-    }
-
-    function populateMonthSelect() {
-        const s = document.getElementById('dashMonthSelect'); s.innerHTML='';
-        const now = new Date();
-        for(let i=0; i<12; i++) {
-            let d = new Date(now.getFullYear(), now.getMonth() - i + 2, 1);
-            let v = d.toISOString().slice(0, 7);
-            let opt = document.createElement('option'); opt.value = v; opt.text = v;
-            s.appendChild(opt);
-        }
-        s.value = new Date().toISOString().slice(0,7);
-    }
-    
-    function runSimulation() {
-        let pv=parseFloat(document.getElementById('calcPV').value)||0;
-        let bv=parseFloat(document.getElementById('calcBV').value)||0;
-        let nbv=parseFloat(document.getElementById('calcNewcomerBV').value)||0;
-        let learn=document.getElementById('calcHasLearned').checked;
-        let news=[]; if(nbv>0) news.push({bv:nbv});
-        let partners = parseFloat(document.getElementById('calcPartners').value)||0;
-        let res = calcBonus(pv, bv, partners > 0 || news.length > 0, news, learn);
-        if(res.isGraduated) {
-            document.getElementById('simGraduateMsg').style.display='block';
-            document.getElementById('simValTotal').innerText="畢業";
-        } else {
-            document.getElementById('simGraduateMsg').style.display='none';
-            document.getElementById('simValTotal').innerText=res.total.toLocaleString();
-        }
-    }
-
-    function exportPDF(){ const e=document.getElementById('dashboard'); html2pdf().from(e).save(); }
-    
-    function exportData(){
-        const d = {members, logs, sponsors, version:"Index_v6.1_Product"};
-        const url = URL.createObjectURL(new Blob([JSON.stringify(d)],{type:"application/json"}));
-        const a=document.createElement('a'); a.href=url; a.download=`NS_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
-    }
-    
-    function importData(inp){
-        const f=inp.files[0]; if(!f)return;
-        const r=new FileReader(); r.onload=e=>{
-            try{ 
-                const d=JSON.parse(e.target.result); 
-                if(confirm("確定還原?")) {
-                    members=d.members||[]; logs=d.logs||[]; sponsors=d.sponsors||[];
-                    sponsors.forEach(s => { if(!s.coachingLegs) s.coachingLegs = []; });
-                    saveToLocal(true); location.reload();
-                } 
-            }catch(e){alert("格式錯誤");}
-        }; r.readAsText(f);
-    }
-
-    function clearAllData() {
-        if(prompt("輸入 DELETE 確認清除所有資料") === 'DELETE') {
-            members=[]; logs=[]; sponsors=[];
-            saveToLocal(true);
-            alert("已重置");
-            location.reload();
-        }
-    }
-    
-    function resetLogFilter() {
-        document.getElementById('filterMember').value = 'all';
-        renderLogs();
-    }
 </script>
 </body>
 </html>
