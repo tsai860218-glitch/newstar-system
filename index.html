@@ -3,162 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新星啟動計畫系統 (v3.4 UI/UX 優化版)</title>
+    <title>新星啟動計畫系統 (v3.3 說明與防呆版)</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
         :root {
-            /* 核心色系 */
-            --primary: #2c3e50;       /* 深藍：側欄、標題 */
-            --primary-light: #34495e; 
-            --accent: #00b894;        /* 亮綠：強調、主按鈕 */
-            --accent-hover: #00a884;
-            
-            /* 狀態色 (柔和版) */
-            --success-bg: #e6f7ef; --success-text: #00b894;
-            --danger-bg: #fff0f0;  --danger-text: #e15f5f;
-            --warning-bg: #fff8e1; --warning-text: #f39c12;
-            --gray-bg: #f1f3f5;    --gray-text: #adb5bd;
-            
-            /* 介面色 */
-            --bg-body: #f4f6f8;
-            --bg-card: #ffffff;
-            --text-main: #2d3436;
-            --text-sub: #636e72;
-            --border: #dfe6e9;
-            
-            /* 陰影與圓角 */
-            --radius: 8px;
-            --radius-lg: 12px;
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-            --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #1abc9c;
+            --accent-hover: #16a085;
+            --danger: #e74c3c;
+            --warning: #f1c40f;
+            --success: #27ae60;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --border: #e0e0e0;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --bg: #f8f9fa;
         }
 
-        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; display: flex; height: 100vh; background-color: var(--bg-body); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; overflow: hidden; }
-
-        /* Typography */
-        h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 600; color: var(--primary); }
-        .text-sub { color: var(--text-sub); font-size: 0.9rem; }
-        .text-sm { font-size: 0.85rem; }
+        * { box-sizing: border-box; font-family: "Segoe UI", "Microsoft JhengHei", sans-serif; }
+        body { margin: 0; display: flex; height: 100vh; background-color: var(--bg); color: #333; overflow: hidden; }
 
         /* Sidebar */
-        aside { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; transition: all 0.3s ease; z-index: 100; box-shadow: 4px 0 10px rgba(0,0,0,0.05); }
-        aside.collapsed { width: 0; padding: 0; opacity: 0; overflow: hidden; }
-        
-        aside h2 { padding: 0 20px; height: 64px; display: flex; align-items: center; gap: 12px; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.1); color: #fff; letter-spacing: 0.5px; }
-        aside nav { flex: 1; overflow-y: auto; padding: 15px 10px; }
-        aside nav a { display: flex; align-items: center; padding: 12px 15px; color: #b2bec3; text-decoration: none; transition: 0.2s; border-radius: var(--radius); margin-bottom: 4px; font-size: 0.95rem; font-weight: 500; }
-        aside nav a:hover { background: rgba(255,255,255,0.08); color: white; }
-        aside nav a.active { background: var(--accent); color: white; box-shadow: 0 2px 8px rgba(0,184,148,0.3); }
-        aside nav a span { margin-right: 10px; font-size: 1.1rem; }
-        aside .footer { padding: 20px; font-size: 0.75rem; color: #636e72; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.1); }
+        aside { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; transition: all 0.3s ease; z-index: 100; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        aside.collapsed { width: 0; opacity: 0; padding: 0; overflow: hidden; }
+        aside h2 { padding: 20px; margin: 0; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; height: 60px; background: rgba(0,0,0,0.1); }
+        aside nav { flex: 1; overflow-y: auto; padding: 10px 0; }
+        aside nav a { display: block; padding: 12px 20px; color: #bdc3c7; text-decoration: none; transition: 0.2s; border-left: 4px solid transparent; cursor: pointer; font-size: 0.95rem; }
+        aside nav a:hover, aside nav a.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--accent); }
+        aside .footer { padding: 15px; font-size: 0.75rem; color: #95a5a6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); }
 
         /* Main Content */
-        main { flex: 1; overflow-y: auto; padding: 25px 30px; position: relative; transition: margin 0.3s; scroll-behavior: smooth; }
+        main { flex: 1; overflow-y: auto; padding: 20px; position: relative; transition: margin 0.3s; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .menu-btn { background: none; border: none; font-size: 1.4rem; cursor: pointer; margin-right: 15px; color: var(--dark); padding: 0; width: 30px; text-align: center; }
+        h1 { margin: 0; color: var(--dark); font-size: 1.6rem; display: flex; align-items: center; font-weight: 700; }
+        .page-desc { font-size: 0.9rem; color: #7f8c8d; margin-top: -15px; margin-bottom: 20px; display: block; line-height: 1.5; }
         
-        /* Header */
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; padding-bottom: 15px; border-bottom: 1px dashed var(--border); }
-        .page-title { display: flex; align-items: center; gap: 15px; }
-        .menu-btn { background: white; border: 1px solid var(--border); width: 36px; height: 36px; border-radius: var(--radius); cursor: pointer; color: var(--text-main); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: 0.2s; box-shadow: var(--shadow-sm); }
-        .menu-btn:hover { border-color: var(--accent); color: var(--accent); }
-        h1 { font-size: 1.5rem; letter-spacing: -0.5px; }
-        .page-desc { display: block; margin-top: -10px; margin-bottom: 20px; color: var(--text-sub); font-size: 0.9rem; padding-left: 5px; }
+        /* UI Components */
+        .card { background: white; border-radius: 10px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 500; }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary { background: var(--accent); color: white; } .btn-primary:hover { background: var(--accent-hover); }
+        .btn-danger { background: var(--danger); color: white; } .btn-danger:hover { background: var(--danger-hover); }
+        .btn-secondary { background: #95a5a6; color: white; } .btn-secondary:hover { background: #7f8c8d; }
+        .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); } .btn-outline:hover { background: var(--accent); color: white; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; transition: border 0.2s; }
+        .row { display: flex; gap: 15px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 200px; }
 
-        /* Cards */
-        .card { background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 25px; margin-bottom: 25px; border: 1px solid var(--border); transition: 0.3s; }
-        .card:hover { box-shadow: var(--shadow-md); }
-
-        /* Buttons */
-        .btn { padding: 9px 18px; border: none; border-radius: var(--radius); cursor: pointer; font-size: 0.92rem; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; font-weight: 500; letter-spacing: 0.3px; line-height: 1.2; }
-        .btn:active { transform: translateY(1px); }
-        .btn-primary { background: var(--accent); color: white; box-shadow: 0 2px 6px rgba(0,184,148,0.25); } .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 4px 10px rgba(0,184,148,0.3); }
-        .btn-danger { background: #fff; color: var(--danger-text); border: 1px solid #fab1a0; } .btn-danger:hover { background: var(--danger-bg); border-color: var(--danger-text); }
-        .btn-secondary { background: #fff; color: var(--text-sub); border: 1px solid var(--border); } .btn-secondary:hover { background: var(--gray-bg); color: var(--text-main); border-color: #ced6e0; }
-        .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); } .btn-outline:hover { background: var(--success-bg); }
-        .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
-
-        /* Form Elements */
-        .form-group { margin-bottom: 18px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-main); font-size: 0.9rem; }
-        .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 1rem; transition: all 0.2s; background: #fff; color: var(--text-main); }
-        .form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,184,148,0.1); }
-        .form-control:disabled { background: var(--gray-bg); cursor: not-allowed; }
-        textarea.form-control { resize: vertical; min-height: 80px; line-height: 1.5; }
-        .row { display: flex; gap: 20px; flex-wrap: wrap; }
-        .col { flex: 1; min-width: 220px; }
-
-        /* Badges */
-        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; min-width: 65px; border: 1px solid transparent; }
-        .status-active { background: var(--success-bg); color: var(--success-text); border-color: rgba(0,184,148,0.2); }
-        .status-inactive { background: var(--gray-bg); color: var(--text-sub); border-color: var(--border); }
-        .status-paid { background: #d1f2eb; color: #0e6655; border-color: #a3e4d7; }
-        .status-unpaid { background: var(--danger-bg); color: var(--danger-text); border-color: #fadbd8; }
-        .status-month-inactive { background: var(--warning-bg); color: var(--warning-text); border-color: #ffe0b2; }
-        .status-archived { background: #f1f2f6; color: #a4b0be; }
+        /* Status Badges */
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; display: inline-block; text-align: center; min-width: 60px; margin-right: 5px; }
+        .status-active { background: #e8f8f5; color: var(--success); }
+        .status-inactive { background: #f2f3f4; color: #95a5a6; border: 1px solid #ddd; }
+        .status-paid { background: #d4efdf; color: var(--success); }
+        .status-unpaid { background: #fce4ec; color: #c0392b; }
+        .status-month-inactive { background: #fff3e0; color: #e67e22; border: 1px solid #ffe0b2; }
+        .status-archived { background: #f0f0f0; color: #7f8c8d; }
 
         /* Tables */
-        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 5px; }
-        th { background-color: #f8f9fa; font-weight: 600; color: var(--text-sub); text-transform: uppercase; font-size: 0.8rem; padding: 12px 15px; border-bottom: 2px solid var(--border); text-align: left; letter-spacing: 0.5px; }
-        td { padding: 16px 15px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text-main); font-size: 0.95rem; }
-        tr:last-child td { border-bottom: none; }
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; }
+        th, td { padding: 14px 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: #f8f9fa; font-weight: 700; color: var(--secondary); position: sticky; top: 0; border-bottom: 2px solid #ddd; }
         tr:hover td { background-color: #fcfcfc; }
 
-        /* Toolbar */
-        .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: white; padding: 15px 20px; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); margin-bottom: 25px; border: 1px solid var(--border); }
-        .toolbar input, .toolbar select { width: auto; min-width: 140px; flex: 1; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 12px; background-color: #fdfdfd; }
-        .toolbar input:focus, .toolbar select:focus { border-color: var(--accent); background-color: #fff; }
-        .toolbar-group { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; padding-left: 10px; border-left: 1px solid var(--border); }
-        .toolbar-group label { font-size: 0.9rem; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px; }
+        /* Dashboard Cards */
+        .summary-row { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+        .summary-card { flex: 1; min-width: 200px; background: white; padding: 20px; border-radius: 10px; box-shadow: var(--shadow); border-left: 5px solid transparent; display: flex; flex-direction: column; justify-content: space-between; }
+        .summary-card.green { border-left-color: var(--success); }
+        .summary-card.red { border-left-color: var(--danger); }
+        .summary-val { font-size: 2rem; font-weight: 800; color: var(--dark); margin: 5px 0; }
+        .summary-label { font-size: 0.9rem; color: #7f8c8d; font-weight: 500; }
+        .summary-hint { font-size: 0.8rem; color: #aaa; margin-top: 5px; }
 
-        /* Dashboard Summary */
-        .summary-row { display: flex; gap: 25px; margin-bottom: 25px; flex-wrap: wrap; }
-        .summary-card { flex: 1; min-width: 240px; background: white; padding: 25px; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); display: flex; flex-direction: column; justify-content: space-between; border-top: 4px solid transparent; position: relative; overflow: hidden; }
-        .summary-card.green { border-top-color: var(--accent); }
-        .summary-card.red { border-top-color: var(--danger); }
-        .summary-label { font-size: 0.9rem; color: var(--text-sub); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
-        .summary-val { font-size: 2.2rem; font-weight: 700; color: var(--primary); letter-spacing: -1px; }
-        .summary-hint { font-size: 0.85rem; color: #b2bec3; margin-top: 8px; display: flex; align-items: center; gap: 5px; }
-        .summary-icon { position: absolute; right: 20px; top: 20px; font-size: 3rem; opacity: 0.1; color: var(--primary); }
-
-        /* Modal */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(44, 62, 80, 0.6); backdrop-filter: blur(3px); }
-        .modal-content { background-color: #fff; margin: 2vh auto; padding: 0; border: none; width: 95%; max-width: 1000px; border-radius: var(--radius-lg); max-height: 96vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .modal-header { padding: 18px 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #fff; }
-        .modal-header h2 { margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 10px; }
-        .close { font-size: 24px; cursor: pointer; color: #b2bec3; transition: 0.2s; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; } 
-        .close:hover { background: var(--gray-bg); color: var(--danger); }
-        .modal-body { padding: 25px; overflow-y: auto; flex: 1; background: #fcfcfc; }
-
-        /* Edit Record Grid */
-        .record-modal-grid { display: flex; gap: 30px; align-items: flex-start; }
-        .record-form-col { flex: 1.5; min-width: 320px; }
-        .record-preview-col { flex: 1; min-width: 300px; position: sticky; top: 0; }
+        /* Modal & Layout */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
+        .modal-content { background-color: #fefefe; margin: 3vh auto; padding: 0; border: none; width: 95%; max-width: 1100px; border-radius: 12px; max-height: 94vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .modal-header h2 { margin: 0; font-size: 1.2rem; }
+        .close { font-size: 24px; cursor: pointer; color: #aaa; transition: 0.2s; } .close:hover { color: #333; }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; background: #f9f9f9; }
         
-        fieldset { border: 1px solid var(--border); background: white; padding: 20px 25px; margin-bottom: 20px; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
-        legend { font-weight: 700; color: var(--primary); font-size: 1rem; padding: 0 10px; margin-left: -10px; margin-bottom: 15px; display: inline-block; width: auto; border: none; }
-        
+        /* Edit Record 2-Col */
+        .record-modal-grid { display: flex; gap: 25px; align-items: flex-start; }
+        .record-form-col { flex: 1.6; min-width: 320px; }
+        .record-preview-col { flex: 1; min-width: 280px; position: sticky; top: 0; }
+        fieldset { border: none; background: white; padding: 20px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
+        legend { font-weight: 700; color: var(--primary); font-size: 1.05rem; padding: 0; margin-bottom: 15px; width: 100%; border-bottom: 1px solid #eee; padding-bottom: 8px; display: block; }
+
         /* Preview Card */
-        .preview-card { background: white; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 25px; border: 1px solid var(--border); position: relative; overflow: hidden; }
-        .preview-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px; background: var(--accent); }
-        .preview-header { font-size: 0.95rem; font-weight: 600; color: var(--text-sub); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .preview-amount-big { font-size: 2.8rem; font-weight: 700; color: var(--accent); text-align: right; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px; line-height: 1; letter-spacing: -1px; }
-        .preview-amount-big.zero { color: #dcdde1; }
-        .preview-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.95rem; color: var(--text-main); }
-        .preview-row span:last-child { font-family: monospace; font-weight: 600; font-size: 1rem; }
-        .preview-row.total { font-weight: 700; color: var(--primary); border-top: 2px solid var(--border); padding-top: 12px; margin-top: 15px; font-size: 1.1rem; }
-        .preview-details { margin-top: 20px; padding-top: 15px; border-top: 1px dashed var(--border); background: #fafafa; padding: 15px; border-radius: var(--radius); font-size: 0.85rem; color: var(--text-sub); }
-        .preview-details h5 { margin: 0 0 10px 0; color: var(--text-main); font-size: 0.9rem; font-weight: 600; }
-        .preview-details div { margin-bottom: 5px; display: flex; justify-content: space-between; }
+        .preview-card { background: white; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 25px; border-top: 5px solid var(--accent); }
+        .preview-header { font-size: 1rem; font-weight: 600; color: #7f8c8d; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .preview-amount-big { font-size: 2.5rem; font-weight: 800; color: var(--success); text-align: right; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px; line-height: 1; }
+        .preview-amount-big.zero { color: #bdc3c7; }
+        .preview-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; color: #555; }
+        .preview-row.total { font-weight: 700; color: #000; border-top: 2px solid #eee; padding-top: 10px; margin-top: 10px; font-size: 1.1rem; }
+        .preview-details { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; font-size: 0.85rem; color: #888; }
+        .preview-details h5 { margin: 0 0 5px 0; color: #555; font-size: 0.9rem; }
+        .preview-details div { margin-bottom: 3px; display: flex; justify-content: space-between; }
+        
+        .status-tag { padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; background: #eee; font-weight: bold; }
 
-        /* Org Chart */
-        .org-container { overflow: auto; padding: 50px 20px; height: 650px; background: white; border-radius: var(--radius-lg); box-shadow: inset 0 0 30px rgba(0,0,0,0.02); border: 1px solid var(--border); text-align: center; }
-        .tree ul { padding-top: 20px; position: relative; display: inline-flex; justify-content: center; }
-        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; }
+        /* 🔥 FAQ Accordion */
+        .faq-item { border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px; overflow: hidden; background: white; }
+        .faq-question { padding: 15px; background: #fff; cursor: pointer; font-weight: 600; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .faq-question:hover { background: #f8f9fa; color: var(--accent); }
+        .faq-question::after { content: '+'; font-size: 1.2rem; color: #ccc; }
+        .faq-item.active .faq-question::after { content: '-'; color: var(--primary); }
+        .faq-answer { display: none; padding: 15px; border-top: 1px solid #eee; color: #555; font-size: 0.95rem; line-height: 1.6; background: #fdfdfd; }
+        .faq-item.active .faq-answer { display: block; }
+        .faq-badge { background: #eee; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+
+        /* Org Chart Nodes */
+        .org-container { overflow: auto; padding: 40px 20px; height: 650px; background: white; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,0,0,0.03); position: relative; text-align: center; }
+        .tree ul { padding-top: 20px; position: relative; transition: all 0.5s; display: inline-flex; justify-content: center; }
+        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; transition: all 0.5s; }
         .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 1px solid #ccc; width: 50%; height: 20px; }
         .tree li::after { right: auto; left: 50%; border-left: 1px solid #ccc; }
         .tree li:only-child::after, .tree li:only-child::before { display: none; }
@@ -168,91 +132,75 @@
         .tree li:first-child::after { border-radius: 5px 0 0 0; }
         .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 1px solid #ccc; width: 0; height: 20px; }
 
-        .node { 
-            border: 2px solid #ddd; padding: 10px 15px; text-decoration: none; color: var(--text-main); 
-            display: inline-block; border-radius: 10px; transition: all 0.3s; min-width: 140px; 
-            position: relative; cursor: pointer; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
-        }
-        .node:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); z-index: 20; border-color: var(--accent); }
-        .node .name { font-weight: 700; font-size: 14px; margin-bottom: 5px; display: block; }
-        .node .status { font-size: 12px; font-weight: 600; color: var(--text-sub); }
-        .node .icon { position: absolute; top: -10px; right: -10px; width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.15); border: 2px solid white; }
+        .node { border: 2px solid #ccc; padding: 8px 12px; text-decoration: none; color: #333; font-size: 13px; display: inline-block; border-radius: 8px; transition: all 0.3s; min-width: 130px; position: relative; cursor: pointer; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .node:hover { transform: scale(1.05); z-index: 20; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .node .name { font-weight: 800; font-size: 14px; margin-bottom: 4px; display: block; }
+        .node .status { font-size: 12px; font-weight: bold; }
+        .node .icon { position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         
-        .node.unpaid { border-color: var(--danger-text); background: #fff5f5; }
-        .node.unpaid .status { color: var(--danger-text); }
-        .node.unpaid .icon { background-color: var(--danger-text); }
+        .node.unpaid { border-color: #e74c3c; background-color: #fdedec; }
+        .node.unpaid .name { color: #c0392b; }
+        .node.unpaid .status { color: #e74c3c; }
+        .node.unpaid .icon { background-color: #e74c3c; }
         
-        .node.paid { border-color: var(--accent); background: #f0fffa; }
-        .node.paid .status { color: var(--accent); }
-        .node.paid .icon { background-color: var(--accent); }
+        .node.paid { border-color: #27ae60; background-color: #e8f8f5; }
+        .node.paid .name { color: #1e8449; }
+        .node.paid .status { color: #27ae60; }
+        .node.paid .icon { background-color: #27ae60; }
         
-        .node.inactive { border-color: #dfe6e9; background: #f8f9fa; opacity: 0.8; }
-        .node.inactive .name { color: #b2bec3; text-decoration: line-through; }
+        /* 👤 夥伴停用 (全灰) */
+        .node.inactive { border-color: #bdc3c7; background-color: #f0f0f0; color: #95a5a6; }
+        .node.inactive .name { color: #7f8c8d; text-decoration: line-through; }
+        .node.inactive .status { color: #95a5a6; }
         
-        .node.graduate { border-color: #0984e3; background: #eaf6ff; }
-        .node.graduate .icon { background: #0984e3; }
+        /* 🎓 畢業 */
+        .node.graduate { border-color: #16a085; background-color: #e0f2f1; }
+        .node.graduate .name { color: #0e6655; }
+        .node.graduate .status { color: #16a085; }
+        .node.graduate .icon { background-color: #1abc9c; }
         
-        .node .tooltip { visibility: hidden; width: 200px; background-color: rgba(44, 62, 80, 0.95); color: #fff; text-align: left; border-radius: 6px; padding: 12px; position: absolute; z-index: 100; bottom: 125%; left: 50%; transform: translateX(-50%); opacity: 0; transition: 0.3s; font-size: 0.85rem; line-height: 1.5; pointer-events: none; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        .node:hover .tooltip { visibility: visible; opacity: 1; bottom: 135%; }
-        .node .tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -6px; border-width: 6px; border-style: solid; border-color: rgba(44, 62, 80, 0.95) transparent transparent transparent; }
+        /* 📅 本月停用 (Participation inactive) */
+        .node.month-inactive { border: 2px dashed #95a5a6; background-color: #fff; }
+        .node.month-inactive .status { color: #95a5a6; font-weight: normal; }
 
-        /* FAQ Accordion */
-        .faq-item { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; overflow: hidden; background: white; transition: 0.2s; }
-        .faq-item:hover { border-color: #b2bec3; }
-        .faq-question { padding: 18px 20px; background: #fff; cursor: pointer; font-weight: 600; display: flex; justify-content: space-between; align-items: center; color: var(--primary); }
-        .faq-question::after { content: '+'; font-size: 1.2rem; color: #ccc; font-weight: 300; }
-        .faq-item.active .faq-question { background: #f8f9fa; color: var(--accent); }
-        .faq-item.active .faq-question::after { content: '−'; color: var(--accent); }
-        .faq-answer { display: none; padding: 20px; border-top: 1px solid #eee; color: #555; font-size: 0.95rem; line-height: 1.7; background: #fff; }
-        .faq-item.active .faq-answer { display: block; }
+        .node.no-record { border: 2px dashed #bdc3c7; background-color: white; opacity: 0.8; }
+        .node.no-record .status { color: #bdc3c7; font-weight: normal; }
 
-        /* Loading & Sync */
-        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f4f7f6; display: flex; justify-content: center; align-items: center; flex-direction: column; z-index: 9999; }
-        .spinner { border: 4px solid rgba(0,0,0,0.05); width: 48px; height: 48px; border-radius: 50%; border-left-color: var(--accent); animation: spin 0.8s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #sync-status { position: fixed; bottom: 20px; right: 20px; padding: 10px 20px; background: white; color: var(--text-main); border-radius: 50px; font-size: 0.85rem; font-weight: 600; pointer-events: none; display: flex; align-items: center; gap: 10px; z-index: 999; box-shadow: 0 5px 20px rgba(0,0,0,0.1); border: 1px solid var(--border); }
-        .dot { width: 10px; height: 10px; border-radius: 50%; background: #dfe6e9; transition: 0.3s; }
-        .dot.connected { background: var(--success); box-shadow: 0 0 8px rgba(0,184,148,0.4); }
+        .node.in-scope { box-shadow: 0 0 0 3px rgba(241, 196, 15, 0.3); }
+        .node.scope-root { border: 3px solid #f1c40f; transform: scale(1.05); }
 
-        /* Mobile */
-        .modal-actions-bar { display: none; }
+        .node .tooltip { visibility: hidden; width: 180px; background-color: #333; color: #fff; text-align: left; border-radius: 6px; padding: 10px; position: absolute; z-index: 1; bottom: 120%; left: 50%; margin-left: -90px; opacity: 0; transition: opacity 0.3s; font-size: 11px; line-height: 1.4; pointer-events: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .node:hover .tooltip { visibility: visible; opacity: 1; }
+
+        /* Toolbar */
+        .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: white; padding: 10px 15px; border-radius: 8px; box-shadow: var(--shadow); margin-bottom: 20px; }
+        .toolbar input, .toolbar select { width: auto; min-width: 120px; flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 8px; }
+
         @media (max-width: 768px) {
-            body { flex-direction: column; height: auto; min-height: 100vh; overflow-y: auto; }
-            aside { width: 100%; height: auto; position: sticky; top: 0; flex-direction: row; align-items: center; justify-content: space-between; padding: 0 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            aside h2 { font-size: 1rem; height: 60px; background: transparent; border: none; padding: 0; flex: 1; }
-            aside nav { display: none; position: absolute; top: 60px; left: 0; right: 0; background: var(--primary); padding: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-            aside.mobile-menu-open nav { display: block; }
-            .footer { display: none; }
-            main { padding: 15px; height: auto; overflow: visible; }
-            .card { padding: 15px; }
-            .toolbar { flex-direction: column; align-items: stretch; gap: 10px; padding: 15px; }
-            .toolbar input, .toolbar select, .toolbar button { width: 100%; }
-            
             .record-modal-grid { flex-direction: column-reverse; }
-            .record-preview-col { position: static; width: 100%; margin-bottom: 20px; }
-            .preview-amount-big { font-size: 2.2rem; text-align: center; }
-            
-            .modal-content { max-height: 100vh; margin: 0; width: 100%; border-radius: 0; }
-            .modal-actions-bar { position: sticky; bottom: 0; left: 0; right: 0; background: white; padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; z-index: 100; box-shadow: 0 -4px 15px rgba(0,0,0,0.05); }
-            .modal-actions-bar .btn { flex: 1; padding: 14px; font-size: 1rem; }
+            .record-preview-col { position: static; width: 100%; margin-bottom: 10px; }
+            .modal-actions-bar { position: sticky; bottom: 0; background: white; padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); }
+            .modal-actions-bar .btn { flex: 1; padding: 12px; font-size: 1rem; }
             .desktop-actions { display: none; }
-            
-            /* Mobile Nav Toggle */
-            .mobile-toggle { display: block; font-size: 1.5rem; cursor: pointer; color: white; padding: 10px; }
         }
-        @media (min-width: 769px) { .mobile-toggle { display: none; } }
+
+        #loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f4f7f6; display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        .spinner { border: 4px solid rgba(0,0,0,0.1); width: 40px; height: 40px; border-radius: 50%; border-left-color: var(--accent); animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #sync-status { position: fixed; bottom: 20px; right: 20px; padding: 8px 16px; background: rgba(0,0,0,0.8); color: white; border-radius: 30px; font-size: 0.85rem; pointer-events: none; display: flex; align-items: center; gap: 8px; z-index: 999; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
+        .dot.connected { background: #2ecc71; box-shadow: 0 0 8px #2ecc71; }
     </style>
 </head>
 <body>
 
-<div id="loading-screen"><div class="spinner"></div><div style="color:#7f8c8d;font-size:0.9rem">系統載入中...</div></div>
+<div id="loading-screen"><div class="spinner"></div><div>連線中...</div></div>
 <div id="sync-status"><div class="dot" id="sync-dot"></div><span id="sync-text">離線</span></div>
 
 <aside id="sidebar">
     <h2>🚀 新星啟動計畫</h2>
-    <div class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('mobile-menu-open')">☰</div>
     <nav>
-        <a onclick="router('dashboard')" id="nav-dashboard">📊 總覽儀表板</a>
+        <a onclick="router('dashboard')" id="nav-dashboard" class="active">📊 總覽儀表板</a>
         <a onclick="router('records')" id="nav-records">📝 月份業績紀錄</a>
         <a onclick="router('payout')" id="nav-payout">💰 本月發放總表</a>
         <a onclick="router('partners')" id="nav-partners">👥 夥伴名單管理</a>
@@ -262,20 +210,21 @@
         <a onclick="router('settings')" id="nav-settings">🛠️ 系統設定</a>
         <a onclick="router('faq')" id="nav-faq">❓ 系統說明 (FAQ)</a>
     </nav>
-    <div class="footer">v3.4 優化版</div>
+    <div class="footer">v3.3 說明與防呆版</div>
 </aside>
 
 <main id="app"></main>
 
 <div id="modal" class="modal">
     <div class="modal-content">
-        <div class="modal-header"><h2 id="modal-title"></h2><span class="close" onclick="closeModalSafe()">×</span></div>
+        <div class="modal-header"><h2 id="modal-title"></h2><span class="close" onclick="closeModalSafe()">&times;</span></div>
         <div class="modal-body" id="modal-body"></div>
     </div>
 </div>
 
 <script>
-/** * FIREBASE CONFIG 
+/**
+ * FIREBASE CONFIG (使用您的 Key)
  */
 const firebaseConfig = {
     apiKey: "AIzaSyCanDeinCJyZFeHUGnYVEmalCYxjwaIw-4",
@@ -295,7 +244,7 @@ try {
     db = firebase.database();
     isFirebaseReady = true;
 } catch (e) {
-    document.getElementById('loading-screen').innerHTML = '<h3 style="color:#e74c3c">⚠️ 連線錯誤</h3>';
+    document.getElementById('loading-screen').innerHTML = '<h3 style="color:red">⚠️ 連線錯誤</h3>';
 }
 
 const defaultPlanParams = { rate_0_3_base: 0.03, rate_0_3_rec: 0.04, rate_6_base: 0.01, rate_6_rec: 0.02, rate_recruit_bv: 0.01, rate_learning: 0.03 };
@@ -346,9 +295,9 @@ function formatMoney(num) { return new Intl.NumberFormat('zh-TW', { style: 'curr
 function getBonusPercent(pv) { return pv>=10000?0.21:pv>=7000?0.18:pv>=4000?0.15:pv>=2000?0.12:pv>=1000?0.09:pv>=600?0.06:pv>=200?0.03:0; }
 function getDefaultPayoutDate(month) { const d = new Date(); return (d.toISOString().slice(0,7)===month && d.getDate()<18) ? month+'-18' : d.toISOString().slice(0,10); }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
-function getHeaderHtml(title) { return `<div class="page-title"><button class="menu-btn" onclick="toggleSidebar()">☰</button> <h1>${title}</h1></div>`; }
+function getHeaderHtml(title) { return `<h1><button class="menu-btn" onclick="toggleSidebar()">☰</button> ${title}</h1>`; }
 
-/* Calculate */
+/* Calculate Logic */
 function calculateCore(r, partner) {
     if (!partner) return null;
     const version = store.getVersion(r.planVersionId);
@@ -358,10 +307,14 @@ function calculateCore(r, partner) {
 
     let starTotal=0, baseBonus=0, recruitBonus=0, learningBonus=0;
     let isGraduated = r.gpv >= 1000;
+    
+    // 🔥 優化定義：Partner Inactive (全停) OR Participation Inactive (當月停)
     let isPartnerInactive = partner.status === 'inactive';
     let isMonthlyInactive = r.participation === 'inactive';
     let isEligible = !isGraduated && !isMonthlyInactive && !isPartnerInactive;
-    let appliedRate = 0, appliedRateText = '0%', calcBaseBV = 0;
+    
+    let appliedRate = 0, appliedRateText = '0%';
+    let calcBaseBV = 0;
 
     if (isEligible) {
         const hasRecruit = (r.newRecruits || []).length > 0;
@@ -383,6 +336,7 @@ function calculateCore(r, partner) {
 }
 function calculateRecord(r) { return calculateCore(r, store.getPartner(r.partnerId)); }
 function calculatePreview(r) { 
+    // 為了預覽，抓取當前選中的 partner (如果有的話)
     let p = store.getPartner(r.partnerId);
     if (!p) p = { name:'', code:'', initiatorId:'', status:'active' }; 
     return calculateCore(r, p); 
@@ -392,7 +346,6 @@ function calculatePreview(r) {
 function router(page) {
     document.querySelectorAll('aside nav a').forEach(a => a.classList.remove('active'));
     if(document.getElementById('nav-'+page)) document.getElementById('nav-'+page).classList.add('active');
-    document.getElementById('sidebar').classList.remove('mobile-menu-open');
     app.innerHTML = '';
     switch(page) {
         case 'dashboard': renderDashboard(); break;
@@ -408,35 +361,71 @@ function renderDashboard() {
     const records = store.getRecordsByMonth(month).map(calculateRecord).filter(x=>x); 
     const total = records.reduce((s, r) => s + r.starTotal, 0);
     const unpaid = records.filter(r => r.payoutStatus !== 'paid' && r.totalIncome > 0).length;
-    app.innerHTML = `<header>${getHeaderHtml(`總覽儀表板 (${month})`)}</header>
+    app.innerHTML = `<header>${getHeaderHtml(`總覽 (${month})`)}</header>
         <div class="summary-row">
-            <div class="summary-card green">
-                <span class="summary-icon">💰</span>
-                <div class="summary-label">本月預估回饋</div>
-                <div class="summary-val">${formatMoney(total)}</div>
-                <div class="summary-hint">所有符合資格者的總計</div>
-            </div>
-            <div class="summary-card red">
-                <span class="summary-icon">📮</span>
-                <div class="summary-label">待發放人數</div>
-                <div class="summary-val">${unpaid} 人</div>
-                <div class="summary-hint">需要進行發放處理</div>
-            </div>
+            <div class="summary-card green"><div class="summary-label">本月預估</div><div class="summary-val">${formatMoney(total)}</div></div>
+            <div class="summary-card red"><div class="summary-label">待發放</div><div class="summary-val">${unpaid} 人</div></div>
         </div>`;
 }
 
-/* FAQ */
+/* 🆕 FAQ Page */
 function renderFAQ() {
     app.innerHTML = `<header>${getHeaderHtml('系統說明 (FAQ)')}</header>
-    <span class="page-desc">內部管理與紀錄用途，不影響公司制度。</span>
-    <div class="faq-item"><div class="faq-question" onclick="toggleFAQ(this)">【一】關於夥伴狀態 (啟用/停用)</div>
-        <div class="faq-answer"><strong>Q：什麼是「啟用 / 停用」？</strong><br>• <span class="status-badge status-active">啟用</span>：列入追蹤與計算。<br>• <span class="status-badge status-inactive">停用</span>：暫不參與計算。<br><br><small style="color:#e74c3c">※ 注意：停用 ≠ 刪除，僅影響本系統顯示。</small></div></div>
-    <div class="faq-item"><div class="faq-question" onclick="toggleFAQ(this)">【二】關於「本月停用」</div>
-        <div class="faq-answer"><strong>Q：夥伴是啟用，但本月顯示「停用」？</strong><br>A：代表該月份選擇不參與計算（例如請假）。<br><br><strong>對照：</strong><br>• 夥伴狀態：長期設定（人）<br>• 本月停用：單月設定（月）</div></div>
-    <div class="faq-item"><div class="faq-question" onclick="toggleFAQ(this)">【三】關於獎金計算</div>
-        <div class="faq-answer">本系統僅計算「新星啟動計畫」的團隊激勵回饋。<br><br><strong>Q：什麼情況「不計」？</strong><br>• 夥伴停用<br>• 本月停用<br>• 已畢業<br>• 檔位不符</div></div>
-    <div class="faq-item"><div class="faq-question" onclick="toggleFAQ(this)">【四】組織圖顏色</div>
-        <div class="faq-answer">🔴 <strong>紅色</strong>：未發放<br>🟢 <strong>綠色</strong>：已發放<br>⚪ <strong>灰色</strong>：停用/無紀錄<br>🎓 <strong>畢業</strong>：已完成</div></div>`;
+    <span class="page-desc">本頁為內部管理與紀錄用途，說明系統各項狀態與操作邏輯，不影響安麗公司制度與資格。</span>
+    
+    <div class="faq-item">
+        <div class="faq-question" onclick="toggleFAQ(this)">【一】關於夥伴狀態 (啟用/停用)</div>
+        <div class="faq-answer">
+            <strong>Q：什麼是「夥伴啟用 / 停用」？</strong><br>
+            A：<br>
+            • <span class="faq-badge">啟用</span>：代表此夥伴目前仍列入「新星啟動計畫」的追蹤與計算。<br>
+            • <span class="faq-badge">停用</span>：代表此夥伴暫時不參與新星啟動計畫的獎金計算。<br><br>
+            <small style="color:#e74c3c">※ 注意：停用 ≠ 退出安麗，也不會刪除資料。僅影響本系統的內部管理與獎金試算。</small>
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-question" onclick="toggleFAQ(this)">【二】關於「本月停用」</div>
+        <div class="faq-answer">
+            <strong>Q：夥伴是啟用，但本月顯示「停用」是什麼意思？</strong><br>
+            A：代表這位夥伴「人還在追蹤中」，但該月份選擇不參與新星啟動計畫計算（例如暫停、請假）。<br><br>
+            <strong>對照說明：</strong><br>
+            • 夥伴狀態：長期設定（人）<br>
+            • 本月停用：單月設定（這個月）
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-question" onclick="toggleFAQ(this)">【三】關於獎金計算與顯示</div>
+        <div class="faq-answer">
+            <strong>Q：系統計算的是什麼獎金？</strong><br>
+            A：本系統僅計算「新星啟動計畫」的團隊激勵回饋，不等於安麗公司實際發放的月結獎金。<br><br>
+            <strong>Q：什麼情況「本月不計」？</strong><br>
+            • 夥伴已停用<br>
+            • 本月設定停用<br>
+            • 已畢業（達成設定門檻）<br>
+            • 檔位不符合新星計畫範圍
+        </div>
+    </div>
+
+    <div class="faq-item">
+        <div class="faq-question" onclick="toggleFAQ(this)">【四】組織關聯圖顏色說明</div>
+        <div class="faq-answer">
+            🔴 <strong>紅色</strong>：本月有金額，但尚未發放<br>
+            🟢 <strong>綠色</strong>：已發放完成<br>
+            ⚪ <strong>灰色</strong>：夥伴停用、本月停用或無紀錄<br>
+            🎓 <strong>畢業</strong>：已完成新星階段
+        </div>
+    </div>
+    
+    <div class="faq-item">
+        <div class="faq-question" onclick="toggleFAQ(this)">【五】操作小提醒</div>
+        <div class="faq-answer">
+            • 建立業績紀錄時，請確認月份與夥伴是否正確。<br>
+            • 建議每月發放前，使用「未發放篩選」快速檢查。<br>
+            • 所有紀錄皆保留在雲端資料庫，可隨時匯出 JSON 備份。
+        </div>
+    </div>`;
 }
 function toggleFAQ(el) { el.parentElement.classList.toggle('active'); }
 
@@ -445,21 +434,21 @@ function renderPartners() {
     const term = localStorage.getItem('p_search') || '';
     const list = store.data.partners.filter(p => p.code.includes(term)||p.name.includes(term));
     app.innerHTML = `<header>${getHeaderHtml('夥伴名單管理')}</header>
-    <span class="page-desc">啟用／停用僅影響本系統追蹤，不影響安麗資格。</span>
-    <div class="toolbar"><input type="text" placeholder="🔍 搜尋 編號/姓名" value="${term}" oninput="localStorage.setItem('p_search',this.value);renderPartners()">
-    <button class="btn btn-primary" onclick="editPartner()">+ 新增夥伴</button></div>
+    <span class="page-desc">啟用／停用僅影響「新星啟動計畫」的追蹤與獎金計算，不影響安麗資格，也不會刪除任何歷史資料。</span>
+    <div class="toolbar"><input type="text" placeholder="🔍 搜尋" value="${term}" oninput="localStorage.setItem('p_search',this.value);renderPartners()">
+    <button class="btn btn-primary" onclick="editPartner()">+ 新增</button></div>
     <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>推薦人</th><th>發起人</th><th>狀態</th><th>操作</th></tr></thead><tbody>
-    ${list.map(p => `<tr><td>${p.code}</td><td>${p.name}</td><td>${store.getPartner(p.sponsorId)?.name||'-'}</td><td>${store.getInitiator(p.initiatorId)?.name||'<span style="color:#e74c3c">未設定</span>'}</td>
+    ${list.map(p => `<tr><td>${p.code}</td><td>${p.name}</td><td>${store.getPartner(p.sponsorId)?.name||'-'}</td><td>${store.getInitiator(p.initiatorId)?.name||'<span style="color:red">未設定</span>'}</td>
     <td><span class="status-badge ${p.status==='inactive'?'status-inactive':'status-active'}">${p.status==='active'?'啟用':'停用'}</span></td>
-    <td><button class="btn btn-secondary btn-sm" onclick="editPartner('${p.id}')">編輯</button> <button class="btn btn-danger btn-sm" onclick="deletePartner('${p.id}')">刪除</button></td></tr>`).join('')}</tbody></table></div>`;
+    <td><button class="btn btn-secondary" onclick="editPartner('${p.id}')">編輯</button> <button class="btn btn-danger" onclick="deletePartner('${p.id}')">刪除</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 function editPartner(id) {
     const p = id ? store.getPartner(id) : {id:'', code:'', name:'', sponsorId:'', initiatorId:'', status:'active'};
     const partners = store.data.partners.filter(x => x.id !== p.id); const initiators = store.data.initiators;
     openModal(id?'編輯夥伴':'新增夥伴', `<form onsubmit="savePartner(event,'${id||''}')">
-    <div class="row"><div class="col form-group"><label>編號 *</label><input class="form-control" name="code" value="${p.code}" required></div><div class="col form-group"><label>姓名 *</label><input class="form-control" name="name" value="${p.name}" required></div></div>
+    <div class="row"><div class="col"><label>編號</label><input class="form-control" name="code" value="${p.code}" required></div><div class="col"><label>姓名</label><input class="form-control" name="name" value="${p.name}" required></div></div>
     <div class="form-group"><label>推薦人</label><select class="form-control" name="sponsorId"><option value="">-- 無 --</option>${partners.map(o=>`<option value="${o.id}" ${o.id===p.sponsorId?'selected':''}>${o.code} ${o.name}</option>`).join('')}</select></div>
-    <div class="form-group"><label>發起人 *</label><select class="form-control" name="initiatorId" required><option value="">-- 請選擇 --</option>${store.data.initiators.map(o=>`<option value="${o.id}" ${o.id===p.initiatorId?'selected':''}>${o.name}</option>`).join('')}</select></div>
+    <div class="form-group"><label>發起人</label><select class="form-control" name="initiatorId" required><option value="">-- 請選擇 --</option>${store.data.initiators.map(o=>`<option value="${o.id}" ${o.id===p.initiatorId?'selected':''}>${o.name}</option>`).join('')}</select></div>
     <div class="form-group"><label>狀態</label><select class="form-control" name="status"><option value="active" ${p.status==='active'?'selected':''}>啟用</option><option value="inactive" ${p.status==='inactive'?'selected':''}>停用</option></select></div>
     <button type="submit" class="btn btn-primary" style="width:100%">儲存</button></form>`);
 }
@@ -475,18 +464,28 @@ function renderRecords() {
     if(search) list = list.filter(r=>r.partnerName.includes(search));
     if(filters.includes('unpaid')) list = list.filter(r=>r.payoutStatus!=='paid'&&r.totalIncome>0);
     const toggle = f => { const i=filters.indexOf(f); i>-1?filters.splice(i,1):filters.push(f); localStorage.setItem('r_filters',JSON.stringify(filters)); renderRecords(); };
-    app.innerHTML = `<header>${getHeaderHtml('月份業績紀錄')}</header>
+    app.innerHTML = `<header>${getHeaderHtml('月份業績')}</header>
     <div class="toolbar"><input type="month" value="${month}" onchange="localStorage.setItem('r_month',this.value);renderRecords()">
-    <input type="text" placeholder="🔍 搜尋 夥伴" value="${search}" oninput="localStorage.setItem('r_search',this.value);renderRecords()">
-    <div class="toolbar-group"><label><input type="checkbox" ${filters.includes('unpaid')?'checked':''} onchange="toggle('unpaid')"> 未發放</label></div>
-    <button class="btn btn-primary" onclick="editRecord(null,'${month}')">＋ 建立紀錄</button></div>
+    <input type="text" placeholder="🔍 搜尋" value="${search}" oninput="localStorage.setItem('r_search',this.value);renderRecords()">
+    <label><input type="checkbox" ${filters.includes('unpaid')?'checked':''} onchange="toggle('unpaid')"> 未發放</label>
+    <button class="btn btn-primary" onclick="editRecord(null,'${month}')">＋ 紀錄</button></div>
     <div class="card"><table><thead><tr><th>夥伴</th><th>狀態</th><th>PV</th><th>回饋</th><th>發放</th><th>操作</th></tr></thead><tbody>
     ${list.map(r => {
-        let pStatus = r.isPartnerInactive ? '<span class="status-badge status-inactive">已停用</span>' : '';
-        let mStatus = r.isGraduated ? '<span class="status-badge status-active">🎓 畢業</span>' : r.isMonthlyInactive ? '<span class="status-badge status-month-inactive">本月不計</span>' : '<span class="status-badge status-active">參與中</span>';
-        return `<tr><td>${r.partnerName}</td><td>${pStatus}${mStatus}</td><td>${r.gpv}</td><td style="font-weight:bold;color:var(--primary)">${formatMoney(r.totalIncome)}</td>
-        <td><span class="status-badge ${r.payoutStatus==='paid'?'status-paid':'status-unpaid'}">${r.payoutStatus==='paid'?'已發放':'未發放'}</span></td>
-        <td><button class="btn btn-secondary btn-sm" onclick="editRecord('${r.id}')">編輯</button></td></tr>`;
+        // 🔥 Badge Logic for Records
+        let pStatus = r.isPartnerInactive ? '<span class="status-badge status-inactive">已停用</span>' : '<span class="status-badge status-active">啟用</span>';
+        let mStatus = '';
+        if (r.isGraduated) mStatus = '<span class="status-badge status-active">🎓 畢業</span>';
+        else if (r.isMonthlyInactive) mStatus = '<span class="status-badge status-month-inactive">本月不計</span>';
+        else mStatus = '<span class="status-badge status-active">參與中</span>';
+
+        return `<tr>
+            <td>${r.partnerName}</td>
+            <td>${pStatus}${mStatus}</td>
+            <td>${r.gpv} <small>(${ (r.myRate*100).toFixed(0) }%)</small></td>
+            <td style="font-weight:bold">${formatMoney(r.totalIncome)}</td>
+            <td><span class="status-badge ${r.payoutStatus==='paid'?'status-paid':'status-unpaid'}">${r.payoutStatus==='paid'?'已發放':'未發放'}</span></td>
+            <td><button class="btn btn-secondary" onclick="editRecord('${r.id}')">編輯</button></td>
+        </tr>`;
     }).join('')}</tbody></table></div>`;
 }
 
@@ -500,43 +499,45 @@ function editRecord(id, month) {
     if(r.payoutStatus==='paid' && id && !confirm('已發放，確定編輯？')) return;
     tempRecord = JSON.parse(JSON.stringify(r));
     
+    // 🔥 Partner Options: Include all, mark inactive
     const partnerOptions = store.data.partners.map(p => {
         let label = p.code + ' ' + p.name;
         if(p.status === 'inactive') label += ' (停用)';
         return `<option value="${p.id}" ${p.id===r.partnerId?'selected':''} style="${p.status==='inactive'?'color:gray':''}">${label}</option>`;
     }).join('');
     
+    // 版本選單
     const versionOptions = store.data.versions.filter(v => !v.archived || v.id === r.planVersionId).map(v => `<option value="${v.id}" ${v.id===r.planVersionId?'selected':''}>${v.name} ${v.archived?'(封存)':''}</option>`).join('');
 
     const modalHtml = `
         <form id="recordForm" onsubmit="saveRecord(event, '${id||''}')">
             <div class="record-modal-grid">
                 <div class="record-form-col">
-                    <fieldset><legend>📌 基本資料</legend>
-                        <div class="row"><div class="col form-group"><label>夥伴</label><select class="form-control" name="partnerId" required onchange="tempRecord.partnerId=this.value;renderPreview()"><option value="">-- 請選擇 --</option>${partnerOptions}</select></div>
-                        <div class="col form-group"><label>計畫版本</label><select class="form-control" name="planVersionId" onchange="tempRecord.planVersionId=this.value;renderPreview()">${versionOptions}</select></div></div>
+                    <fieldset><legend>基本</legend>
+                        <div class="row"><div class="col"><label>夥伴</label><select class="form-control" name="partnerId" required onchange="tempRecord.partnerId=this.value;renderPreview()"><option value="">-- 請選擇 --</option>${partnerOptions}</select></div>
+                        <div class="col"><label>版本</label><select class="form-control" name="planVersionId" onchange="tempRecord.planVersionId=this.value;renderPreview()">${versionOptions}</select></div></div>
                     </fieldset>
-                    <fieldset><legend>📈 業績數據 (PV/BV)</legend>
+                    <fieldset><legend>業績 (PV/BV)</legend>
                         <div class="row"><div class="col"><label>個人PV</label><input type="number" class="form-control" name="ppv" value="${r.ppv}" oninput="document.getElementsByName('pbv')[0].value=this.value*50"></div>
                         <div class="col"><label>個人BV</label><input type="number" class="form-control" name="pbv" value="${r.pbv}"></div>
                         <div class="col"><label>小組PV *</label><input type="number" class="form-control" name="gpv" value="${r.gpv}" required oninput="tempRecord.gpv=Number(this.value);renderPreview()"></div></div>
                     </fieldset>
-                    <fieldset><legend>🦵 第一代腿 (判斷獨立)</legend><div id="legs-container"></div><button type="button" class="btn btn-outline btn-sm" style="margin-top:5px" onclick="addLeg()">+ 新增腿</button></fieldset>
-                    <fieldset><legend>✨ 新星條件</legend>
-                        <div class="row"><div class="col form-group"><label>本月狀態</label><select class="form-control" onchange="tempRecord.participation=this.value;renderPreview()"><option value="active" ${r.participation==='active'?'selected':''}>參與</option><option value="inactive" ${r.participation==='inactive'?'selected':''}>本月不計</option></select></div>
-                        <div class="col form-group"><label style="padding-top:30px"><input type="checkbox" ${r.learningDone?'checked':''} onchange="tempRecord.learningDone=this.checked;renderPreview()"> 學習任務</label></div></div>
-                        <div><label>新推薦清單</label><div id="recruits-container"></div><button type="button" class="btn btn-outline btn-sm" style="margin-top:5px" onclick="addRecruit()">+ 新增新人</button></div>
+                    <fieldset><legend>腿 (判斷獨立)</legend><div id="legs-container"></div><button type="button" class="btn btn-outline" style="margin-top:5px" onclick="addLeg()">+ 腿</button></fieldset>
+                    <fieldset><legend>條件</legend>
+                        <div class="row"><div class="col"><label>狀態</label><select class="form-control" onchange="tempRecord.participation=this.value;renderPreview()"><option value="active" ${r.participation==='active'?'selected':''}>參與</option><option value="inactive" ${r.participation==='inactive'?'selected':''}>本月不計</option></select></div>
+                        <div class="col"><label style="padding-top:30px"><input type="checkbox" ${r.learningDone?'checked':''} onchange="tempRecord.learningDone=this.checked;renderPreview()"> 學習任務</label></div></div>
+                        <div><label>新人清單</label><div id="recruits-container"></div><button type="button" class="btn btn-outline" style="margin-top:5px" onclick="addRecruit()">+ 新人</button></div>
                     </fieldset>
-                    <fieldset><legend>📝 其他資訊</legend>
+                    <fieldset><legend>其他</legend>
                         <div class="form-group"><label>備註</label><textarea name="note" class="form-control">${r.note||''}</textarea></div>
-                        <div class="row"><div class="col"><label>發放日</label><input type="date" class="form-control" name="payoutDate" value="${r.payoutDate}"></div>
-                        <div class="col"><label>發放狀態</label><select class="form-control" name="payoutStatus"><option value="unpaid" ${r.payoutStatus==='unpaid'?'selected':''}>未發放</option><option value="paid" ${r.payoutStatus==='paid'?'selected':''}>已發放</option></select></div></div>
+                        <div class="row"><div class="col"><label>日期</label><input type="date" class="form-control" name="payoutDate" value="${r.payoutDate}"></div>
+                        <div class="col"><label>發放</label><select class="form-control" name="payoutStatus"><option value="unpaid" ${r.payoutStatus==='unpaid'?'selected':''}>未發放</option><option value="paid" ${r.payoutStatus==='paid'?'selected':''}>已發放</option></select></div></div>
                     </fieldset>
                 </div>
                 <div class="record-preview-col">
                     <div id="preview-box" class="preview-card"></div>
                     <div class="desktop-actions" style="margin-top:15px; display:flex; gap:10px;">
-                        <button type="submit" class="btn btn-primary" style="flex:1; padding:12px;">儲存紀錄</button>
+                        <button type="submit" class="btn btn-primary" style="flex:1; padding:12px;">儲存</button>
                         ${id?`<button type="button" class="btn btn-danger" onclick="deleteRecord('${id}')">刪除</button>`:''}
                     </div>
                 </div>
@@ -560,7 +561,7 @@ function renderPreview() {
     if(!box || !res) return;
     
     let statusHtml = '<span class="status-tag" style="background:#e8f8f5;color:#27ae60">🟢 可發放</span>';
-    if(res.isPartnerInactive) statusHtml = '<span class="status-tag" style="background:#f0f0f0;color:#7f8c8d">⏸ 夥伴停用</span>';
+    if(res.isPartnerInactive) statusHtml = '<span class="status-tag" style="background:#f0f0f0;color:#7f8c8d">⏸ 夥伴已停用</span>';
     else if(res.isMonthlyInactive) statusHtml = '<span class="status-tag" style="background:#fff3e0;color:#e67e22">⚪ 本月不計</span>';
     else if(res.isGraduated) statusHtml = '<span class="status-tag" style="background:#e8f8f5;color:#27ae60">🎓 畢業</span>';
     else if(!res.isEligible) statusHtml = '<span class="status-tag" style="background:#fef9e7;color:#f39c12">🚫 不適用</span>';
@@ -574,12 +575,12 @@ function renderPreview() {
     <div class="preview-details">
         <div><span>檔位</span><span>${(res.myRate*100).toFixed(0)}%</span></div>
         <div><span>基數BV</span><span>${Math.round(res.calcBaseBV)}</span></div>
-    </div>` : `<div style="text-align:center;color:#999;padding:10px;font-size:0.9rem">${res.isPartnerInactive?'夥伴已停用，不計算':res.isMonthlyInactive?'本月設為不計':res.isGraduated?'已畢業，恭喜！':'非適用檔位'}</div>`}`;
+    </div>` : `<div style="text-align:center;color:#999;padding:10px;">${res.isPartnerInactive?'夥伴已停用':res.isMonthlyInactive?'本月不計':res.isGraduated?'已畢業':'非適用檔位'}</div>`}`;
 }
 
-function renderLegs() { document.getElementById('legs-container').innerHTML = tempRecord.legs.map((l, i) => `<div style="display:flex;gap:5px;margin-bottom:5px;"><input style="flex:2" class="form-control" placeholder="腿名" value="${l.name}" oninput="tempRecord.legs[${i}].name=this.value"><input style="flex:1.5" type="number" class="form-control" placeholder="PV" value="${l.pv}" oninput="tempRecord.legs[${i}].pv=Number(this.value)"><input style="flex:1.5" type="number" class="form-control" placeholder="BV" value="${l.bv}" oninput="tempRecord.legs[${i}].bv=Number(this.value);renderPreview()"><label style="flex:1;display:flex;align-items:center;font-size:0.8rem"><input type="checkbox" ${l.isIndependent?'checked':''} onchange="tempRecord.legs[${i}].isIndependent=this.checked;renderPreview()"> 獨立</label><button type="button" class="btn btn-danger btn-sm" onclick="tempRecord.legs.splice(${i},1);renderLegs();renderPreview();markDirty()">×</button></div>`).join(''); }
+function renderLegs() { document.getElementById('legs-container').innerHTML = tempRecord.legs.map((l, i) => `<div style="display:flex;gap:5px;margin-bottom:5px;"><input style="flex:2" class="form-control" placeholder="腿名" value="${l.name}" oninput="tempRecord.legs[${i}].name=this.value"><input style="flex:1.5" type="number" class="form-control" placeholder="PV" value="${l.pv}" oninput="tempRecord.legs[${i}].pv=Number(this.value)"><input style="flex:1.5" type="number" class="form-control" placeholder="BV" value="${l.bv}" oninput="tempRecord.legs[${i}].bv=Number(this.value);renderPreview()"><label style="flex:1;display:flex;align-items:center;font-size:0.8rem"><input type="checkbox" ${l.isIndependent?'checked':''} onchange="tempRecord.legs[${i}].isIndependent=this.checked;renderPreview()"> 獨立</label><button type="button" class="btn btn-danger" onclick="tempRecord.legs.splice(${i},1);renderLegs();renderPreview();markDirty()">X</button></div>`).join(''); }
 function addLeg() { tempRecord.legs.push({ name: '', pv: 0, bv: 0, isIndependent: false }); renderLegs(); renderPreview(); markDirty(); }
-function renderRecruits() { document.getElementById('recruits-container').innerHTML = tempRecord.newRecruits.map((r, i) => `<div style="display:flex;gap:5px;margin-bottom:5px;"><input style="flex:2" class="form-control" placeholder="姓名" value="${r.name}" oninput="tempRecord.newRecruits[${i}].name=this.value"><input style="flex:1.5" type="number" class="form-control" placeholder="BV" value="${r.bv}" oninput="tempRecord.newRecruits[${i}].bv=Number(this.value);renderPreview()"><button type="button" class="btn btn-danger btn-sm" onclick="tempRecord.newRecruits.splice(${i},1);renderRecruits();renderPreview();markDirty()">×</button></div>`).join(''); }
+function renderRecruits() { document.getElementById('recruits-container').innerHTML = tempRecord.newRecruits.map((r, i) => `<div style="display:flex;gap:5px;margin-bottom:5px;"><input style="flex:2" class="form-control" placeholder="姓名" value="${r.name}" oninput="tempRecord.newRecruits[${i}].name=this.value"><input style="flex:1.5" type="number" class="form-control" placeholder="BV" value="${r.bv}" oninput="tempRecord.newRecruits[${i}].bv=Number(this.value);renderPreview()"><button type="button" class="btn btn-danger" onclick="tempRecord.newRecruits.splice(${i},1);renderRecruits();renderPreview();markDirty()">X</button></div>`).join(''); }
 function addRecruit() { tempRecord.newRecruits.push({ name: '', bv: 0 }); renderRecruits(); renderPreview(); markDirty(); }
 
 function saveRecord(e, id) {
@@ -587,18 +588,20 @@ function saveRecord(e, id) {
     const partnerId = fd.get('partnerId');
     const month = tempRecord.month;
     
-    // 防呆 1：重複
+    // 防呆 1：重複檢查
     if (!id) {
         const exist = store.data.records.find(r => r.month === month && r.partnerId === partnerId);
         if (exist) { if(confirm('本月已有紀錄！編輯？')) { closeModal(); setTimeout(() => editRecord(exist.id, month), 200); } return; }
     }
 
-    // 防呆 2：停用
+    // 🔥 防呆 2：停用檢查
     const p = store.getPartner(partnerId);
     if (p && p.status === 'inactive') {
-        if(confirm(`此夥伴 (${p.name}) 為【停用】狀態，不計算獎金。\n\n是否要改為「啟用」？`)) {
-            p.status = 'active'; store.save(); 
+        if(confirm(`此夥伴 (${p.name}) 目前為【停用】狀態，本月不會計算新星獎金。\n\n是否要先將夥伴改為「啟用」？`)) {
+            p.status = 'active'; // 自動啟用
+            store.save(); // 先存夥伴狀態
         } else {
+            // 否則保持停用，並強制本月 participation 為 inactive
             tempRecord.participation = 'inactive';
         }
     }
@@ -621,25 +624,25 @@ function renderPayout() {
     const orphans = records.filter(r => !r.initiatorId || !store.getInitiator(r.initiatorId));
     if(orphans.length > 0) groups['none'] = { info: { name: '未指定', code: 'N/A' }, records: orphans, total:0, paid:0, unpaid:0 };
     Object.values(groups).forEach(g => { g.records.forEach(r => { g.total += r.totalIncome; if(r.payoutStatus === 'paid') g.paid += r.totalIncome; else g.unpaid += r.totalIncome; }); });
-    app.innerHTML = `<header>${getHeaderHtml('本月發放總表')}</header>
+    app.innerHTML = `<header>${getHeaderHtml('本月發放')}</header>
     <div class="toolbar"><input type="month" value="${month}" onchange="localStorage.setItem('pay_month',this.value);renderPayout()">
-    <input type="text" placeholder="🔍 搜尋 夥伴/發起人" value="${search}" oninput="localStorage.setItem('pay_search',this.value);renderPayout()">
+    <input type="text" placeholder="🔍 搜尋" value="${search}" oninput="localStorage.setItem('pay_search',this.value);renderPayout()">
     <button class="btn btn-primary" onclick="bulkMarkPaid('${month}')">批次發放</button> 
     <button class="btn btn-secondary" onclick="exportPayoutCSV('${month}')">匯出 CSV</button></div>
     ${Object.values(groups).filter(g => g.records.length > 0).map(g => `<div class="card">
         <h3 style="border-bottom:2px solid var(--accent);padding-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
-        <span>${g.info.name}</span> <span class="text-sub text-sm">應付：${formatMoney(g.unpaid)} / 已付：${formatMoney(g.paid)}</span></h3>
+        <span>${g.info.name}</span> <span style="font-size:0.9rem;color:#7f8c8d">應付：${formatMoney(g.unpaid)} / 已付：${formatMoney(g.paid)}</span></h3>
         <table><thead><tr><th width="40"><input type="checkbox" onchange="toggleGroupCheck(this, '${g.info.id}')"></th><th>夥伴</th><th>回饋</th><th>發放</th></tr></thead><tbody>
         ${g.records.map(r => `<tr><td><input type="checkbox" class="payout-check group-${g.info.id}" value="${r.id}" ${r.payoutStatus==='paid'?'disabled':''}></td>
-        <td>${r.partnerName}</td><td style="font-weight:bold;color:var(--primary)">${formatMoney(r.totalIncome)}</td>
-        <td><button class="btn ${r.payoutStatus==='paid'?'btn-primary':'btn-outline'} btn-sm" onclick="togglePaid('${r.id}','${r.payoutStatus}','${month}')">${r.payoutStatus==='paid'?'已發放':'未發放'}</button></td></tr>`).join('')}</tbody></table></div>`).join('')}`;
+        <td>${r.partnerName}</td><td style="font-weight:bold">${formatMoney(r.totalIncome)}</td>
+        <td><button class="btn ${r.payoutStatus==='paid'?'btn-primary':'btn-outline'}" style="padding:4px 10px;font-size:0.8rem" onclick="togglePaid('${r.id}','${r.payoutStatus}','${month}')">${r.payoutStatus==='paid'?'已發放':'未發放'}</button></td></tr>`).join('')}</tbody></table></div>`).join('')}`;
 }
 function toggleGroupCheck(m, id) { document.querySelectorAll(`.group-${id}`).forEach(c => { if(!c.disabled) c.checked = m.checked; }); }
 function bulkMarkPaid(month) { const sel = Array.from(document.querySelectorAll('.payout-check:checked')).map(c => c.value); if(!sel.length || !confirm('確認標記？')) return; const date = getDefaultPayoutDate(month); sel.forEach(id => { const r = store.getRecord(id); if(r) { r.payoutStatus = 'paid'; r.payoutDate = date; } }); store.save(); }
 function togglePaid(id, status, month) { const r = store.getRecord(id); if(status === 'unpaid') { r.payoutStatus = 'paid'; r.payoutDate = getDefaultPayoutDate(month); } else if(confirm('取消發放？')) { r.payoutStatus = 'unpaid'; } store.save(); }
 function exportPayoutCSV(month) { const records = store.getRecordsByMonth(month).map(calculateRecord).filter(x=>x); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob(['\uFEFF月份,發起人,夥伴,金額,備註,狀態,日期\n'+records.map(r=>`${r.month},${store.getInitiator(r.initiatorId)?.name||''},${r.partnerName},${r.starTotal},${r.note||''},${r.payoutStatus},${r.payoutDate}`).join('\n')], { type: 'text/csv;charset=utf-8;' })); link.download = `Payout_${month}.csv`; link.click(); }
 
-/* 6. Org Chart */
+/* 6. Org Chart (Optimized Visuals) */
 function renderOrgChart() {
     const month = localStorage.getItem('org_month') || new Date().toISOString().slice(0, 7);
     const mode = localStorage.getItem('org_mode') || 'status';
@@ -651,7 +654,10 @@ function renderOrgChart() {
     let scopeSet = new Set();
     if(activeScopeId) {
         const scope = store.getCoachingScope(activeScopeId);
-        if(scope.roots) { function mark(pid, d) { if(d>5) return; scopeSet.add(pid); const p = partnerMap[pid]; if(p && p.children) p.children.forEach(c => mark(c.id, d+1)); } scope.roots.forEach(rid => { if(partnerMap[rid]) mark(rid, 1); }); }
+        if(scope.roots) {
+            function mark(pid, d) { if(d>5) return; scopeSet.add(pid); const p = partnerMap[pid]; if(p && p.children) p.children.forEach(c => mark(c.id, d+1)); }
+            scope.roots.forEach(rid => { if(partnerMap[rid]) mark(rid, 1); });
+        }
     }
 
     function renderNode(node) {
@@ -661,30 +667,58 @@ function renderOrgChart() {
         
         let label = '', icon = '', subClass = '', tooltipHtml = '';
         
-        if (node.status === 'inactive') { subClass = 'inactive'; icon = '⏸'; label = '停用'; } 
+        // 🔥 Org Chart Visual Logic
+        // 1. Partner Inactive (Highest Priority)
+        if (node.status === 'inactive') {
+            subClass = 'inactive'; icon = '⏸'; label = '停用';
+        } 
+        // 2. Has Record
         else if (r) {
-            if (r.isMonthlyInactive) { subClass = 'month-inactive'; label = '本月不計'; } 
-            else if (r.isGraduated) { subClass = 'graduate'; icon = '🎓'; label = '畢業'; } 
-            else if (r.payoutStatus === 'paid') { subClass = 'paid'; icon = '✔'; label = '已發放'; } 
-            else if (r.totalIncome > 0) { subClass = 'unpaid'; icon = '●'; label = '未發放'; } 
-            else { subClass = 'no-record'; label = '無獎金'; }
+            if (r.isMonthlyInactive) { 
+                subClass = 'month-inactive'; label = '本月停用'; 
+            } else if (r.isGraduated) {
+                subClass = 'graduate'; icon = '🎓'; label = '畢業';
+            } else if (r.payoutStatus === 'paid') {
+                subClass = 'paid'; icon = '✔'; label = '已發放';
+            } else if (r.totalIncome > 0) {
+                subClass = 'unpaid'; icon = '●'; label = '未發放'; 
+            } else {
+                subClass = 'no-record'; label = '無獎金';
+            }
             if (mode === 'money' && !r.isMonthlyInactive) label = formatMoney(r.totalIncome);
+
             tooltipHtml = `<div class="tooltip"><strong>${r.month}</strong><br>金額：${formatMoney(r.totalIncome)}<br>狀態：${r.payoutStatus==='paid'?'已發放':'未發放'}<br>備註：${r.note||'-'}</div>`;
-        } else { subClass = 'no-record'; label = '無紀錄'; }
+        } 
+        // 3. No Record
+        else {
+            subClass = 'no-record'; label = '本月無紀錄';
+        }
 
         classes.push(subClass);
-        return `<li><div class="${classes.join(' ')}" onclick="showNodeDetails('${node.id}','${month}')">
-            ${icon ? `<div class="icon">${icon}</div>` : ''}
-            <div class="name">${node.name}</div><div class="status">${label}</div>
-            ${tooltipHtml}
-        </div>${node.children.length>0 ? `<ul>${node.children.map(renderNode).join('')}</ul>` : ''}</li>`;
+
+        return `<li>
+            <div class="${classes.join(' ')}" onclick="showNodeDetails('${node.id}','${month}')">
+                ${icon ? `<div class="icon">${icon}</div>` : ''}
+                <div class="name">${node.name}</div>
+                <div class="status">${label}</div>
+                ${tooltipHtml}
+            </div>
+            ${node.children.length > 0 ? `<ul>${node.children.map(renderNode).join('')}</ul>` : ''}
+        </li>`;
     }
 
     app.innerHTML = `<header>${getHeaderHtml('組織關聯圖')}</header>
-    <div class="toolbar"><input type="month" value="${month}" style="max-width:150px" onchange="localStorage.setItem('org_month',this.value);renderOrgChart();">
-    <select onchange="localStorage.setItem('org_mode',this.value);renderOrgChart()" style="max-width:150px"><option value="status" ${mode==='status'?'selected':''}>🚦 狀態模式</option><option value="money" ${mode==='money'?'selected':''}>🧮 金額模式</option></select>
-    <select onchange="localStorage.setItem('active_scope_initiator',this.value);renderOrgChart();" style="max-width:200px"><option value="">顯示輔導範圍...</option>${store.data.initiators.map(i=>`<option value="${i.id}" ${i.id===activeScopeId?'selected':''}>${i.name}</option>`).join('')}</select>
-    <button class="btn btn-secondary" onclick="openScopeSettings()">⚙️ 設定範圍</button></div>
+    <div class="toolbar">
+        <input type="month" value="${month}" style="max-width:150px" onchange="localStorage.setItem('org_month',this.value);renderOrgChart();">
+        <select onchange="localStorage.setItem('org_mode',this.value);renderOrgChart()" style="max-width:150px">
+            <option value="status" ${mode==='status'?'selected':''}>🚦 狀態模式</option>
+            <option value="money" ${mode==='money'?'selected':''}>🧮 金額模式</option>
+        </select>
+        <select onchange="localStorage.setItem('active_scope_initiator',this.value);renderOrgChart();" style="max-width:200px">
+            <option value="">顯示輔導範圍...</option>${store.data.initiators.map(i=>`<option value="${i.id}" ${i.id===activeScopeId?'selected':''}>${i.name}</option>`).join('')}
+        </select>
+        <button class="btn btn-secondary" onclick="openScopeSettings()">⚙️ 設定範圍</button>
+    </div>
     <div class="org-container"><div class="tree"><ul>${roots.map(renderNode).join('')}</ul></div></div>`;
 }
 function openScopeSettings() {
@@ -715,16 +749,16 @@ function showNodeDetails(pid, month) {
     </table><div style="margin-top:15px;text-align:right"><button class="btn btn-primary" onclick="closeModal(); router('records'); setTimeout(()=>editRecord('${r.id}', '${month}'), 100)">編輯</button></div>`);
 }
 
-/* 7. Initiators & Versions & Settings */
+/* 7. Initiators & Versions & Settings (Minimal updates) */
 function renderInitiators() {
     app.innerHTML = `<header>${getHeaderHtml('發起人管理')} <button class="btn btn-primary" onclick="editInitiator()">+ 新增</button></header>
-    <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>操作</th></tr></thead><tbody>${store.data.initiators.map(i => `<tr><td>${i.code}</td><td>${i.name}</td><td><button class="btn btn-secondary btn-sm" onclick="editInitiator('${i.id}')">編輯</button> <button class="btn btn-danger btn-sm" onclick="deleteInitiator('${i.id}')">刪除</button></td></tr>`).join('')}</tbody></table></div>`;
+    <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>操作</th></tr></thead><tbody>${store.data.initiators.map(i => `<tr><td>${i.code}</td><td>${i.name}</td><td><button class="btn btn-secondary" onclick="editInitiator('${i.id}')">編輯</button> <button class="btn btn-danger" onclick="deleteInitiator('${i.id}')">刪除</button></td></tr>`).join('')}</tbody></table></div>`;
 }
 function editInitiator(id) { const i = id?store.getInitiator(id):{id:'',code:'',name:'',note:''}; openModal(id?'編輯':'新增', `<form onsubmit="saveInitiator(event,'${id||''}')"><div class="row"><div class="col form-group"><label>編號</label><input class="form-control" name="code" value="${i.code}" required></div><div class="col form-group"><label>姓名</label><input class="form-control" name="name" value="${i.name}" required></div></div><div class="form-group"><label>備註</label><input class="form-control" name="note" value="${i.note}"></div><button type="submit" class="btn btn-primary" style="width:100%">儲存</button></form>`); }
 function saveInitiator(e,id){e.preventDefault();const d=Object.fromEntries(new FormData(e.target));if(store.data.initiators.some(i=>i.code===d.code&&i.id!==id))return alert('重複');if(id){const x=store.data.initiators.findIndex(k=>k.id===id);store.data.initiators[x]={...store.data.initiators[x],...d}}else{store.data.initiators.push({...d,id:generateUUID()})}store.save();closeModal();}
 function deleteInitiator(id){if(confirm('刪除？')){store.data.partners.forEach(p=>{if(p.initiatorId===id)p.initiatorId=''});store.data.initiators=store.data.initiators.filter(i=>i.id!==id);store.save();renderInitiators();}}
 
-function renderVersions() { app.innerHTML = `<header>${getHeaderHtml('版本控管')} <button class="btn btn-primary" onclick="editVersion()">+ 新增</button></header><div class="card"><table><thead><tr><th>名稱</th><th>狀態</th><th>操作</th></tr></thead><tbody>${store.data.versions.map(v => `<tr><td>${v.name}</td><td>${v.archived?'封存':'使用中'}</td><td><button class="btn btn-secondary btn-sm" onclick="editVersion('${v.id}')">查看</button> ${!v.archived?`<button class="btn btn-danger btn-sm" onclick="deleteVersion('${v.id}')">刪除</button>`:''}</td></tr>`).join('')}</tbody></table></div>`; }
+function renderVersions() { app.innerHTML = `<header>${getHeaderHtml('版本控管')} <button class="btn btn-primary" onclick="editVersion()">+ 新增</button></header><div class="card"><table><thead><tr><th>名稱</th><th>狀態</th><th>操作</th></tr></thead><tbody>${store.data.versions.map(v => `<tr><td>${v.name}</td><td>${v.archived?'封存':'使用中'}</td><td><button class="btn btn-secondary" onclick="editVersion('${v.id}')">查看</button> ${!v.archived?`<button class="btn btn-danger" onclick="deleteVersion('${v.id}')">刪除</button>`:''}</td></tr>`).join('')}</tbody></table></div>`; }
 function editVersion(id) { const v = id?store.getVersion(id):{id:'',name:'New',createdAt:'',params:{...defaultPlanParams}}; const p=v.params; openModal(id?'版本':'新增', `<form onsubmit="saveVersion(event,'${id||''}')"><div class="form-group"><label>名稱</label><input class="form-control" name="name" value="${v.name}" required ${v.archived?'disabled':''}></div><fieldset><legend>參數</legend><div class="row"><div class="col"><label>0-3% 基礎</label><input type="number" step="0.01" name="rate_0_3_base" value="${p.rate_0_3_base}" class="form-control" ${v.archived?'disabled':''}></div><div class="col"><label>0-3% 推薦</label><input type="number" step="0.01" name="rate_0_3_rec" value="${p.rate_0_3_rec}" class="form-control" ${v.archived?'disabled':''}></div></div><div class="row"><div class="col"><label>6% 基礎</label><input type="number" step="0.01" name="rate_6_base" value="${p.rate_6_base}" class="form-control" ${v.archived?'disabled':''}></div><div class="col"><label>6% 推薦</label><input type="number" step="0.01" name="rate_6_rec" value="${p.rate_6_rec}" class="form-control" ${v.archived?'disabled':''}></div></div><div class="row"><div class="col"><label>新人回饋</label><input type="number" step="0.01" name="rate_recruit_bv" value="${p.rate_recruit_bv}" class="form-control" ${v.archived?'disabled':''}></div><div class="col"><label>學習加碼</label><input type="number" step="0.01" name="rate_learning" value="${p.rate_learning}" class="form-control" ${v.archived?'disabled':''}></div></div></fieldset>${!v.archived?'<button type="submit" class="btn btn-primary" style="width:100%">儲存</button>':''}</form>`); }
 function saveVersion(e,id){e.preventDefault();const fd=new FormData(e.target);const params={rate_0_3_base:Number(fd.get('rate_0_3_base')),rate_0_3_rec:Number(fd.get('rate_0_3_rec')),rate_6_base:0.01,rate_6_rec:0.02,rate_recruit_bv:Number(fd.get('rate_recruit_bv')),rate_learning:Number(fd.get('rate_learning'))}; if(id){const x=store.data.versions.findIndex(v=>v.id===id);store.data.versions[x]={...store.data.versions[x],name:fd.get('name'),params}}else{store.data.versions.unshift({id:generateUUID(),name:fd.get('name'),createdAt:new Date().toISOString(),params})} store.save();closeModal();renderVersions();}
 function deleteVersion(id){if(!confirm('刪除？'))return;const used=store.data.records.some(r=>r.planVersionId===id);if(used){if(confirm('已被使用，改為封存？')){store.getVersion(id).archived=true;store.save();renderVersions()}}else{store.data.versions=store.data.versions.filter(v=>v.id!==id);store.save();renderVersions()}}
@@ -737,6 +771,8 @@ function importData(input) { const f=input.files[0];if(!f)return;const r=new Fil
 function openModal(title, content) { document.getElementById('modal-title').innerText = title; document.getElementById('modal-body').innerHTML = content; document.getElementById('modal').style.display = 'block'; }
 function closeModalSafe() { if(isModalDirty && !confirm('有未儲存變更，確定離開？')) return; isModalDirty = false; document.getElementById('modal').style.display = 'none'; }
 function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+// Remove standard onclick close, rely on closeModalSafe
 window.onclick = null; 
 
 </script>
