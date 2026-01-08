@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>安麗新星啟動計畫管理系統 (純新星版)</title>
+    <title>新星啟動計畫系統 (雲端同步版 v2.4)</title>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -15,6 +15,7 @@
             --accent: #1abc9c;
             --accent-hover: #16a085;
             --danger: #e74c3c;
+            --danger-hover: #c0392b;
             --warning: #f1c40f;
             --success: #27ae60;
             --light: #ecf0f1;
@@ -40,7 +41,7 @@
             z-index: 100;
         }
         aside.collapsed { width: 0; padding: 0; opacity: 0; }
-        aside h2 { padding: 20px; margin: 0; font-size: 1.2rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; height: 64px;}
+        aside h2 { padding: 20px; margin: 0; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; height: 64px;}
         aside nav { flex: 1; overflow-y: auto; padding-top: 10px; }
         aside nav a { display: block; padding: 15px 20px; color: #bdc3c7; text-decoration: none; transition: 0.2s; border-left: 4px solid transparent; cursor: pointer; }
         aside nav a:hover, aside nav a.active { background: var(--secondary); color: white; border-left-color: var(--accent); }
@@ -57,10 +58,11 @@
         
         /* Components */
         .card { background: white; border-radius: 8px; box-shadow: var(--shadow); padding: 20px; margin-bottom: 20px; }
-        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; text-decoration: none; }
         .btn-primary { background: var(--accent); color: white; }
         .btn-primary:hover { background: var(--accent-hover); }
         .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: var(--danger-hover); }
         .btn-secondary { background: #95a5a6; color: white; }
         .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
         
@@ -78,6 +80,11 @@
         .status-inactive { background: #fdedec; color: var(--danger); }
         .status-paid { background: #d4efdf; color: var(--success); }
         .status-unpaid { background: #fce4ec; color: #c0392b; }
+
+        /* Preview Box */
+        #preview-box h4 { margin-top: 0; border-bottom: 1px solid #ddd; padding-bottom: 10px; color: var(--dark); font-size: 1rem; }
+        .preview-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem; }
+        .preview-total { font-size: 1.1rem; font-weight: bold; color: var(--danger); border-top: 2px solid #eee; margin-top: 10px; padding-top: 10px; }
 
         /* Sync Status Indicator */
         #sync-status { position: fixed; bottom: 20px; right: 20px; padding: 8px 15px; background: rgba(0,0,0,0.7); color: white; border-radius: 20px; font-size: 0.8rem; pointer-events: none; display: flex; align-items: center; gap: 8px; z-index: 999; }
@@ -131,7 +138,7 @@
 <div id="sync-status"><div class="dot" id="sync-dot"></div> <span id="sync-text">離線</span></div>
 
 <aside id="sidebar">
-    <h2>🚀 安麗新星計畫</h2>
+    <h2>🚀 新星啟動計畫系統</h2>
     <nav>
         <a onclick="router('dashboard')" id="nav-dashboard" class="active">📊 總覽儀表板</a>
         <a onclick="router('payout')" id="nav-payout">💰 本月發放總表</a>
@@ -142,7 +149,7 @@
         <a onclick="router('versions')" id="nav-versions">⚙️ 計畫版本控管</a>
         <a onclick="router('settings')" id="nav-settings">🛠️ 系統設定</a>
     </nav>
-    <div class="footer">純新星版 v1.0</div>
+    <div class="footer">新星系統 v2.4 (安麗專用)</div>
 </aside>
 
 <main id="app">
@@ -304,57 +311,41 @@ function getHeaderHtml(title) {
     return `<h1><button class="menu-btn" onclick="toggleSidebar()">☰</button> ${title}</h1>`;
 }
 
-// 🔥 修改重點：calculateRecord 只計算新星計畫
+// 核心計算
 function calculateRecord(record) {
     const partner = store.getPartner(record.partnerId);
-    if (!partner) return null;
+    if (!partner) return null; 
     const version = store.getVersion(record.planVersionId);
     const params = version.params;
     
-    // 雖然不計算公司獎金，但仍需判斷檔位
+    // 檔位判斷
     const myRate = getBonusPercent(record.gpv);
     
-    // 公司獎金部分歸零
     const personalBonus = 0;
     const diffBonusTotal = 0;
     const companyTotal = 0;
-
-    // 仍需保留腿的資訊以判斷「獨立腿」(isIndependent)
-    const legDetails = (record.legs || []).map(leg => {
-        return { ...leg, bonus: 0 }; 
-    });
+    const legDetails = (record.legs || []).map(leg => { return { ...leg, bonus: 0 }; });
 
     let starTotal = 0, baseBonus = 0, recruitBonus = 0, learningBonus = 0;
-    
-    // 畢業判斷：GPV >= 1000
     let isGraduated = record.gpv >= 1000;
-    
-    // 參與資格：未畢業 且 狀態不是 inactive
     let isEligible = !isGraduated && record.participation !== 'inactive';
 
     if (isEligible) {
         let hasRecruit = (record.newRecruits || []).length > 0;
         let appliedRate = 0;
         
-        // 依照 myRate (檔位) 決定新星回饋率
         if (myRate <= 0.03) appliedRate = hasRecruit ? params.rate_0_3_rec : params.rate_0_3_base;
         else if (myRate === 0.06) appliedRate = hasRecruit ? params.rate_6_rec : params.rate_6_base;
         
-        // 若 myRate >= 0.09，starTotal 維持 0 (因為 isGraduated 會擋掉 >=1000 PV, 
-        // 但若 PV 600~999 算 6%, PV < 600 算 0/3%)
-        
-        // 計算基數：扣除獨立腿的 BV
         const independentLegsBV = legDetails.filter(l => l.isIndependent).reduce((sum, l) => sum + (Number(l.bv) || 0), 0);
         const totalGroupBV = record.gpv * 50; 
         const calcBaseBV = Math.max(0, totalGroupBV - independentLegsBV);
         
         baseBonus = calcBaseBV * appliedRate;
 
-        // 新人消費回饋
         const newRecruitTotalBV = (record.newRecruits || []).reduce((sum, r) => sum + (Number(r.bv)||0), 0);
         recruitBonus = newRecruitTotalBV * params.rate_recruit_bv;
 
-        // 學習加碼
         if (record.learningDone) {
             learningBonus = (baseBonus + recruitBonus) * params.rate_learning;
         }
@@ -362,7 +353,6 @@ function calculateRecord(record) {
         starTotal = baseBonus + recruitBonus + learningBonus;
     }
 
-    // 總收入 = 新星回饋
     const totalIncome = starTotal;
 
     return {
@@ -371,6 +361,76 @@ function calculateRecord(record) {
         isGraduated, isEligible, baseBonus, recruitBonus, learningBonus, starTotal, totalIncome
     };
 }
+
+// 🔥 新增：預覽計算邏輯 (不依賴 partner 資料)
+function calculatePreview(r) {
+    const v = store.getVersion(r.planVersionId);
+    if (!v) return null;
+    const params = v.params;
+
+    const myRate = getBonusPercent(r.gpv);
+    const isGraduated = r.gpv >= 1000;
+    const isInactive = r.participation === 'inactive';
+    const isEligible = !isGraduated && !isInactive;
+
+    let appliedRate = 0;
+    let appliedRateText = '0%';
+    let baseBonus = 0;
+    let recruitBonus = 0;
+    let learningBonus = 0;
+    let starTotal = 0;
+    let msg = '';
+    let msgColor = 'black';
+
+    // 狀態訊息與回饋率判斷
+    if (isInactive) {
+        msg = '⚠️ 停用：本月不計';
+        msgColor = 'var(--danger)';
+    } else if (isGraduated) {
+        msg = '🎓 畢業（本月不計新星回饋）';
+        msgColor = 'var(--success)';
+    } else if (myRate > 0.06) {
+        msg = '🚫 非適用檔位 (9%以上)：本月不計';
+        msgColor = 'orange';
+    }
+
+    if (isEligible) {
+        const hasRecruit = (r.newRecruits || []).length > 0;
+        
+        if (myRate <= 0.03) {
+            appliedRate = hasRecruit ? params.rate_0_3_rec : params.rate_0_3_base;
+            appliedRateText = hasRecruit ? `0-3% 含推薦 (${(params.rate_0_3_rec*100).toFixed(1)}%)` : `0-3% 基礎 (${(params.rate_0_3_base*100).toFixed(1)}%)`;
+        } else if (myRate === 0.06) {
+            appliedRate = hasRecruit ? params.rate_6_rec : params.rate_6_base;
+            appliedRateText = hasRecruit ? `6% 含推薦 (${(params.rate_6_rec*100).toFixed(1)}%)` : `6% 基礎 (${(params.rate_6_base*100).toFixed(1)}%)`;
+        }
+
+        // 計算基數 (排除獨立腿)
+        const independentLegsBV = (r.legs || []).filter(l => l.isIndependent).reduce((sum, l) => sum + (Number(l.bv) || 0), 0);
+        const totalGroupBV = r.gpv * 50;
+        const calcBaseBV = Math.max(0, totalGroupBV - independentLegsBV);
+
+        // 1. 基礎回饋
+        baseBonus = calcBaseBV * appliedRate;
+
+        // 2. 新人消費回饋
+        const newRecruitTotalBV = (r.newRecruits || []).reduce((sum, nr) => sum + (Number(nr.bv) || 0), 0);
+        recruitBonus = newRecruitTotalBV * params.rate_recruit_bv;
+
+        // 3. 學習加碼
+        if (r.learningDone) {
+            learningBonus = (baseBonus + recruitBonus) * params.rate_learning;
+        }
+
+        starTotal = baseBonus + recruitBonus + learningBonus;
+    }
+
+    return {
+        myRate, isGraduated, isInactive, isEligible,
+        appliedRateText, baseBonus, recruitBonus, learningBonus, starTotal, msg, msgColor
+    };
+}
+
 
 const navLinks = document.querySelectorAll('aside nav a');
 function router(page) {
@@ -392,7 +452,7 @@ function router(page) {
     }
 }
 
-// 1. Dashboard (移除公司獎金顯示)
+// 1. Dashboard
 function renderDashboard() {
     const currentMonth = new Date().toISOString().slice(0, 7);
     const records = store.getRecordsByMonth(currentMonth).map(calculateRecord).filter(x=>x); 
@@ -407,7 +467,7 @@ function renderDashboard() {
             <div class="summary-box col" style="background:#c0392b"><div class="summary-item"><div>待發放人數</div><div>${unpaidCount} 人</div></div></div>
         </div>
         <div class="card">
-            <h3>☁️ 雲端同步系統 (純新星版)</h3>
+            <h3>☁️ 新星啟動計畫系統 (雲端版)</h3>
             <p>本系統僅計算「新星啟動計畫」獎金，不含公司月結獎金。</p>
             <ul>
                 <li>手機、平板、電腦請使用相同網址即可同步。</li>
@@ -417,7 +477,7 @@ function renderDashboard() {
     `;
 }
 
-// 2. Partners (無變動)
+// 2. Partners
 function renderPartners() {
     let html = `
         <header>${getHeaderHtml('夥伴名單管理')} <button class="btn btn-primary" onclick="editPartner()">+ 新增夥伴</button></header>
@@ -431,9 +491,12 @@ function renderPartners() {
                     return `<tr>
                         <td>${p.code}</td><td>${p.name}</td>
                         <td>${sponsor ? sponsor.code + ' ' + sponsor.name : '-'}</td>
-                        <td>${init ? init.code + ' ' + init.name : '<span style="color:red">未設定</span>'}</td>
+                        <td>${init ? init.code + ' ' + init.name : '<span style="color:red;font-weight:bold;">未設定</span>'}</td>
                         <td><span class="status-badge ${p.status === 'inactive' ? 'status-inactive' : 'status-active'}">${p.status==='inactive'?'停用':'啟用'}</span></td>
-                        <td><button class="btn btn-secondary" onclick="editPartner('${p.id}')">編輯</button></td>
+                        <td>
+                            <button class="btn btn-secondary" onclick="editPartner('${p.id}')">編輯</button>
+                            <button class="btn btn-danger" onclick="deletePartner('${p.id}')">刪除</button>
+                        </td>
                     </tr>`;
                 }).join('')}
                 </tbody>
@@ -441,6 +504,7 @@ function renderPartners() {
         </div>`;
     app.innerHTML = html;
 }
+
 function editPartner(id) {
     const p = id ? store.getPartner(id) : { id: '', code: '', name: '', sponsorId: '', initiatorId: '', status: 'active' };
     const partners = store.data.partners.filter(x => x.id !== p.id);
@@ -460,6 +524,7 @@ function editPartner(id) {
         </form>
     `);
 }
+
 function savePartner(e, id) {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.target).entries());
@@ -473,18 +538,45 @@ function savePartner(e, id) {
     store.save(); closeModal();
 }
 
-// 3. Initiators (無變動)
+function deletePartner(id) {
+    const p = store.getPartner(id);
+    if (!p) return;
+    if (!confirm(`確定要刪除夥伴「${p.code} ${p.name}」嗎？\n\n⚠️ 警告：\n1. 該夥伴的所有業績紀錄將被刪除。\n2. 他的下線將變為頂層（無推薦人）。\n3. 他將從所有輔導範圍中移除。`)) return;
+
+    store.data.records = store.data.records.filter(r => r.partnerId !== id);
+    store.data.partners.forEach(sub => {
+        if (sub.sponsorId === id) sub.sponsorId = "";
+        if (sub.initiatorId === id) sub.initiatorId = "";
+    });
+    store.data.coachingScopes.forEach(scope => {
+        if (scope.roots && scope.roots.includes(id)) {
+            scope.roots = scope.roots.filter(rid => rid !== id);
+        }
+    });
+    store.data.partners = store.data.partners.filter(x => x.id !== id);
+    store.save();
+    renderPartners();
+}
+
+// 3. Initiators
 function renderInitiators() {
     let html = `
         <header>${getHeaderHtml('發起人管理')} <button class="btn btn-primary" onclick="editInitiator()">+ 新增發起人</button></header>
         <div class="card">
             <table>
                 <thead><tr><th>編號</th><th>姓名</th><th>備註</th><th>操作</th></tr></thead>
-                <tbody>${store.data.initiators.map(i => `<tr><td>${i.code}</td><td>${i.name}</td><td>${i.note||''}</td><td><button class="btn btn-secondary" onclick="editInitiator('${i.id}')">編輯</button></td></tr>`).join('')}</tbody>
+                <tbody>${store.data.initiators.map(i => `<tr>
+                    <td>${i.code}</td><td>${i.name}</td><td>${i.note||''}</td>
+                    <td>
+                        <button class="btn btn-secondary" onclick="editInitiator('${i.id}')">編輯</button>
+                        <button class="btn btn-danger" onclick="deleteInitiator('${i.id}')">刪除</button>
+                    </td>
+                </tr>`).join('')}</tbody>
             </table>
         </div>`;
     app.innerHTML = html;
 }
+
 function editInitiator(id) {
     const i = id ? store.getInitiator(id) : { id:'', code:'', name:'', note:'' };
     const safeId = id || '';
@@ -496,6 +588,7 @@ function editInitiator(id) {
             <button type="submit" class="btn btn-primary">儲存</button>
         </form>`);
 }
+
 function saveInitiator(e, id) {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.target).entries());
@@ -505,7 +598,22 @@ function saveInitiator(e, id) {
     store.save(); closeModal();
 }
 
-// 4. Records (移除公司獎金欄位)
+function deleteInitiator(id) {
+    const init = store.getInitiator(id);
+    if (!init) return;
+    if (!confirm(`確定要刪除發起人「${init.code} ${init.name}」嗎？\n\n⚠️ 警告：\n1. 所有歸屬此發起人的夥伴將變為「未設定」。\n2. 此發起人的輔導範圍設定將被移除。`)) return;
+
+    store.data.partners.forEach(p => {
+        if (p.initiatorId === id) p.initiatorId = "";
+    });
+    store.data.coachingScopes = store.data.coachingScopes.filter(scope => scope.initiatorId !== id);
+    store.data.initiators = store.data.initiators.filter(i => i.id !== id);
+
+    store.save();
+    renderInitiators();
+}
+
+// 4. Records
 function renderRecords() {
     const month = localStorage.getItem('last_view_month') || new Date().toISOString().slice(0, 7);
     const calculatedRecords = store.getRecordsByMonth(month).map(calculateRecord).filter(x=>x);
@@ -527,49 +635,103 @@ function renderRecords() {
         </div>`;
 }
 function changeRecordMonth(m) { localStorage.setItem('last_view_month', m); renderRecords(); }
+
 let tempRecord = {};
+
 function editRecord(id, month) {
     const r = id ? store.getRecord(id) : { id: '', partnerId: '', month: month, ppv: 0, pbv: 0, gpv: 0, legs: [], newRecruits: [], products: [], learningDone: false, participation: 'active', payoutStatus: 'unpaid', payoutDate: month + '-18', planVersionId: store.data.versions[0].id };
     if (r.payoutStatus === 'paid' && id && !confirm('此紀錄已鎖定(已發放)，確定要解鎖編輯？')) return;
     tempRecord = JSON.parse(JSON.stringify(r));
     const partners = store.data.partners.filter(p => p.status === 'active');
     const safeId = id || '';
+    
+    // HTML 結構
     const modalHtml = `
         <h2>${id ? '編輯' : '新增'}業績紀錄 (${r.month})</h2>
         <form id="recordForm" onsubmit="saveRecord(event, '${safeId}')">
             <div class="row">
                 <div class="col form-group"><label>夥伴 *</label><select class="form-control" name="partnerId" required onchange="tempRecord.partnerId=this.value"><option value="">-- 請選擇 --</option>${partners.map(p => `<option value="${p.id}" ${p.id === r.partnerId ? 'selected' : ''}>${p.code} ${p.name}</option>`).join('')}</select></div>
-                <div class="col form-group"><label>計畫版本</label><select class="form-control" name="planVersionId" required>${store.data.versions.map(v => `<option value="${v.id}" ${v.id === r.planVersionId ? 'selected' : ''}>${v.name}</option>`).join('')}</select></div>
+                <div class="col form-group"><label>計畫版本</label><select class="form-control" name="planVersionId" required onchange="tempRecord.planVersionId=this.value; renderPreview();">${store.data.versions.map(v => `<option value="${v.id}" ${v.id === r.planVersionId ? 'selected' : ''}>${v.name}</option>`).join('')}</select></div>
             </div>
             <fieldset style="border:1px solid #ddd; padding:10px; margin-bottom:15px;"><legend>業績</legend>
                 <div class="row">
                     <div class="col"><label>個人PV</label><input type="number" class="form-control" name="ppv" value="${r.ppv}" oninput="syncBV(this, 'pbv')"></div>
                     <div class="col"><label>個人BV</label><input type="number" class="form-control" name="pbv" value="${r.pbv}" oninput="syncPV(this, 'ppv')"></div>
-                    <div class="col"><label>小組PV</label><input type="number" class="form-control" name="gpv" value="${r.gpv}" required></div>
+                    <div class="col"><label>小組PV</label><input type="number" class="form-control" name="gpv" value="${r.gpv}" required oninput="tempRecord.gpv=Number(this.value); renderPreview();"></div>
                 </div>
             </fieldset>
             <fieldset style="border:1px solid #ddd; padding:10px; margin-bottom:15px;"><legend>第一代腿 (判斷獨立用)</legend><div id="legs-container"></div><button type="button" class="btn btn-outline" onclick="addLeg()">+ 腿</button></fieldset>
             <fieldset style="border:1px solid #ddd; padding:10px; margin-bottom:15px;"><legend>新星計畫</legend>
-                 <div class="row"><div class="col"><label>參與狀態</label><select class="form-control" name="participation"><option value="active" ${r.participation==='active'?'selected':''}>參與</option><option value="inactive" ${r.participation==='inactive'?'selected':''}>停用</option></select></div><div class="col"><label><input type="checkbox" name="learningDone" ${r.learningDone ? 'checked' : ''}> 完成學習任務</label></div></div>
+                 <div class="row"><div class="col"><label>參與狀態</label><select class="form-control" name="participation" onchange="tempRecord.participation=this.value; renderPreview();"><option value="active" ${r.participation==='active'?'selected':''}>參與</option><option value="inactive" ${r.participation==='inactive'?'selected':''}>停用</option></select></div><div class="col"><label><input type="checkbox" name="learningDone" ${r.learningDone ? 'checked' : ''} onchange="tempRecord.learningDone=this.checked; renderPreview();"> 完成學習任務</label></div></div>
                 <div><label>新推薦會員</label><div id="recruits-container"></div><button type="button" class="btn btn-outline" onclick="addRecruit()">+ 新人</button></div>
             </fieldset>
+            
+            <div class="card" id="preview-box" style="background:#f8f9fa; border:1px solid #bdc3c7; margin-top:15px; margin-bottom:15px;">
+                </div>
+
             <fieldset style="border:1px solid #ddd; padding:10px; margin-bottom:15px;"><legend>產品 <button type="button" class="btn" style="font-size:0.8rem" onclick="addCustomCol()">+ 欄位</button></legend><div id="products-container"></div><button type="button" class="btn btn-outline" onclick="addProduct()">+ 產品</button></fieldset>
             <div class="row"><div class="col"><label>發放日</label><input type="date" class="form-control" name="payoutDate" value="${r.payoutDate}"></div><div class="col"><label>狀態</label><select class="form-control" name="payoutStatus"><option value="unpaid" ${r.payoutStatus==='unpaid'?'selected':''}>未發放</option><option value="paid" ${r.payoutStatus==='paid'?'selected':''}>已發放</option></select></div></div>
             <button type="submit" class="btn btn-primary">儲存紀錄</button>
         </form>`;
     openModal(modalHtml);
-    renderLegs(); renderRecruits(); renderProducts();
+    renderLegs(); 
+    renderRecruits(); 
+    renderProducts();
+    renderPreview(); // 初始渲染
 }
+
+// 🔥 新增：渲染預覽畫面
+function renderPreview() {
+    const res = calculatePreview(tempRecord);
+    const box = document.getElementById('preview-box');
+    if (!box || !res) return;
+
+    box.innerHTML = `
+        <h4>📌 即時預覽 (預估獎金)</h4>
+        <div style="font-weight:bold; color:${res.msgColor}; margin-bottom:10px;">
+            ${res.msg ? res.msg : `✅ 狀態正常 (檔位 ${(res.myRate * 100).toFixed(0)}%)`}
+        </div>
+        ${res.isEligible ? `
+            <div class="preview-row"><span>適用回饋率：</span><span>${res.appliedRateText}</span></div>
+            <div class="preview-row"><span>基礎回饋：</span><span>${formatMoney(res.baseBonus)}</span></div>
+            <div class="preview-row"><span>新人回饋：</span><span>${formatMoney(res.recruitBonus)}</span></div>
+            <div class="preview-row"><span>學習加碼：</span><span>${formatMoney(res.learningBonus)}</span></div>
+            <div class="preview-row preview-total">
+                <span>新星回饋合計：</span><span>${formatMoney(res.starTotal)}</span>
+            </div>
+        ` : `
+            <div style="text-align:center; color:#999; padding:10px;">不符合計算條件，無回饋</div>
+        `}
+    `;
+}
+
 function syncBV(el,t){ document.querySelector(`[name="${t}"]`).value = el.value * 50; }
 function syncPV(el,t){ document.querySelector(`[name="${t}"]`).value = el.value / 50; }
+
 function renderLegs() {
-    document.getElementById('legs-container').innerHTML = tempRecord.legs.map((l, i) => `<div class="row" style="margin-bottom:5px;"><div class="col"><input placeholder="腿名" class="form-control" value="${l.name}" onchange="tempRecord.legs[${i}].name=this.value"></div><div class="col"><input type="number" placeholder="PV" class="form-control" value="${l.pv}" onchange="tempRecord.legs[${i}].pv=Number(this.value)"></div><div class="col"><input type="number" placeholder="BV" class="form-control" value="${l.bv}" onchange="tempRecord.legs[${i}].bv=Number(this.value)"></div><div class="col" style="flex:0.5"><label><input type="checkbox" ${l.isIndependent?'checked':''} onchange="tempRecord.legs[${i}].isIndependent=this.checked">獨</label></div><button type="button" class="btn btn-danger" onclick="removeLeg(${i})">X</button></div>`).join('');
+    document.getElementById('legs-container').innerHTML = tempRecord.legs.map((l, i) => `
+        <div class="row" style="margin-bottom:5px;">
+            <div class="col"><input placeholder="腿名" class="form-control" value="${l.name}" oninput="tempRecord.legs[${i}].name=this.value"></div>
+            <div class="col"><input type="number" placeholder="PV" class="form-control" value="${l.pv}" oninput="tempRecord.legs[${i}].pv=Number(this.value)"></div>
+            <div class="col"><input type="number" placeholder="BV" class="form-control" value="${l.bv}" oninput="tempRecord.legs[${i}].bv=Number(this.value); renderPreview();"></div>
+            <div class="col" style="flex:0.5"><label><input type="checkbox" ${l.isIndependent?'checked':''} onchange="tempRecord.legs[${i}].isIndependent=this.checked; renderPreview();">獨</label></div>
+            <button type="button" class="btn btn-danger" onclick="removeLeg(${i})">X</button>
+        </div>`).join('');
 }
-function addLeg() { tempRecord.legs.push({ name: '', pv: 0, bv: 0, isIndependent: false }); renderLegs(); }
-function removeLeg(i) { tempRecord.legs.splice(i, 1); renderLegs(); }
-function renderRecruits() { document.getElementById('recruits-container').innerHTML = tempRecord.newRecruits.map((r, i) => `<div class="row" style="margin-bottom:5px;"><div class="col"><input placeholder="姓名" class="form-control" value="${r.name}" onchange="tempRecord.newRecruits[${i}].name=this.value"></div><div class="col"><input type="number" placeholder="BV" class="form-control" value="${r.bv}" onchange="tempRecord.newRecruits[${i}].bv=Number(this.value)"></div><button type="button" class="btn btn-danger" onclick="removeRecruit(${i})">X</button></div>`).join(''); }
-function addRecruit() { tempRecord.newRecruits.push({ name: '', bv: 0 }); renderRecruits(); }
-function removeRecruit(i) { tempRecord.newRecruits.splice(i, 1); renderRecruits(); }
+function addLeg() { tempRecord.legs.push({ name: '', pv: 0, bv: 0, isIndependent: false }); renderLegs(); renderPreview(); }
+function removeLeg(i) { tempRecord.legs.splice(i, 1); renderLegs(); renderPreview(); }
+
+function renderRecruits() { 
+    document.getElementById('recruits-container').innerHTML = tempRecord.newRecruits.map((r, i) => `
+        <div class="row" style="margin-bottom:5px;">
+            <div class="col"><input placeholder="姓名" class="form-control" value="${r.name}" oninput="tempRecord.newRecruits[${i}].name=this.value"></div>
+            <div class="col"><input type="number" placeholder="BV" class="form-control" value="${r.bv}" oninput="tempRecord.newRecruits[${i}].bv=Number(this.value); renderPreview();"></div>
+            <button type="button" class="btn btn-danger" onclick="removeRecruit(${i})">X</button>
+        </div>`).join(''); 
+}
+function addRecruit() { tempRecord.newRecruits.push({ name: '', bv: 0 }); renderRecruits(); renderPreview(); }
+function removeRecruit(i) { tempRecord.newRecruits.splice(i, 1); renderRecruits(); renderPreview(); }
+
 function renderProducts() {
     const cols = store.data.customProductColumns;
     let html = `<div style="display:flex;font-weight:bold;margin-bottom:5px;"><div style="flex:2">品項</div><div style="flex:1">數量</div>${cols.map(c => `<div style="flex:1">${c}</div>`).join('')}<div style="width:40px"></div></div>`;
@@ -581,6 +743,7 @@ function removeProduct(i) { tempRecord.products.splice(i, 1); renderProducts(); 
 function updateProd(i, f, v) { tempRecord.products[i][f] = v; }
 function updateProdCustom(i, f, v) { if(!tempRecord.products[i].custom) tempRecord.products[i].custom = {}; tempRecord.products[i].custom[f] = v; }
 function addCustomCol() { const name = prompt('新欄位名稱：'); if(name && !store.data.customProductColumns.includes(name)) { store.data.customProductColumns.push(name); store.save(); renderProducts(); } }
+
 function saveRecord(e, id) {
     e.preventDefault(); const formData = new FormData(e.target);
     const record = { ...tempRecord, partnerId: formData.get('partnerId'), planVersionId: formData.get('planVersionId'), month: tempRecord.month, ppv: Number(formData.get('ppv')), pbv: Number(formData.get('pbv')), gpv: Number(formData.get('gpv')), participation: formData.get('participation'), learningDone: formData.get('learningDone') === 'on', payoutDate: formData.get('payoutDate'), payoutStatus: formData.get('payoutStatus') };
@@ -589,15 +752,20 @@ function saveRecord(e, id) {
     store.save(); closeModal();
 }
 
-// 5. Payout (移除公司獎金欄位)
+// 5. Payout
 function renderPayout() {
     const month = localStorage.getItem('last_payout_view_month') || new Date().toISOString().slice(0, 7);
-    const records = store.getRecordsByMonth(month).map(calculateRecord).filter(x=>x);
+    const records = store.getRecordsByMonth(month).map(calculateRecord).filter(x=>x); 
     const initiators = store.data.initiators;
     const groups = {};
-    initiators.forEach(init => { groups[init.id] = { info: init, records: records.filter(r => r.initiatorId === init.id), total: 0, paid: 0, unpaid: 0 }; });
-    const orphanRecords = records.filter(r => !r.initiatorId);
-    if(orphanRecords.length > 0) groups['none'] = { info: { name: '未指定', code: 'N/A' }, records: orphanRecords, total:0, paid:0, unpaid:0 };
+    
+    initiators.forEach(init => { 
+        groups[init.id] = { info: init, records: records.filter(r => r.initiatorId === init.id), total: 0, paid: 0, unpaid: 0 }; 
+    });
+    
+    const orphanRecords = records.filter(r => !r.initiatorId || !store.getInitiator(r.initiatorId));
+    if(orphanRecords.length > 0) groups['none'] = { info: { name: '未指定 (未設定)', code: 'N/A' }, records: orphanRecords, total:0, paid:0, unpaid:0 };
+    
     Object.values(groups).forEach(g => { g.records.forEach(r => { g.total += r.totalIncome; if(r.payoutStatus === 'paid') g.paid += r.totalIncome; else g.unpaid += r.totalIncome; }); });
     app.innerHTML = `
         <header>${getHeaderHtml('本月發放總表')} <input type="month" value="${month}" class="form-control" style="width:auto" onchange="localStorage.setItem('last_payout_view_month', this.value); renderPayout();"></header>
@@ -617,30 +785,42 @@ function exportPayoutCSV(month) {
     const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.download = `Payout_${month}.csv`; link.click();
 }
 
-// 6. Org Chart (只顯示新星獎金)
+// 6. Org Chart
 function renderOrgChart() {
     const month = localStorage.getItem('last_org_view_month') || new Date().toISOString().slice(0, 7);
-    const partners = store.data.partners;
+    const partners = store.data.partners; 
     const records = store.getRecordsByMonth(month).map(calculateRecord);
     const initiators = store.data.initiators;
+    
     const partnerMap = {};
     partners.forEach(p => { partnerMap[p.id] = { ...p, children: [], record: records.find(r => r && r.partnerId === p.id) }; });
+    
     const roots = [];
-    partners.forEach(p => { if (p.sponsorId && partnerMap[p.sponsorId]) partnerMap[p.sponsorId].children.push(partnerMap[p.id]); else roots.push(partnerMap[p.id]); });
+    partners.forEach(p => { 
+        if (p.sponsorId && partnerMap[p.sponsorId]) {
+            partnerMap[p.sponsorId].children.push(partnerMap[p.id]); 
+        } else { 
+            roots.push(partnerMap[p.id]); 
+        } 
+    });
+
     const activeScopeId = localStorage.getItem('active_scope_initiator');
     let scopeSet = new Set();
     if (activeScopeId) {
         const scope = store.getCoachingScope(activeScopeId);
         if (scope.roots && scope.roots.length > 0) {
             function mark(pid, d) { if (d > 5) return; scopeSet.add(pid); const p = partnerMap[pid]; if(p && p.children) p.children.forEach(c => mark(c.id, d + 1)); }
-            scope.roots.forEach(rid => mark(rid, 1));
+            scope.roots.forEach(rid => { if(partnerMap[rid]) mark(rid, 1); });
         }
     }
     function renderNode(node) {
         const r = node.record;
         let classes = ['node'];
         if (scopeSet.has(node.id)) classes.push('in-scope');
-        if (activeScopeId && store.getCoachingScope(activeScopeId).roots.includes(node.id)) classes.push('scope-root');
+        if (activeScopeId) {
+             const scope = store.getCoachingScope(activeScopeId);
+             if(scope.roots.includes(node.id)) classes.push('scope-root');
+        }
         if (r && r.isGraduated) classes.push('graduate');
         if (r && r.payoutStatus === 'unpaid' && r.totalIncome > 0) classes.push('unpaid');
         let metric = r ? `${formatMoney(r.totalIncome)}` : '無紀錄';
@@ -685,7 +865,7 @@ function showNodeDetails(pid, month) {
     </table><div class="text-right"><button class="btn btn-primary" onclick="closeModal(); router('records'); setTimeout(()=>editRecord('${r.id}', '${month}'), 100)">編輯</button></div>`);
 }
 
-// 7. Versions (無變動)
+// 7. Versions
 function renderVersions() {
     app.innerHTML = `<header>${getHeaderHtml('版本控管')} <button class="btn btn-primary" onclick="editVersion()">+ 新增</button></header><div class="card"><table><thead><tr><th>名稱</th><th>日期</th><th>操作</th></tr></thead><tbody>${store.data.versions.map(v => `<tr><td>${v.name}</td><td>${new Date(v.createdAt).toLocaleDateString()}</td><td><button class="btn btn-secondary" onclick="editVersion('${v.id}')">查看</button></td></tr>`).join('')}</tbody></table></div>`;
 }
@@ -707,7 +887,7 @@ function saveVersion(e, id) {
     store.save(); closeModal();
 }
 
-// 8. Settings (無變動)
+// 8. Settings
 function renderSettings() {
     app.innerHTML = `<header>${getHeaderHtml('系統設定')}</header><div class="card"><h3>⚠️ 危險區域</h3><p>直接清除雲端所有資料。</p><button class="btn btn-danger" onclick="clearData()">🔥 清除所有資料 (Reset)</button></div>`;
 }
