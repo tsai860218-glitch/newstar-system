@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新星啟動計畫系統 (v3.6 除錯修復版)</title>
+    <title>新星啟動計畫系統 (v3.7 修復版)</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -137,7 +137,7 @@
         <a onclick="router('versions')" id="nav-versions">⚙️ 計畫版本控管</a>
         <a onclick="router('settings')" id="nav-settings">🛠️ 系統設定</a>
     </nav>
-    <div class="footer">v3.6 除錯修復版</div>
+    <div class="footer">v3.7 修復版</div>
 </aside>
 
 <main id="app"></main>
@@ -150,11 +150,11 @@
 </div>
 
 <script>
-// --- GLOBAL ERROR HANDLER (捕捉所有錯誤並顯示) ---
+// --- GLOBAL ERROR HANDLER ---
 window.onerror = function(msg, url, line, col, error) {
     alert(`⚠️ 系統發生錯誤：\n${msg}\n(行數: ${line})`);
     console.error(error);
-    document.getElementById('loading').style.display = 'none'; // 避免卡在載入畫面
+    document.getElementById('loading').style.display = 'none';
 };
 
 // --- FIREBASE CONFIG ---
@@ -176,7 +176,7 @@ try {
     isReady = true;
 } catch (e) { document.getElementById('loading').innerHTML = '<h3 style="color:red">⚠️ Firebase 連線錯誤，請檢查網路</h3>'; }
 
-// --- UTILS (Hoisted) ---
+// --- UTILS ---
 function uuid() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0, v = c=='x'?r:(r&0x3|0x8); return v.toString(16); }); }
 function money(n) { return new Intl.NumberFormat('zh-TW', {style:'currency', currency:'TWD', minimumFractionDigits:0}).format(n||0); }
 function getPercent(pv) { return pv>=10000?0.21:pv>=7000?0.18:pv>=4000?0.15:pv>=2000?0.12:pv>=1000?0.09:pv>=600?0.06:pv>=200?0.03:0; }
@@ -189,18 +189,27 @@ function openModal(title, content) {
     document.getElementById('modal').style.display = 'block';
 }
 
-// --- DATA STORE ---
+// --- DATA STORE (Fix 1: Firebase Loading & Error Handler) ---
 const defaultParams = { rate_0_3_base: 0.03, rate_0_3_rec: 0.04, rate_6_base: 0.01, rate_6_rec: 0.02, rate_recruit_bv: 0.01, rate_learning: 0.03 };
 let appData = { partners: [], initiators: [], records: [], versions: [] };
 const store = {
     data: appData,
     init() {
         if(!isReady) return;
+        
+        // Timeout safeguard
+        setTimeout(() => {
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl && loadingEl.style.display !== 'none') {
+                loadingEl.style.display = 'none';
+                console.warn('Loading timeout - force hide');
+            }
+        }, 8000);
+
         db.ref('AmwaySystem/v1').on('value', snap => {
             const val = snap.val();
             if(val) {
                 this.data = val;
-                // 確保陣列存在，防止操作報錯
                 ['partners','initiators','records','versions'].forEach(k => { if(!this.data[k]) this.data[k] = []; });
             } else {
                 this.data.versions.push({id: uuid(), name:'預設版本', params:{...defaultParams}});
@@ -209,6 +218,11 @@ const store = {
             document.getElementById('loading').style.display = 'none';
             const active = document.querySelector('aside nav a.active');
             router(active ? active.id.replace('nav-','') : 'dashboard');
+        }, err => {
+            console.error('Firebase read error:', err);
+            document.getElementById('loading').style.display = 'none';
+            alert('⚠️ Firebase 讀取失敗：' + (err?.message || err));
+            router('dashboard');
         });
     },
     save() { if(isReady) db.ref('AmwaySystem/v1').set(this.data); },
@@ -396,6 +410,7 @@ function editRecord(id, month) {
         const pOpts = store.data.partners.map(p => `<option value="${p.id}" ${p.id===base.partnerId?'selected':''} style="${p.status==='inactive'?'color:gray':''}">${p.code} ${p.name} ${p.status==='inactive'?'(停用)':''}</option>`).join('');
         const vOpts = store.data.versions.map(v => `<option value="${v.id}" ${v.id===base.planVersionId?'selected':''} ${v.archived?'disabled':''}>${v.name}</option>`).join('');
 
+        // Fix 4: Add name="learningDone" to checkbox
         openModal(id?'編輯紀錄':'新增紀錄', `
             <form id="recForm" onsubmit="saveRecord(event, '${id||''}')">
                 <div class="record-modal-grid">
@@ -423,7 +438,7 @@ function editRecord(id, month) {
                         <div class="card">
                             <div class="row">
                                 <div class="col"><label>狀態</label><select name="participation" class="form-control" onchange="tempRec.participation=this.value;renderPreview();markDirty()"><option value="active" ${base.participation==='active'?'selected':''}>參與</option><option value="inactive" ${base.participation==='inactive'?'selected':''}>本月不計</option></select></div>
-                                <div class="col" style="padding-top:25px"><label><input type="checkbox" ${base.learningDone?'checked':''} onchange="tempRec.learningDone=this.checked;renderPreview();markDirty()"> 完成學習任務</label></div>
+                                <div class="col" style="padding-top:25px"><label><input type="checkbox" name="learningDone" ${base.learningDone?'checked':''} onchange="tempRec.learningDone=this.checked;renderPreview();markDirty()"> 完成學習任務</label></div>
                             </div>
                             <div class="form-group"><label>備註</label><textarea name="note" class="form-control" oninput="markDirty()">${base.note}</textarea></div>
                             <div class="row">
@@ -616,7 +631,7 @@ function delInit(id) {
     store.save(); renderInitiators();
 }
 
-// 6. ORG CHART (Minimalist)
+// 6. ORG CHART (Minimalist - Fix 2: Variable Scope & Fix 3: showNode Logic)
 function renderOrgChart() {
     try {
         const m = localStorage.getItem('org_m') || new Date().toISOString().slice(0,7);
@@ -649,28 +664,29 @@ function renderOrgChart() {
             }
         }
 
+        // Fix 2: Correct variable scope for status
         function traverseScope(node, depth, isChainValid) {
-            if(depth > 0) { 
+            let currentStatus = null;
+
+            if (depth > 0) {
                 const isSelfInitiator = store.data.initiators.some(i => i.code === node.code);
-                let status = 'out';
-                
-                if(isSelfInitiator && node.id !== (store.getPartner(viewerId)?.id)) {
-                    status = 'breakaway';
-                    isChainValid = false; 
-                } 
-                else if(isChainValid) {
-                    if(depth <= 5) status = 'in';
-                    else status = 'out'; 
+                currentStatus = 'out';
+
+                if (isSelfInitiator && node.id !== (store.getPartner(viewerId)?.id) && isChainValid) {
+                    currentStatus = 'breakaway';
+                    isChainValid = false;
+                } else if (isChainValid) {
+                    currentStatus = depth <= 5 ? 'in' : 'out';
                 }
-                
-                scopeStatus[node.id] = status;
+
+                scopeStatus[node.id] = currentStatus;
                 levels[node.id] = depth;
             }
 
             node.children.forEach((child, idx) => {
                 let childValid = isChainValid;
-                if(status === 'breakaway') childValid = false;
-                if(depth === 0 && idx >= 3) childValid = false; // 3-Width Rule
+                if (currentStatus === 'breakaway') childValid = false;
+                if (depth === 0 && idx >= 3) childValid = false; // 根層 3寬
                 traverseScope(child, depth + 1, childValid);
             });
         }
@@ -725,13 +741,27 @@ function renderOrgChart() {
         `;
     } catch(e) { alert('組織圖渲染錯誤: ' + e.message); }
 }
-function showNode(id, m) {
-    const r = store.getRecord(id);
-    if(r) editRecord(r.id);
-    else if(confirm('無本月紀錄，要建立嗎？')) {
+
+// Fix 3: Correct showNode logic to find record by partnerId + month
+function showNode(partnerId, m) {
+    const r = (store.data.records || []).find(x => x.partnerId === partnerId && x.month === m);
+    
+    if (r) {
+        editRecord(r.id);
+    } else if (confirm('無本月紀錄，要建立嗎？')) {
         editRecord(null, m);
-        tempRec.partnerId = id; 
-        document.querySelector('[name=partnerId]').value = id;
+        tempRec.partnerId = partnerId;
+        // Wait for modal to render then set value
+        setTimeout(() => {
+            const sel = document.querySelector('[name=partnerId]');
+            if (sel) {
+                sel.value = partnerId;
+                // Need to update tempRec.partnerId as well if the select logic doesn't trigger automatically
+                tempRec.partnerId = partnerId; 
+                renderPreview();
+                markDirty();
+            }
+        }, 50);
     }
 }
 
