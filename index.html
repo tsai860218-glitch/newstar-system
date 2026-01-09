@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v5.3 名單管理完全體)</title>
+    <title>新星啟動計畫系統 (v5.4 產品紀錄版)</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -195,7 +195,7 @@
         .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 5px; font-size: 1rem; }
         .row { display: flex; gap: 15px; flex-wrap: wrap; } .col { flex: 1; min-width: 150px; }
         
-        /* Toggle Switch CSS (Standard Size) */
+        /* Toggle Switch CSS */
         .switch { position: relative; display: inline-block; width: 50px; height: 26px; vertical-align: middle; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -204,7 +204,6 @@
         input:checked + .slider:before { transform: translateX(24px); }
         .switch-label { margin-left: 10px; font-weight: bold; vertical-align: middle; color: #555; }
 
-        /* Toggle Switch Small (For List) */
         .switch-sm { position: relative; display: inline-block; width: 40px; height: 22px; vertical-align: middle; flex-shrink: 0; }
         .switch-sm input { opacity: 0; width: 0; height: 0; }
         .slider-sm { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -232,7 +231,6 @@
         th { background: #f8f9fa; color: #555; white-space: nowrap; cursor: pointer; user-select: none; }
         th:hover { background: #eee; }
         tr:last-child td { border-bottom: none; }
-        
         .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
 
         /* Modal */
@@ -331,7 +329,7 @@
             </div>
         </div>
     </div>
-    <div class="footer">v5.3 名單管理完全體</div>
+    <div class="footer">v5.4 產品紀錄版</div>
 </aside>
 
 <main id="app"></main>
@@ -425,11 +423,9 @@ function getLocalToday() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
-// Legacy for records default (keep sync with local)
 function getToday(m) { 
     if(m) {
         const d = new Date();
-        // If current month, try to use 18th if not passed, else today. But requirement is just simple default.
         return (d.toISOString().slice(0,7)===m && d.getDate()<18) ? m+'-18' : getLocalToday();
     }
     return getLocalToday();
@@ -503,20 +499,20 @@ const store = {
                     if(r.newRecruits && Array.isArray(r.newRecruits)) {
                         r.newRecruits.forEach(nr => { if(!nr.memberType) nr.memberType = 'directSeller'; });
                     }
+                    if(!r.products) r.products = []; // Normalize Products
                 });
             } else {
                 this.data.versions.push({id: uuid(), name:'預設版本', params:{...defaultParams}});
                 this.save();
             }
             document.getElementById('loading').style.display = 'none';
-            // Only router if we are not already on a specific page to avoid reset loop during save
-            if(!document.querySelector('.nav-item.active')) {
-                router('dashboard');
+            const active = document.querySelector('.nav-item.active');
+            // If active page exists, re-render it (e.g. list update), else go dashboard
+            if (active) {
+                const pageId = active.id.replace('nav-', '');
+                if (pageId === 'records' || pageId === 'partners') router(pageId); 
             } else {
-                // If on partners page, refresh it to show updated data
-                if(document.getElementById('nav-partners') && document.getElementById('nav-partners').classList.contains('active')) {
-                    renderPartners();
-                }
+                router('dashboard');
             }
         }, err => { console.error(err); document.getElementById('loading').style.display = 'none'; alert('⚠️ 讀取失敗：' + err.message); router('dashboard'); });
     },
@@ -603,18 +599,13 @@ function renderDashboard() {
     `;
 }
 
-// --- PARTNERS (v5.3 Enhanced) ---
+// --- PARTNERS ---
 function renderPartners() {
     const term = localStorage.getItem('p_search') || '';
     let list = store.data.partners.filter(p => p.code.includes(term)||p.name.includes(term));
-    
-    // Status Filter
     const statusFilter = localStorage.getItem('p_statusFilter') || 'all';
-    if (statusFilter !== 'all') {
-        list = list.filter(p => (p.status || 'active') === statusFilter);
-    }
+    if (statusFilter !== 'all') list = list.filter(p => (p.status || 'active') === statusFilter);
 
-    // Date Filter
     const joinedFrom = localStorage.getItem('p_joinedFrom');
     const joinedTo = localStorage.getItem('p_joinedTo');
     if (joinedFrom || joinedTo) {
@@ -626,7 +617,6 @@ function renderPartners() {
         });
     }
 
-    // Sorting
     const sortMode = localStorage.getItem('p_sort') || 'default';
     if (sortMode !== 'default') {
         list.sort((a, b) => {
@@ -642,15 +632,12 @@ function renderPartners() {
         
         <div class="filter-bar">
             <input class="form-control" style="width:150px;margin:0" placeholder="🔍 搜尋 編號/姓名" value="${term}" oninput="localStorage.setItem('p_search',this.value);renderPartners()">
-            
             <select class="form-control" style="width:auto;margin:0" onchange="localStorage.setItem('p_statusFilter',this.value);renderPartners()">
                 <option value="all" ${statusFilter==='all'?'selected':''}>全部狀態</option>
                 <option value="active" ${statusFilter==='active'?'selected':''}>只看參與</option>
                 <option value="inactive" ${statusFilter==='inactive'?'selected':''}>只看未參與</option>
             </select>
-
             <span style="color:#aaa">|</span>
-            
             <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
                 <small>加入日:</small>
                 <input type="date" class="form-control" style="width:130px;margin:0" value="${joinedFrom||''}" onchange="localStorage.setItem('p_joinedFrom',this.value);renderPartners()">
@@ -706,36 +693,29 @@ function renderPartners() {
     `;
 }
 
-// 🚀 New Feature: Toggle Status Directly
 function togglePartnerStatus(id, el) {
     const p = store.getPartner(id);
     if (!p) return;
-    
     const newStatus = el.checked ? 'active' : 'inactive';
     
-    // Confirm when going active -> inactive
     if (newStatus === 'inactive') {
         if (!confirm('確定將此夥伴設定為『未參與』嗎？\n（加入計畫日期不會被刪除，但會隱藏）')) {
-            el.checked = true; // Revert UI
-            return;
+            el.checked = true; return;
         }
     } else {
-        // Going active: Auto fill joinedAt if empty
-        if (!p.joinedAt) {
-            p.joinedAt = getLocalToday();
-        }
+        if (!p.joinedAt) p.joinedAt = getLocalToday();
     }
 
     const oldStatus = p.status;
     p.status = newStatus;
 
     try {
-        store.save(); // Instant save
-        renderPartners(); // Refresh list to update texts and durations
+        store.save(); 
+        renderPartners(); 
     } catch(e) {
         console.error(e);
-        p.status = oldStatus; // Revert data
-        el.checked = !el.checked; // Revert UI
+        p.status = oldStatus; 
+        el.checked = !el.checked; 
         alert('⚠️ 儲存失敗，請檢查網路');
     }
 }
@@ -773,10 +753,9 @@ function togglePartnerSort() {
 function editPartner(id) {
     try {
         const p = id ? store.getPartner(id) : {id:'', code:'', name:'', memberType:'directSeller', sponsorId:'', initiatorId:'', status:'active', joinedAt:''};
-        // Defaults for old data
         if(!p.memberType) p.memberType = 'directSeller';
         if(!p.status) p.status = 'active';
-        if(p.status === 'active' && !p.joinedAt && !id) p.joinedAt = getLocalToday(); // Default today for new active
+        if(p.status === 'active' && !p.joinedAt && !id) p.joinedAt = getLocalToday(); 
         
         const others = store.data.partners.filter(x=>x.id!==p.id);
         const inits = store.data.initiators;
@@ -787,14 +766,12 @@ function editPartner(id) {
                     <div class="col"><label>編號 *</label><input name="code" value="${p.code}" class="form-control" required></div>
                     <div class="col"><label>姓名 *</label><input name="name" value="${p.name}" class="form-control" required></div>
                 </div>
-                
                 <div class="form-group"><label>會員性質 *</label>
                     <select name="memberType" class="form-control" required>
                         <option value="directSeller" ${p.memberType==='directSeller'?'selected':''}>直銷商</option>
                         <option value="member" ${p.memberType==='member'?'selected':''}>生活會員</option>
                     </select>
                 </div>
-
                 <div class="card" style="background:#fdfdfd;border:1px solid #eee;padding:15px">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                         <label style="margin:0">計畫狀態</label>
@@ -804,20 +781,17 @@ function editPartner(id) {
                         </label>
                         <span id="statusLabel" class="switch-label">${p.status==='active'?'參與':'未參與'}</span>
                     </div>
-                    
                     <div id="joinedAtGroup" style="display:${p.status==='active'?'block':'none'}">
                         <label>加入計畫日期 *</label>
                         <input type="date" name="joinedAt" id="joinedAtInput" class="form-control" value="${p.joinedAt||''}" ${p.status==='active'?'required':''}>
                     </div>
                 </div>
-
                 <div class="form-group"><label>推薦人 (上線)</label>
                     <select name="sponsorId" class="form-control"><option value="">-- 無 (頂層) --</option>${others.map(o=>`<option value="${o.id}" ${o.id===p.sponsorId?'selected':''}>${o.code} ${o.name}</option>`).join('')}</select>
                 </div>
                 <div class="form-group"><label>所屬發起人 (獎金來源)</label>
                     <select name="initiatorId" class="form-control" required><option value="">-- 請選擇 --</option>${inits.map(i=>`<option value="${i.id}" ${i.id===p.initiatorId?'selected':''}>${i.name}</option>`).join('')}</select>
                 </div>
-                
                 <button class="btn btn-primary" style="width:100%">儲存</button>
             </form>
         `);
@@ -826,39 +800,23 @@ function editPartner(id) {
             const label = document.getElementById('statusLabel');
             const dateGroup = document.getElementById('joinedAtGroup');
             const dateInput = document.getElementById('joinedAtInput');
-            
             if (el.checked) {
-                label.innerText = "參與";
-                dateGroup.style.display = "block";
-                dateInput.required = true;
+                label.innerText = "參與"; dateGroup.style.display = "block"; dateInput.required = true;
                 if (!dateInput.value) dateInput.value = getLocalToday();
             } else {
-                label.innerText = "未參與";
-                dateGroup.style.display = "none";
-                dateInput.required = false;
+                label.innerText = "未參與"; dateGroup.style.display = "none"; dateInput.required = false;
             }
         };
-
     } catch(e) { alert('開啟失敗: '+e.message); }
 }
 
 function savePartner(e, id) {
-    e.preventDefault(); 
-    const fd = new FormData(e.target); 
-    const d = Object.fromEntries(fd);
-    
-    // Manual handling for toggle
+    e.preventDefault(); const fd = new FormData(e.target); const d = Object.fromEntries(fd);
     const toggle = document.getElementById('statusToggle');
     d.status = toggle.checked ? 'active' : 'inactive';
-    
     if(store.data.partners.some(x=>x.code===d.code && x.id!==id)) return alert('編號重複');
-    
-    if(id) { 
-        const i = store.data.partners.findIndex(x=>x.id===id); 
-        store.data.partners[i] = {...store.data.partners[i], ...d}; 
-    } else { 
-        store.data.partners.push({...d, id: uuid()}); 
-    }
+    if(id) { const i = store.data.partners.findIndex(x=>x.id===id); store.data.partners[i] = {...store.data.partners[i], ...d}; } 
+    else { store.data.partners.push({...d, id: uuid()}); }
     store.save(); closeModal(); renderPartners();
 }
 
@@ -870,6 +828,7 @@ function deletePartner(id) {
     store.save(); renderPartners();
 }
 
+// --- RECORDS ---
 function renderRecords() {
     const m = localStorage.getItem('r_m') || new Date().toISOString().slice(0,7);
     const q = localStorage.getItem('r_q') || '';
@@ -889,14 +848,19 @@ function renderRecords() {
             </label>
             <button class="btn btn-primary" onclick="editRecord(null,'${m}')">＋ 新增紀錄</button>
         </div>
-        <div class="card"><table><thead><tr><th>夥伴</th><th>狀態</th><th>PV / 回饋</th><th>發放</th><th>操作</th></tr></thead><tbody>
-        ${list.map(r => `<tr>
+        <div class="card"><table><thead><tr><th>夥伴</th><th>狀態</th><th>新增日</th><th>PV / 回饋 / 產品</th><th>發放</th><th>操作</th></tr></thead><tbody>
+        ${list.map(r => {
+            const pText = (r.products||[]).map(x=>`${x.name}×${x.qty}`).join('、');
+            const pDisplay = pText ? `<div style="font-size:0.8rem;color:#7f8c8d;margin-top:4px">📦 ${pText}</div>` : '';
+            
+            return `<tr>
             <td>${r.partnerName}</td>
             <td>${r.isGraduated?'<span class="status-badge status-active">🎓 畢業</span>':r.isPartnerInactive?'<span class="status-badge status-inactive">未參與</span>':r.isMonthlyInactive?'<span class="status-badge status-inactive">本月不計</span>':'<span class="status-badge status-active">參與</span>'}</td>
-            <td><div>PV: ${r.gpv}</div><div style="font-weight:bold;color:${r.totalIncome>0?'var(--success)':'#aaa'}">${money(r.totalIncome)}</div></td>
+            <td style="font-size:0.9rem;color:#777">${r.createdAt||'—'}</td>
+            <td><div>PV: ${r.gpv}</div><div style="font-weight:bold;color:${r.totalIncome>0?'var(--success)':'#aaa'}">${money(r.totalIncome)}</div>${pDisplay}</td>
             <td><span class="status-badge ${r.payoutStatus==='paid'?'status-paid':'status-unpaid'}">${r.payoutStatus==='paid'?'已發放':'未發放'}</span></td>
             <td><button class="btn btn-secondary" style="font-size:0.8rem;padding:4px 10px" onclick="editRecord('${r.id}')">編輯</button></td>
-        </tr>`).join('')}
+        </tr>`}).join('')}
         </tbody></table></div>
     `;
 }
@@ -909,10 +873,11 @@ function editRecord(id, month) {
         const existing = id ? store.getRecord(id) : null;
         if(existing && existing.payoutStatus==='paid' && !confirm('此紀錄已發放，確定要修改嗎？')) return;
         
-        const base = existing || { id:'', partnerId:'', month, ppv:0, pbv:0, gpv:0, legs:[], newRecruits:[], learningDone:false, participation:'active', payoutStatus:'unpaid', payoutDate: getToday(month), planVersionId: store.data.versions.find(v=>!v.archived)?.id, note:'' };
+        const base = existing || { id:'', partnerId:'', month, ppv:0, pbv:0, gpv:0, legs:[], newRecruits:[], products:[], learningDone:false, participation:'active', payoutStatus:'unpaid', payoutDate: getToday(month), planVersionId: store.data.versions.find(v=>!v.archived)?.id, note:'' };
         tempRec = JSON.parse(JSON.stringify(base));
         if (!Array.isArray(tempRec.legs)) tempRec.legs = [];
         if (!Array.isArray(tempRec.newRecruits)) tempRec.newRecruits = [];
+        if (!Array.isArray(tempRec.products)) tempRec.products = [];
 
         const pOpts = store.data.partners.map(p => `<option value="${p.id}" ${p.id===base.partnerId?'selected':''} style="${p.status==='inactive'?'color:gray':''}">${p.code} ${p.name} ${p.status==='inactive'?'(未參與)':''}</option>`).join('');
         const vOpts = store.data.versions.map(v => `<option value="${v.id}" ${v.id===base.planVersionId?'selected':''} ${v.archived?'disabled':''}>${v.name}</option>`).join('');
@@ -930,6 +895,11 @@ function editRecord(id, month) {
                                 <div class="col"><label>個人 PV</label><input type="number" name="ppv" value="${base.ppv}" class="form-control" oninput="markDirty()"></div>
                                 <div class="col"><label>小組 PV *</label><input type="number" name="gpv" value="${base.gpv}" class="form-control" required oninput="tempRec.gpv=Number(this.value);renderPreview();markDirty()"></div>
                             </div>
+                        </div>
+                        <div class="card">
+                            <label>產品分享 (選填)</label>
+                            <div id="productsArea"></div>
+                            <button type="button" class="btn btn-outline" onclick="addProd()">+ 產品</button>
                         </div>
                         <div class="card">
                             <label>腿 (用於扣除獨立業績)</label>
@@ -967,10 +937,22 @@ function editRecord(id, month) {
             </form>
         `);
         renderPreview();
+        renderProducts();
         renderLegs(); 
         renderRecs(); 
     } catch(e) { alert('紀錄頁錯誤: ' + e.message); }
 }
+function renderProducts() {
+    document.getElementById('productsArea').innerHTML = (tempRec.products||[]).map((p,i)=>`
+        <div style="display:flex;gap:5px;margin-bottom:5px;flex-wrap:wrap">
+            <input placeholder="品項" value="${p.name}" class="form-control" style="flex:2" oninput="tempRec.products[${i}].name=this.value;markDirty()">
+            <input type="number" placeholder="數量" value="${p.qty}" class="form-control" style="flex:1" oninput="tempRec.products[${i}].qty=Number(this.value);markDirty()">
+            <input placeholder="備註" value="${p.note}" class="form-control" style="flex:1.5" oninput="tempRec.products[${i}].note=this.value;markDirty()">
+            <button type="button" class="btn btn-danger" onclick="tempRec.products.splice(${i},1);renderProducts();markDirty()">×</button>
+        </div>
+    `).join('');
+}
+function addProd() { tempRec.products.push({name:'', qty:1, note:''}); renderProducts(); markDirty(); }
 function renderLegs() {
     document.getElementById('legsArea').innerHTML = tempRec.legs.map((l,i)=>`
         <div style="display:flex;gap:5px;margin-bottom:5px">
@@ -1033,6 +1015,7 @@ function saveRecord(e, id) {
     const fd = new FormData(e.target);
     if(!id && store.data.records.some(r=>r.month===tempRec.month && r.partnerId===tempRec.partnerId)) return alert('此夥伴本月已有紀錄');
     
+    // Upsert New Recruits
     const parent = store.getPartner(tempRec.partnerId);
     if(parent) {
         tempRec.newRecruits.forEach(rec => {
@@ -1044,7 +1027,7 @@ function saveRecord(e, id) {
                     memberType: rec.memberType || 'directSeller',
                     sponsorId: parent.id,
                     initiatorId: parent.initiatorId || '',
-                    status: 'active'
+                    status: 'active', joinedAt: ''
                 });
             } else {
                 if(!p.sponsorId) p.sponsorId = parent.id;
@@ -1058,8 +1041,11 @@ function saveRecord(e, id) {
         ppv: Number(fd.get('ppv')), gpv: Number(fd.get('gpv')), 
         learningDone: fd.get('learningDone')==='on' 
     };
-    final.legs = tempRec.legs; final.newRecruits = tempRec.newRecruits;
+    final.legs = tempRec.legs; final.newRecruits = tempRec.newRecruits; final.products = tempRec.products;
     
+    // Set createdAt if new
+    if(!id && !final.createdAt) final.createdAt = getLocalToday();
+
     if(id) { const i = store.data.records.findIndex(x=>x.id===id); store.data.records[i] = final; }
     else { final.id = uuid(); store.data.records.push(final); }
     store.save(); isDirty=false; closeModal(); renderRecords();
@@ -1204,10 +1190,11 @@ function delInit(id) {
 function renderOrgChart() {
     try {
         const m = localStorage.getItem('org_m') || new Date().toISOString().slice(0,7);
+        const viewerId = localStorage.getItem('org_viewer');
+        
         const partners = store.data.partners;
         const recs = store.getRecordsByMonth(m).map(calculate);
         const pMap = {};
-        
         partners.forEach(p => { pMap[p.id] = { ...p, children:[], record: recs.find(r=>r && r.partnerId===p.id) }; });
         
         const roots = [];
@@ -1219,8 +1206,43 @@ function renderOrgChart() {
             }
         });
 
+        const scopeStatus = {}; 
+        const generations = {};
+
+        if(viewerId) {
+            const viewerInit = store.getInitiator(viewerId);
+            const rootIds = viewerInit ? (viewerInit.coachedPartnerIds || []) : [];
+            rootIds.forEach(rid => { if(pMap[rid]) traverseScope(pMap[rid], 1, true); });
+        }
+
+        function traverseScope(node, gen, isChainValid) {
+            let currentStatus = null;
+            const isBreakaway = !!node.initiatorId && node.initiatorId !== viewerId;
+
+            if (isBreakaway) {
+                currentStatus = 'breakaway';
+                isChainValid = false;
+            } else if (isChainValid) {
+                currentStatus = gen <= 5 ? 'in' : 'out';
+                generations[node.id] = gen;
+            } else {
+                currentStatus = 'out';
+            }
+            scopeStatus[node.id] = currentStatus;
+            node.children.forEach(child => traverseScope(child, gen + 1, isChainValid && currentStatus !== 'breakaway'));
+        }
+
         function renderNode(node) {
             const r = node.record;
+            const st = scopeStatus[node.id];
+            const gen = generations[node.id];
+            let cls = ['node'];
+            let badge = '';
+            
+            if(st === 'breakaway') { cls.push('breakaway'); badge = `<div class="node-badge" style="background:#8e44ad">獨立體系</div>`; }
+            else if(st === 'in') { cls.push('in-scope'); if(gen) badge = `<div class="node-badge" style="background:var(--accent)">發起人第${gen}代</div>`; }
+            else if(viewerId) { cls.push('out-scope'); } 
+
             let info = '無紀錄';
             if(node.status==='inactive') info = '未參與';
             else if(r) {
@@ -1231,8 +1253,9 @@ function renderOrgChart() {
             }
 
             return `<li>
-                <div class="node" onclick="showNode('${node.id}','${m}')">
-                    <div class="name">${node.code} ${node.name}</div>
+                <div class="${cls.join(' ')}" onclick="showNode('${node.id}','${m}')">
+                    ${badge}
+                    <span class="name">${node.code} ${node.name}</span>
                     <div class="type">${node.memberType === 'member' ? '生活會員' : '直銷商'}</div>
                     <div class="detail">${info}</div>
                     ${r ? `<div class="tooltip">PV: ${r.gpv}<br>金額: ${money(r.totalIncome)}</div>` : ''}
@@ -1245,6 +1268,10 @@ function renderOrgChart() {
             <header>${header('組織關聯圖')}</header>
             <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
                 <input type="month" value="${m}" class="form-control" style="width:auto" onchange="localStorage.setItem('org_m',this.value);renderOrgChart()">
+                <select class="form-control" style="width:auto" onchange="localStorage.setItem('org_viewer',this.value);renderOrgChart()">
+                    <option value="">👁️ 選擇視角 (查看輔導範圍)...</option>
+                    ${store.data.initiators.map(i=>`<option value="${i.id}" ${i.id===viewerId?'selected':''}>${i.name}</option>`).join('')}
+                </select>
                 <div style="font-size:0.8rem;color:#777;margin-left:auto">
                     此圖僅顯示上下推薦關係
                 </div>
