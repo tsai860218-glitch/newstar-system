@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v5.0 UI重構版)</title>
+    <title>新星啟動計畫系統 (v5.1 組織簡化與會員性質版)</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -20,7 +20,6 @@
             --border: #e0e0e0;
             --sidebar-width: 260px;
             --header-height: 60px;
-            /* iOS 100vh fix */
             --vh: 1vh; 
         }
 
@@ -30,7 +29,7 @@
             margin: 0; 
             background-color: var(--bg); 
             color: #333; 
-            overflow: hidden; /* Prevent body scroll by default, handle in main */
+            overflow: hidden; 
             height: 100vh; 
             height: calc(var(--vh, 1vh) * 100);
             display: flex;
@@ -60,7 +59,6 @@
             flex-shrink: 0;
         }
 
-        /* Sidebar Navigation (Accordion) */
         .sidebar-scroll {
             flex: 1;
             overflow-y: auto;
@@ -85,14 +83,14 @@
             content: '›';
             font-size: 1.2em;
             transition: transform 0.3s;
-            transform: rotate(90deg); /* Default Expanded */
+            transform: rotate(90deg);
         }
         .nav-group.collapsed .nav-group-title::after {
             transform: rotate(0deg);
         }
 
         .nav-items {
-            max-height: 500px; /* For transition */
+            max-height: 500px;
             overflow: hidden;
             transition: max-height 0.3s ease-out;
             background: rgba(0,0,0,0.1);
@@ -103,7 +101,7 @@
 
         .nav-item {
             display: block;
-            padding: 10px 20px 10px 35px; /* Indent */
+            padding: 10px 20px 10px 35px;
             color: #bdc3c7;
             text-decoration: none;
             font-size: 0.95rem;
@@ -132,13 +130,12 @@
             flex: 1;
             height: 100%;
             overflow-y: auto;
-            -webkit-overflow-scrolling: touch; /* iOS Smooth Scroll */
+            -webkit-overflow-scrolling: touch;
             padding: 20px;
             position: relative;
             background-color: var(--bg);
         }
 
-        /* Header in Main */
         header {
             display: flex;
             align-items: center;
@@ -149,7 +146,7 @@
         }
         
         .menu-btn {
-            display: none; /* Hidden on Desktop */
+            display: none;
             background: none;
             border: none;
             font-size: 1.5rem;
@@ -168,24 +165,18 @@
             align-items: center;
         }
 
-        /* --- Mobile / Tablet Styles (< 1024px) --- */
+        /* Mobile / Tablet Styles */
         @media (max-width: 1023px) {
-            .menu-btn { display: block; } /* Show Hamburger */
-
+            .menu-btn { display: block; }
             aside {
                 position: fixed;
                 top: 0;
                 left: 0;
                 bottom: 0;
-                transform: translateX(-100%); /* Hide by default */
+                transform: translateX(-100%);
                 box-shadow: 2px 0 10px rgba(0,0,0,0.2);
             }
-
-            aside.open {
-                transform: translateX(0);
-            }
-
-            /* Overlay */
+            aside.open { transform: translateX(0); }
             #drawer-overlay {
                 position: fixed;
                 top: 0;
@@ -199,13 +190,10 @@
                 transition: opacity 0.3s;
                 backdrop-filter: blur(2px);
             }
-            #drawer-overlay.visible {
-                opacity: 1;
-                visibility: visible;
-            }
+            #drawer-overlay.visible { opacity: 1; visibility: visible; }
         }
 
-        /* --- General UI Components (from v4.3) --- */
+        /* --- UI Components --- */
         .card { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); }
         .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; color: white; user-select: none; }
         .btn:active { transform: scale(0.98); }
@@ -254,7 +242,7 @@
         .modal-actions-bar { position: sticky; bottom: 0; background: white; padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; z-index: 50; }
         .modal-actions-bar button { flex: 1; padding: 12px; }
 
-        /* Org Chart */
+        /* Org Chart (Simplified Tree) */
         .org-container { overflow: auto; padding: 40px; height: 650px; background: white; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,0,0,0.02); text-align: center; cursor: grab; -webkit-overflow-scrolling: touch; }
         .tree ul { padding-top: 20px; position: relative; transition: .5s; display: inline-flex; justify-content: center; }
         .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; transition: .5s; }
@@ -266,14 +254,17 @@
         .tree li:last-child::before { border-right: 1px solid #ccc; border-radius: 0 5px 0 0; }
         .tree li:first-child::after { border-radius: 5px 0 0 0; }
         .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 1px solid #ccc; width: 0; height: 20px; }
-        .node { border: 2px solid #ccc; padding: 8px 12px; text-decoration: none; color: #333; font-size: 13px; display: inline-block; border-radius: 8px; transition: .3s; min-width: 130px; position: relative; background: white; z-index: 2; }
-        .node.in-scope { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.3); background: #e8f8f5; }
-        .node.out-scope { border-color: #ddd; background: #f9f9f9; color: #aaa; opacity: 0.8; border-style: dashed; }
-        .node.breakaway { border-color: #8e44ad; background: #f4ecf7; color: #8e44ad; }
-        .node-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); padding: 2px 6px; border-radius: 4px; font-size: 10px; color: white; background: #95a5a6; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .node.in-scope .node-badge { background: var(--accent); }
-        .node.breakaway .node-badge { background: #8e44ad; }
-
+        
+        .node { 
+            border: 2px solid #ccc; padding: 8px 12px; text-decoration: none; color: #333; 
+            font-size: 13px; display: inline-block; border-radius: 8px; transition: .3s; 
+            min-width: 130px; position: relative; background: white; z-index: 2; 
+        }
+        .node:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.15); z-index: 10; }
+        .node .name { font-weight: 800; display: block; margin-bottom: 3px; font-size: 14px; }
+        .node .type { font-size: 11px; color: #7f8c8d; background: #f0f0f0; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px; }
+        .node .detail { font-size: 11px; color: #555; }
+        
         #loading { position: fixed; inset: 0; background: #f4f7f6; display: flex; justify-content: center; align-items: center; z-index: 3000; flex-direction: column; }
         .spinner { width: 40px; height: 40px; border: 4px solid rgba(0,0,0,0.1); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -322,7 +313,7 @@
             </div>
         </div>
     </div>
-    <div class="footer">v5.0 UI重構版</div>
+    <div class="footer">v5.1 組織簡化與會員性質版</div>
 </aside>
 
 <main id="app"></main>
@@ -343,7 +334,6 @@ window.onerror = function(msg, url, line, col, error) {
 };
 
 // --- IOS SAFARI FIXES & UI LOGIC ---
-// 1. VH Fix
 function setVh() {
     let vh = window.innerHeight * 0.01;
     document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -352,7 +342,6 @@ window.addEventListener('resize', setVh);
 window.addEventListener('orientationchange', setVh);
 setVh();
 
-// 2. Drawer Logic
 const sidebar = document.getElementById('sidebar');
 const overlay = document.getElementById('drawer-overlay');
 let bodyScrollY = 0;
@@ -360,7 +349,6 @@ let bodyScrollY = 0;
 function openDrawer() {
     sidebar.classList.add('open');
     overlay.classList.add('visible');
-    // Lock Body
     bodyScrollY = window.scrollY;
     document.body.style.position = 'fixed';
     document.body.style.top = `-${bodyScrollY}px`;
@@ -370,22 +358,16 @@ function openDrawer() {
 function closeDrawer() {
     sidebar.classList.remove('open');
     overlay.classList.remove('visible');
-    // Unlock Body
     document.body.style.position = '';
     document.body.style.top = '';
     window.scrollTo(0, bodyScrollY);
 }
 
-// Legacy function mapping for existing render strings
-function toggleSidebar() { openDrawer(); }
-
-// 3. Accordion Logic
 function toggleGroup(groupId) {
     const group = document.getElementById(groupId);
     group.classList.toggle('collapsed');
 }
 
-// 4. Swipe to Close Logic (Mobile)
 let touchStartX = 0;
 let touchStartY = 0;
 const sidebarEl = document.getElementById('sidebar');
@@ -398,19 +380,14 @@ sidebarEl.addEventListener('touchstart', e => {
 sidebarEl.addEventListener('touchend', e => {
     const touchEndX = e.changedTouches[0].screenX;
     const touchEndY = e.changedTouches[0].screenY;
-    
-    // Check if Swipe Left (Close)
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
-    
-    // Condition: Moved left > 50px AND vertical move is small
     if (deltaX < -50 && Math.abs(deltaY) < 50) {
         closeDrawer();
     }
 }, {passive: true});
 
-
-// --- FIREBASE CONFIG (UNCHANGED) ---
+// --- FIREBASE CONFIG ---
 const firebaseConfig = {
     apiKey: "AIzaSyCanDeinCJyZFeHUGnYVEmalCYxjwaIw-4",
     authDomain: "newstar-system.firebaseapp.com",
@@ -429,7 +406,7 @@ try {
     isReady = true;
 } catch (e) { document.getElementById('loading').innerHTML = '<h3 style="color:red">⚠️ Firebase 連線錯誤</h3>'; }
 
-// --- UTILS (UNCHANGED) ---
+// --- UTILS ---
 function uuid() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0, v = c=='x'?r:(r&0x3|0x8); return v.toString(16); }); }
 function money(n) { return new Intl.NumberFormat('zh-TW', {style:'currency', currency:'TWD', minimumFractionDigits:0}).format(n||0); }
 function getPercent(pv) { return pv>=10000?0.21:pv>=7000?0.18:pv>=4000?0.15:pv>=2000?0.12:pv>=1000?0.09:pv>=600?0.06:pv>=200?0.03:0; }
@@ -447,7 +424,7 @@ window.checkLimit = function(el) {
     }
 }
 
-// --- DATA STORE (UNCHANGED) ---
+// --- DATA STORE ---
 const defaultParams = { rate_0_3_base: 0.03, rate_0_3_rec: 0.04, rate_6_base: 0.01, rate_6_rec: 0.02, rate_recruit_bv: 0.01, rate_learning: 0.03 };
 let appData = { partners: [], initiators: [], records: [], versions: [] };
 const store = {
@@ -464,7 +441,16 @@ const store = {
             if(val) {
                 this.data = val;
                 ['partners','initiators','records','versions'].forEach(k => { if(!this.data[k]) this.data[k] = []; });
-                (this.data.initiators || []).forEach(i => { if (!Array.isArray(i.coachedPartnerIds)) i.coachedPartnerIds = []; });
+                
+                // Normalization for Member Type
+                (this.data.partners || []).forEach(p => { if(!p.memberType) p.memberType = 'directSeller'; });
+                (this.data.initiators || []).forEach(i => { if(!i.memberType) i.memberType = 'directSeller'; if (!Array.isArray(i.coachedPartnerIds)) i.coachedPartnerIds = []; });
+                (this.data.records || []).forEach(r => {
+                    if(r.newRecruits && Array.isArray(r.newRecruits)) {
+                        r.newRecruits.forEach(nr => { if(!nr.memberType) nr.memberType = 'directSeller'; });
+                    }
+                });
+
             } else {
                 this.data.versions.push({id: uuid(), name:'預設版本', params:{...defaultParams}});
                 this.save();
@@ -488,7 +474,6 @@ const store = {
 };
 store.init();
 
-// --- CALCULATION (UNCHANGED v4.1 Logic) ---
 function calculate(r) {
     const p = store.getPartner(r.partnerId);
     if(!p) return null;
@@ -532,26 +517,18 @@ function calculate(r) {
     return res;
 }
 
-// --- ROUTER (UPDATED for UI) ---
 function router(pg) {
     try {
-        // UI Reset
         document.querySelectorAll('.nav-item').forEach(a=>a.classList.remove('active'));
-        
         const nav = document.getElementById('nav-'+pg);
         if(nav) {
             nav.classList.add('active');
-            // Auto expand parent group
             const group = nav.closest('.nav-group');
             if(group) group.classList.remove('collapsed');
         }
-        
-        // Mobile Auto Close
         if(window.innerWidth < 1024) closeDrawer();
-
         document.getElementById('app').innerHTML = '';
         
-        // Route Logic (UNCHANGED)
         if(pg==='dashboard') renderDashboard();
         else if(pg==='records') renderRecords();
         else if(pg==='payout') renderPayout();
@@ -562,8 +539,6 @@ function router(pg) {
         else if(pg==='settings') renderSettings();
     } catch(e) { console.error(e); alert('頁面載入錯誤：' + e.message); }
 }
-
-// --- RENDER FUNCTIONS (UNCHANGED LOGIC) ---
 
 function renderDashboard() {
     const m = new Date().toISOString().slice(0,7);
@@ -583,11 +558,12 @@ function renderPartners() {
     const term = localStorage.getItem('p_search') || '';
     const list = store.data.partners.filter(p => p.code.includes(term)||p.name.includes(term));
     document.getElementById('app').innerHTML = `
-        <header>${header('伙伴名單')} <button class="btn btn-primary" onclick="editPartner()">+ 新增</button></header>
+        <header>${header('夥伴名單')} <button class="btn btn-primary" onclick="editPartner()">+ 新增</button></header>
         <input class="form-control" style="max-width:300px;margin-bottom:15px" placeholder="🔍 搜尋 編號/姓名" value="${term}" oninput="localStorage.setItem('p_search',this.value);renderPartners()">
-        <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>推薦人</th><th>發起人</th><th>狀態</th><th>操作</th></tr></thead><tbody>
+        <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>性質</th><th>推薦人</th><th>發起人</th><th>狀態</th><th>操作</th></tr></thead><tbody>
         ${list.map(p => `<tr>
             <td>${p.code}</td><td>${p.name}</td>
+            <td>${p.memberType === 'member' ? '生活會員' : '直銷商'}</td>
             <td>${store.getPartner(p.sponsorId)?.name||'-'}</td>
             <td>${store.getInitiator(p.initiatorId)?.name||'<span style="color:red">未設定</span>'}</td>
             <td><span class="status-badge ${p.status==='active'?'status-active':'status-inactive'}">${p.status==='active'?'啟用':'停用'}</span></td>
@@ -601,7 +577,8 @@ function renderPartners() {
 }
 function editPartner(id) {
     try {
-        const p = id ? store.getPartner(id) : {id:'', code:'', name:'', sponsorId:'', initiatorId:'', status:'active'};
+        const p = id ? store.getPartner(id) : {id:'', code:'', name:'', memberType:'directSeller', sponsorId:'', initiatorId:'', status:'active'};
+        if(!p.memberType) p.memberType = 'directSeller';
         const others = store.data.partners.filter(x=>x.id!==p.id);
         const inits = store.data.initiators;
         openModal(id?'編輯夥伴':'新增夥伴', `
@@ -609,6 +586,12 @@ function editPartner(id) {
                 <div class="row">
                     <div class="col"><label>編號 *</label><input name="code" value="${p.code}" class="form-control" required></div>
                     <div class="col"><label>姓名 *</label><input name="name" value="${p.name}" class="form-control" required></div>
+                </div>
+                <div class="form-group"><label>會員性質 *</label>
+                    <select name="memberType" class="form-control" required>
+                        <option value="directSeller" ${p.memberType==='directSeller'?'selected':''}>直銷商</option>
+                        <option value="member" ${p.memberType==='member'?'selected':''}>生活會員</option>
+                    </select>
                 </div>
                 <div class="form-group"><label>推薦人 (上線)</label>
                     <select name="sponsorId" class="form-control"><option value="">-- 無 (頂層) --</option>${others.map(o=>`<option value="${o.id}" ${o.id===p.sponsorId?'selected':''}>${o.code} ${o.name}</option>`).join('')}</select>
@@ -680,8 +663,6 @@ function editRecord(id, month) {
         
         const base = existing || { id:'', partnerId:'', month, ppv:0, pbv:0, gpv:0, legs:[], newRecruits:[], learningDone:false, participation:'active', payoutStatus:'unpaid', payoutDate: getToday(month), planVersionId: store.data.versions.find(v=>!v.archived)?.id, note:'' };
         tempRec = JSON.parse(JSON.stringify(base));
-        
-        // 🔥 FIX: Ensure arrays exist to prevent crash
         if (!Array.isArray(tempRec.legs)) tempRec.legs = [];
         if (!Array.isArray(tempRec.newRecruits)) tempRec.newRecruits = [];
 
@@ -737,7 +718,6 @@ function editRecord(id, month) {
                 </div>
             </form>
         `);
-        // 🔥 FIX: Render preview first
         renderPreview();
         renderLegs(); 
         renderRecs(); 
@@ -756,15 +736,19 @@ function renderLegs() {
 function addLeg() { tempRec.legs.push({name:'',bv:0,isIndependent:false}); renderLegs(); renderPreview(); markDirty(); }
 function renderRecs() {
     document.getElementById('recruitArea').innerHTML = (tempRec.newRecruits||[]).map((r,i)=>`
-        <div style="display:flex;gap:5px;margin-bottom:5px">
+        <div style="display:flex;gap:5px;margin-bottom:5px;flex-wrap:wrap;">
             <input placeholder="編號" value="${r.code||''}" class="form-control" style="flex:1" oninput="tempRec.newRecruits[${i}].code=this.value;markDirty()">
             <input placeholder="姓名" value="${r.name}" class="form-control" style="flex:1.5" oninput="tempRec.newRecruits[${i}].name=this.value;markDirty()">
+            <select class="form-control" style="flex:1" onchange="tempRec.newRecruits[${i}].memberType=this.value;markDirty()">
+                <option value="directSeller" ${(!r.memberType || r.memberType==='directSeller')?'selected':''}>直銷商</option>
+                <option value="member" ${r.memberType==='member'?'selected':''}>生活會員</option>
+            </select>
             <input type="number" placeholder="BV" value="${r.bv}" class="form-control" style="flex:1" oninput="tempRec.newRecruits[${i}].bv=Number(this.value);renderPreview();markDirty()">
             <button type="button" class="btn btn-danger" onclick="tempRec.newRecruits.splice(${i},1);renderRecs();renderPreview();markDirty()">×</button>
         </div>
     `).join('');
 }
-function addRec() { tempRec.newRecruits.push({code:'',name:'',bv:0}); renderRecs(); renderPreview(); markDirty(); }
+function addRec() { tempRec.newRecruits.push({code:'',name:'',memberType:'directSeller',bv:0}); renderRecs(); renderPreview(); markDirty(); }
 function renderPreview() {
     try {
         const res = calculate(tempRec);
@@ -801,7 +785,6 @@ function saveRecord(e, id) {
     const fd = new FormData(e.target);
     if(!id && store.data.records.some(r=>r.month===tempRec.month && r.partnerId===tempRec.partnerId)) return alert('此夥伴本月已有紀錄');
     
-    // Upsert New Recruits
     const parent = store.getPartner(tempRec.partnerId);
     if(parent) {
         tempRec.newRecruits.forEach(rec => {
@@ -810,6 +793,7 @@ function saveRecord(e, id) {
             if(!p) {
                 store.data.partners.push({
                     id: uuid(), code: rec.code, name: rec.name,
+                    memberType: rec.memberType || 'directSeller',
                     sponsorId: parent.id,
                     initiatorId: parent.initiatorId || '',
                     status: 'active'
@@ -906,13 +890,13 @@ function exportCSV(m) {
 function renderInitiators() {
     document.getElementById('app').innerHTML = `
         <header>${header('發起人管理')} <button class="btn btn-primary" onclick="editInit()">+ 新增</button></header>
-        <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>輔導名單 (最多3位)</th><th>操作</th></tr></thead><tbody>
+        <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>性質</th><th>輔導名單 (最多3位)</th><th>操作</th></tr></thead><tbody>
         ${store.data.initiators.map(i => {
             const names = (i.coachedPartnerIds||[]).map(pid => {
                 const p = store.getPartner(pid);
                 return p ? `${p.code} ${p.name}` : '?';
             }).join('、') || '-';
-            return `<tr><td>${i.code}</td><td>${i.name}</td><td>${names}</td><td>
+            return `<tr><td>${i.code}</td><td>${i.name}</td><td>${i.memberType === 'member' ? '生活會員' : '直銷商'}</td><td>${names}</td><td>
                 <button class="btn btn-secondary" style="padding:4px 10px" onclick="editInit('${i.id}')">編輯</button>
                 <button class="btn btn-danger" style="padding:4px 10px" onclick="delInit('${i.id}')">刪除</button>
             </td></tr>`;
@@ -922,7 +906,9 @@ function renderInitiators() {
 }
 function editInit(id) {
     try {
-        const i = id ? store.getInitiator(id) : {id:'', code:'', name:'', coachedPartnerIds:[]};
+        const i = id ? store.getInitiator(id) : {id:'', code:'', name:'', memberType:'directSeller', coachedPartnerIds:[]};
+        if(!i.memberType) i.memberType = 'directSeller';
+        
         const myPartners = store.data.partners.filter(p => p.initiatorId === id);
         const coachHTML = myPartners.map(p => {
             const checked = (i.coachedPartnerIds||[]).includes(p.id) ? 'checked' : '';
@@ -933,6 +919,12 @@ function editInit(id) {
             <form onsubmit="saveInit(event, '${id||''}')">
                 <div class="row"><div class="col"><label>編號</label><input name="code" value="${i.code}" class="form-control" required></div>
                 <div class="col"><label>姓名</label><input name="name" value="${i.name}" class="form-control" required></div></div>
+                <div class="form-group"><label>會員性質 *</label>
+                    <select name="memberType" class="form-control" required>
+                        <option value="directSeller" ${i.memberType==='directSeller'?'selected':''}>直銷商</option>
+                        <option value="member" ${i.memberType==='member'?'selected':''}>生活會員</option>
+                    </select>
+                </div>
                 <div class="card" style="margin-top:15px">
                     <h4 style="margin:0 0 10px 0;font-size:1rem">輔導名單 (最多3位)</h4>
                     <div style="max-height:150px;overflow-y:auto;border:1px solid #eee;padding:10px;border-radius:4px">${coachHTML}</div>
@@ -964,13 +956,14 @@ function delInit(id) {
 function renderOrgChart() {
     try {
         const m = localStorage.getItem('org_m') || new Date().toISOString().slice(0,7);
-        const viewerId = localStorage.getItem('org_viewer');
-        
         const partners = store.data.partners;
         const recs = store.getRecordsByMonth(m).map(calculate);
         const pMap = {};
+        
+        // Build map
         partners.forEach(p => { pMap[p.id] = { ...p, children:[], record: recs.find(r=>r && r.partnerId===p.id) }; });
         
+        // Build pure tree based on sponsorId
         const roots = [];
         partners.forEach(p => {
             if(p.sponsorId && pMap[p.sponsorId] && p.sponsorId !== p.id) {
@@ -980,43 +973,8 @@ function renderOrgChart() {
             }
         });
 
-        const scopeStatus = {}; 
-        const generations = {};
-
-        if(viewerId) {
-            const viewerInit = store.getInitiator(viewerId);
-            const rootIds = viewerInit ? (viewerInit.coachedPartnerIds || []) : [];
-            rootIds.forEach(rid => { if(pMap[rid]) traverseScope(pMap[rid], 1, true); });
-        }
-
-        function traverseScope(node, gen, isChainValid) {
-            let currentStatus = null;
-            const isBreakaway = !!node.initiatorId && node.initiatorId !== viewerId;
-
-            if (isBreakaway) {
-                currentStatus = 'breakaway';
-                isChainValid = false;
-            } else if (isChainValid) {
-                currentStatus = gen <= 5 ? 'in' : 'out';
-                generations[node.id] = gen;
-            } else {
-                currentStatus = 'out';
-            }
-            scopeStatus[node.id] = currentStatus;
-            node.children.forEach(child => traverseScope(child, gen + 1, isChainValid && currentStatus !== 'breakaway'));
-        }
-
         function renderNode(node) {
             const r = node.record;
-            const st = scopeStatus[node.id];
-            const gen = generations[node.id];
-            let cls = ['node'];
-            let badge = '';
-            
-            if(st === 'breakaway') { cls.push('breakaway'); badge = `<div class="node-badge" style="background:#8e44ad">獨立體系</div>`; }
-            else if(st === 'in') { cls.push('in-scope'); if(gen) badge = `<div class="node-badge" style="background:var(--accent)">發起人第${gen}代</div>`; }
-            else if(viewerId) { cls.push('out-scope'); } 
-
             let info = '無紀錄';
             if(node.status==='inactive') info = '停用';
             else if(r) {
@@ -1027,10 +985,10 @@ function renderOrgChart() {
             }
 
             return `<li>
-                <div class="${cls.join(' ')}" onclick="showNode('${node.id}','${m}')">
-                    ${badge}
-                    <span class="name">${node.name}</span>
-                    <span class="detail">${info}</span>
+                <div class="node" onclick="showNode('${node.id}','${m}')">
+                    <div class="name">${node.code} ${node.name}</div>
+                    <div class="type">${node.memberType === 'member' ? '生活會員' : '直銷商'}</div>
+                    <div class="detail">${info}</div>
                     ${r ? `<div class="tooltip">PV: ${r.gpv}<br>金額: ${money(r.totalIncome)}</div>` : ''}
                 </div>
                 ${node.children.length ? `<ul>${node.children.map(renderNode).join('')}</ul>` : ''}
@@ -1041,14 +999,8 @@ function renderOrgChart() {
             <header>${header('組織關聯圖')}</header>
             <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
                 <input type="month" value="${m}" class="form-control" style="width:auto" onchange="localStorage.setItem('org_m',this.value);renderOrgChart()">
-                <select class="form-control" style="width:auto" onchange="localStorage.setItem('org_viewer',this.value);renderOrgChart()">
-                    <option value="">👁️ 選擇視角 (查看輔導範圍)...</option>
-                    ${store.data.initiators.map(i=>`<option value="${i.id}" ${i.id===viewerId?'selected':''}>${i.name}</option>`).join('')}
-                </select>
                 <div style="font-size:0.8rem;color:#777;margin-left:auto">
-                    <span style="margin-right:10px"><span style="display:inline-block;width:10px;height:10px;background:#e8f8f5;border:1px solid var(--accent)"></span> 輔導內 (3寬5深)</span>
-                    <span style="margin-right:10px"><span style="display:inline-block;width:10px;height:10px;background:#f4ecf7;border:1px solid #8e44ad"></span> 獨立體系</span>
-                    <span><span style="display:inline-block;width:10px;height:10px;background:#f9f9f9;border:1px dashed #ccc"></span> 超出範圍</span>
+                    此圖僅顯示上下推薦關係
                 </div>
             </div>
             <div class="org-container"><div class="tree"><ul>${roots.map(renderNode).join('')}</ul></div></div>
