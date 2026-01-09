@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新星啟動計畫系統 (v4.3 預覽修復版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>新星啟動計畫系統 (v5.0 UI重構版)</title>
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -11,82 +11,251 @@
     <style>
         :root {
             --primary: #2c3e50;
+            --secondary: #34495e;
             --accent: #1abc9c;
             --accent-hover: #16a085;
             --danger: #e74c3c;
             --success: #27ae60;
             --bg: #f8f9fa;
             --border: #e0e0e0;
+            --sidebar-width: 260px;
+            --header-height: 60px;
+            /* iOS 100vh fix */
+            --vh: 1vh; 
         }
 
-        * { box-sizing: border-box; font-family: "Segoe UI", "Microsoft JhengHei", sans-serif; }
-        body { margin: 0; display: flex; height: 100vh; background-color: var(--bg); color: #333; overflow: hidden; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: "Segoe UI", "Microsoft JhengHei", sans-serif; }
+        
+        body { 
+            margin: 0; 
+            background-color: var(--bg); 
+            color: #333; 
+            overflow: hidden; /* Prevent body scroll by default, handle in main */
+            height: 100vh; 
+            height: calc(var(--vh, 1vh) * 100);
+            display: flex;
+        }
 
-        /* Sidebar */
-        aside { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; transition: 0.3s; z-index: 100; }
-        aside.collapsed { width: 0; opacity: 0; overflow: hidden; }
-        aside h2 { padding: 20px; margin: 0; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); height: 60px; display: flex; align-items: center; }
-        aside nav { flex: 1; overflow-y: auto; padding: 10px 0; }
-        aside nav a { display: block; padding: 12px 20px; color: #bdc3c7; text-decoration: none; border-left: 4px solid transparent; cursor: pointer; }
-        aside nav a:hover, aside nav a.active { background: rgba(255,255,255,0.1); color: white; border-left-color: var(--accent); }
-        aside .footer { padding: 15px; font-size: 0.75rem; color: #95a5a6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); }
+        /* --- Sidebar (Desktop Fixed / Mobile Drawer) --- */
+        aside {
+            width: var(--sidebar-width);
+            background: var(--primary);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 1000;
+            height: 100%;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-        main { flex: 1; overflow-y: auto; padding: 20px; position: relative; }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
-        .menu-btn { background: none; border: none; font-size: 1.4rem; cursor: pointer; margin-right: 15px; color: var(--primary); }
-        h1 { margin: 0; font-size: 1.6rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; }
+        aside h2 {
+            padding: 0 20px;
+            margin: 0;
+            font-size: 1.1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
 
-        /* UI Elements */
+        /* Sidebar Navigation (Accordion) */
+        .sidebar-scroll {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 10px 0;
+        }
+
+        .nav-group-title {
+            padding: 12px 20px;
+            color: #bdc3c7;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: color 0.2s;
+            user-select: none;
+        }
+        .nav-group-title:hover { color: white; }
+        .nav-group-title::after {
+            content: '›';
+            font-size: 1.2em;
+            transition: transform 0.3s;
+            transform: rotate(90deg); /* Default Expanded */
+        }
+        .nav-group.collapsed .nav-group-title::after {
+            transform: rotate(0deg);
+        }
+
+        .nav-items {
+            max-height: 500px; /* For transition */
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background: rgba(0,0,0,0.1);
+        }
+        .nav-group.collapsed .nav-items {
+            max-height: 0;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 10px 20px 10px 35px; /* Indent */
+            color: #bdc3c7;
+            text-decoration: none;
+            font-size: 0.95rem;
+            border-left: 4px solid transparent;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .nav-item:hover { color: white; background: rgba(255,255,255,0.05); }
+        .nav-item.active {
+            color: white;
+            background: rgba(255,255,255,0.1);
+            border-left-color: var(--accent);
+        }
+
+        aside .footer {
+            padding: 15px;
+            font-size: 0.75rem;
+            color: #95a5a6;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            flex-shrink: 0;
+        }
+
+        /* --- Main Content --- */
+        main {
+            flex: 1;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch; /* iOS Smooth Scroll */
+            padding: 20px;
+            position: relative;
+            background-color: var(--bg);
+        }
+
+        /* Header in Main */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .menu-btn {
+            display: none; /* Hidden on Desktop */
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--primary);
+            padding: 5px;
+            margin-right: 10px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+        }
+
+        /* --- Mobile / Tablet Styles (< 1024px) --- */
+        @media (max-width: 1023px) {
+            .menu-btn { display: block; } /* Show Hamburger */
+
+            aside {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                transform: translateX(-100%); /* Hide by default */
+                box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+            }
+
+            aside.open {
+                transform: translateX(0);
+            }
+
+            /* Overlay */
+            #drawer-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 999;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.3s;
+                backdrop-filter: blur(2px);
+            }
+            #drawer-overlay.visible {
+                opacity: 1;
+                visibility: visible;
+            }
+        }
+
+        /* --- General UI Components (from v4.3) --- */
         .card { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); }
-        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; color: white; }
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; color: white; user-select: none; }
+        .btn:active { transform: scale(0.98); }
         .btn-primary { background: var(--accent); }
         .btn-danger { background: var(--danger); }
         .btn-secondary { background: #95a5a6; }
         .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
-        .btn-outline:hover { background: var(--accent); color: white; }
         
-        .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 5px; }
-        .row { display: flex; gap: 15px; } .col { flex: 1; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 5px; font-size: 1rem; }
+        .row { display: flex; gap: 15px; flex-wrap: wrap; } .col { flex: 1; min-width: 150px; }
         
-        /* Badges */
-        .status-badge { padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; }
+        .status-badge { padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; white-space: nowrap; }
         .status-active { background: #e8f8f5; color: var(--success); }
         .status-inactive { background: #f2f3f4; color: #95a5a6; }
         .status-paid { background: #d4efdf; color: var(--success); }
         .status-unpaid { background: #fce4ec; color: var(--danger); }
 
-        /* Dashboard */
-        .summary-row { display: flex; gap: 20px; margin-bottom: 20px; }
-        .summary-card { flex: 1; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 5px solid transparent; }
+        .summary-row { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .summary-card { flex: 1; min-width: 200px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 5px solid transparent; }
         .summary-card.green { border-left-color: var(--success); }
         .summary-card.red { border-left-color: var(--danger); }
-        .summary-val { font-size: 2.2rem; font-weight: 800; margin: 10px 0; color: #2c3e50; }
-        .summary-label { color: #7f8c8d; font-weight: 600; }
+        .summary-val { font-size: 2rem; font-weight: 800; margin: 10px 0; color: #2c3e50; }
+        .summary-label { color: #7f8c8d; font-weight: 600; font-size: 0.9rem; }
 
-        /* Tables */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        th { background: #f8f9fa; color: #555; }
+        th { background: #f8f9fa; color: #555; white-space: nowrap; }
+        tr:last-child td { border-bottom: none; }
 
         /* Modal */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
-        .modal-content { background: white; margin: 3vh auto; width: 95%; max-width: 1100px; border-radius: 12px; max-height: 94vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { padding: 20px; overflow-y: auto; flex: 1; background: #f9f9f9; }
+        .modal-content { background: white; margin: 5vh auto; width: 95%; max-width: 1100px; border-radius: 12px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; background: #f9f9f9; -webkit-overflow-scrolling: touch; }
         
-        /* Edit Record Grid (Desktop) */
-        .record-modal-grid { display: flex; gap: 25px; align-items: flex-start; }
-        .record-form-col { flex: 1.5; min-width: 0; } 
-        .record-preview-col { flex: 1; min-width: 280px; position: sticky; top: 0; }
+        .record-modal-grid { display: flex; gap: 20px; flex-direction: column-reverse; }
+        @media (min-width: 769px) {
+            .record-modal-grid { flex-direction: row; align-items: flex-start; }
+            .record-form-col { flex: 1.5; }
+            .record-preview-col { flex: 1; min-width: 280px; position: sticky; top: 0; }
+        }
         
-        /* Preview Card */
-        .preview-card { background: white; padding: 25px; border-radius: 10px; border-top: 5px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.1); min-height: 200px; }
-        .preview-amount { font-size: 2.5rem; font-weight: 800; color: var(--success); text-align: right; border-bottom: 1px solid #eee; margin-bottom: 15px; line-height: 1; }
-        .preview-row { display: flex; justify-content: space-between; margin-bottom: 10px; color: #555; font-size: 0.95rem; }
+        .preview-card { background: white; padding: 20px; border-radius: 10px; border-top: 4px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.08); min-height: 150px; }
+        .preview-amount { font-size: 2.2rem; font-weight: 800; color: var(--success); text-align: right; border-bottom: 1px solid #eee; margin-bottom: 15px; line-height: 1.2; }
+        .preview-row { display: flex; justify-content: space-between; margin-bottom: 8px; color: #555; font-size: 0.9rem; }
+        .modal-actions-bar { position: sticky; bottom: 0; background: white; padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; z-index: 50; }
+        .modal-actions-bar button { flex: 1; padding: 12px; }
 
         /* Org Chart */
-        .org-container { overflow: auto; padding: 40px; height: 650px; background: white; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,0,0,0.02); text-align: center; cursor: grab; }
+        .org-container { overflow: auto; padding: 40px; height: 650px; background: white; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,0,0,0.02); text-align: center; cursor: grab; -webkit-overflow-scrolling: touch; }
         .tree ul { padding-top: 20px; position: relative; transition: .5s; display: inline-flex; justify-content: center; }
         .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; transition: .5s; }
         .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 1px solid #ccc; width: 50%; height: 20px; }
@@ -97,24 +266,13 @@
         .tree li:last-child::before { border-right: 1px solid #ccc; border-radius: 0 5px 0 0; }
         .tree li:first-child::after { border-radius: 5px 0 0 0; }
         .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 1px solid #ccc; width: 0; height: 20px; }
-
         .node { border: 2px solid #ccc; padding: 8px 12px; text-decoration: none; color: #333; font-size: 13px; display: inline-block; border-radius: 8px; transition: .3s; min-width: 130px; position: relative; background: white; z-index: 2; }
-        .node:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.15); z-index: 10; }
-        .node .name { font-weight: 800; display: block; margin-bottom: 4px; }
-        .node .detail { font-size: 11px; }
         .node.in-scope { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.3); background: #e8f8f5; }
         .node.out-scope { border-color: #ddd; background: #f9f9f9; color: #aaa; opacity: 0.8; border-style: dashed; }
         .node.breakaway { border-color: #8e44ad; background: #f4ecf7; color: #8e44ad; }
         .node-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); padding: 2px 6px; border-radius: 4px; font-size: 10px; color: white; background: #95a5a6; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .node.in-scope .node-badge { background: var(--accent); }
         .node.breakaway .node-badge { background: #8e44ad; }
-
-        @media (max-width: 768px) {
-            .record-modal-grid { flex-direction: column-reverse; }
-            .record-preview-col { position: static; width: 100%; margin-bottom: 15px; }
-            .modal-actions-bar { position: sticky; bottom: 0; background: white; padding: 10px; border-top: 1px solid #eee; display: flex; gap: 10px; z-index: 50; }
-            .modal-actions-bar button { flex: 1; padding: 12px; }
-        }
 
         #loading { position: fixed; inset: 0; background: #f4f7f6; display: flex; justify-content: center; align-items: center; z-index: 3000; flex-direction: column; }
         .spinner { width: 40px; height: 40px; border: 4px solid rgba(0,0,0,0.1); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
@@ -125,19 +283,46 @@
 
 <div id="loading"><div class="spinner"></div><div>載入中...</div></div>
 
+<div id="drawer-overlay" onclick="closeDrawer()"></div>
+
 <aside id="sidebar">
     <h2>🚀 新星啟動計畫</h2>
-    <nav>
-        <a onclick="router('dashboard')" id="nav-dashboard" class="active">📊 總覽儀表板</a>
-        <a onclick="router('records')" id="nav-records">📝 月份業績紀錄</a>
-        <a onclick="router('payout')" id="nav-payout">💰 本月發放總表</a>
-        <a onclick="router('partners')" id="nav-partners">👥 夥伴名單管理</a>
-        <a onclick="router('initiators')" id="nav-initiators">👔 發起人管理</a>
-        <a onclick="router('org')" id="nav-org">🌳 組織關聯圖</a>
-        <a onclick="router('versions')" id="nav-versions">⚙️ 計畫版本控管</a>
-        <a onclick="router('settings')" id="nav-settings">🛠️ 系統設定</a>
-    </nav>
-    <div class="footer">v4.3 預覽修復版</div>
+    <div class="sidebar-scroll" id="sidebar-scroll-area">
+        <div class="nav-group" id="group-overview">
+            <div class="nav-group-title" onclick="toggleGroup('group-overview')">📊 營運總覽</div>
+            <div class="nav-items">
+                <a onclick="router('dashboard')" id="nav-dashboard" class="nav-item">總覽儀表板</a>
+                <a onclick="router('payout')" id="nav-payout" class="nav-item">本月發放總表</a>
+            </div>
+        </div>
+        <div class="nav-group" id="group-records">
+            <div class="nav-group-title" onclick="toggleGroup('group-records')">📝 業績與紀錄</div>
+            <div class="nav-items">
+                <a onclick="router('records')" id="nav-records" class="nav-item">月份業績紀錄</a>
+            </div>
+        </div>
+        <div class="nav-group" id="group-partners">
+            <div class="nav-group-title" onclick="toggleGroup('group-partners')">👥 人員管理</div>
+            <div class="nav-items">
+                <a onclick="router('partners')" id="nav-partners" class="nav-item">夥伴名單管理</a>
+                <a onclick="router('initiators')" id="nav-initiators" class="nav-item">發起人管理</a>
+            </div>
+        </div>
+        <div class="nav-group" id="group-org">
+            <div class="nav-group-title" onclick="toggleGroup('group-org')">🌳 組織結構</div>
+            <div class="nav-items">
+                <a onclick="router('org')" id="nav-org" class="nav-item">組織關聯圖</a>
+            </div>
+        </div>
+        <div class="nav-group" id="group-settings">
+            <div class="nav-group-title" onclick="toggleGroup('group-settings')">⚙️ 系統設定</div>
+            <div class="nav-items">
+                <a onclick="router('versions')" id="nav-versions" class="nav-item">計畫版本控管</a>
+                <a onclick="router('settings')" id="nav-settings" class="nav-item">系統設定</a>
+            </div>
+        </div>
+    </div>
+    <div class="footer">v5.0 UI重構版</div>
 </aside>
 
 <main id="app"></main>
@@ -150,12 +335,82 @@
 </div>
 
 <script>
+// --- GLOBAL ERROR HANDLER ---
 window.onerror = function(msg, url, line, col, error) {
     alert(`⚠️ 系統發生錯誤：\n${msg}\n(行數: ${line})`);
     console.error(error);
     document.getElementById('loading').style.display = 'none';
 };
 
+// --- IOS SAFARI FIXES & UI LOGIC ---
+// 1. VH Fix
+function setVh() {
+    let vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--vh', `${vh}px`);
+}
+window.addEventListener('resize', setVh);
+window.addEventListener('orientationchange', setVh);
+setVh();
+
+// 2. Drawer Logic
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('drawer-overlay');
+let bodyScrollY = 0;
+
+function openDrawer() {
+    sidebar.classList.add('open');
+    overlay.classList.add('visible');
+    // Lock Body
+    bodyScrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${bodyScrollY}px`;
+    document.body.style.width = '100%';
+}
+
+function closeDrawer() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('visible');
+    // Unlock Body
+    document.body.style.position = '';
+    document.body.style.top = '';
+    window.scrollTo(0, bodyScrollY);
+}
+
+// Legacy function mapping for existing render strings
+function toggleSidebar() { openDrawer(); }
+
+// 3. Accordion Logic
+function toggleGroup(groupId) {
+    const group = document.getElementById(groupId);
+    group.classList.toggle('collapsed');
+}
+
+// 4. Swipe to Close Logic (Mobile)
+let touchStartX = 0;
+let touchStartY = 0;
+const sidebarEl = document.getElementById('sidebar');
+
+sidebarEl.addEventListener('touchstart', e => {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+}, {passive: true});
+
+sidebarEl.addEventListener('touchend', e => {
+    const touchEndX = e.changedTouches[0].screenX;
+    const touchEndY = e.changedTouches[0].screenY;
+    
+    // Check if Swipe Left (Close)
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    
+    // Condition: Moved left > 50px AND vertical move is small
+    if (deltaX < -50 && Math.abs(deltaY) < 50) {
+        closeDrawer();
+    }
+}, {passive: true});
+
+
+// --- FIREBASE CONFIG (UNCHANGED) ---
 const firebaseConfig = {
     apiKey: "AIzaSyCanDeinCJyZFeHUGnYVEmalCYxjwaIw-4",
     authDomain: "newstar-system.firebaseapp.com",
@@ -174,12 +429,12 @@ try {
     isReady = true;
 } catch (e) { document.getElementById('loading').innerHTML = '<h3 style="color:red">⚠️ Firebase 連線錯誤</h3>'; }
 
+// --- UTILS (UNCHANGED) ---
 function uuid() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random()*16|0, v = c=='x'?r:(r&0x3|0x8); return v.toString(16); }); }
 function money(n) { return new Intl.NumberFormat('zh-TW', {style:'currency', currency:'TWD', minimumFractionDigits:0}).format(n||0); }
 function getPercent(pv) { return pv>=10000?0.21:pv>=7000?0.18:pv>=4000?0.15:pv>=2000?0.12:pv>=1000?0.09:pv>=600?0.06:pv>=200?0.03:0; }
 function getToday(m) { const d=new Date(); return (d.toISOString().slice(0,7)===m && d.getDate()<18) ? m+'-18' : d.toISOString().slice(0,10); }
-function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
-function header(t) { return `<h1><button class="menu-btn" onclick="toggleSidebar()">☰</button> ${t}</h1>`; }
+function header(t) { return `<h1><button class="menu-btn" onclick="openDrawer()">☰</button> ${t}</h1>`; }
 function openModal(title, content) {
     document.getElementById('modal-title').innerText = title;
     document.getElementById('modal-body').innerHTML = content;
@@ -192,6 +447,7 @@ window.checkLimit = function(el) {
     }
 }
 
+// --- DATA STORE (UNCHANGED) ---
 const defaultParams = { rate_0_3_base: 0.03, rate_0_3_rec: 0.04, rate_6_base: 0.01, rate_6_rec: 0.02, rate_recruit_bv: 0.01, rate_learning: 0.03 };
 let appData = { partners: [], initiators: [], records: [], versions: [] };
 const store = {
@@ -214,7 +470,7 @@ const store = {
                 this.save();
             }
             document.getElementById('loading').style.display = 'none';
-            const active = document.querySelector('aside nav a.active');
+            const active = document.querySelector('.nav-item.active');
             router(active ? active.id.replace('nav-','') : 'dashboard');
         }, err => {
             console.error(err);
@@ -232,6 +488,7 @@ const store = {
 };
 store.init();
 
+// --- CALCULATION (UNCHANGED v4.1 Logic) ---
 function calculate(r) {
     const p = store.getPartner(r.partnerId);
     if(!p) return null;
@@ -275,13 +532,26 @@ function calculate(r) {
     return res;
 }
 
+// --- ROUTER (UPDATED for UI) ---
 function router(pg) {
     try {
-        document.querySelectorAll('aside nav a').forEach(a=>a.classList.remove('active'));
+        // UI Reset
+        document.querySelectorAll('.nav-item').forEach(a=>a.classList.remove('active'));
+        
         const nav = document.getElementById('nav-'+pg);
-        if(nav) nav.classList.add('active');
+        if(nav) {
+            nav.classList.add('active');
+            // Auto expand parent group
+            const group = nav.closest('.nav-group');
+            if(group) group.classList.remove('collapsed');
+        }
+        
+        // Mobile Auto Close
+        if(window.innerWidth < 1024) closeDrawer();
+
         document.getElementById('app').innerHTML = '';
         
+        // Route Logic (UNCHANGED)
         if(pg==='dashboard') renderDashboard();
         else if(pg==='records') renderRecords();
         else if(pg==='payout') renderPayout();
@@ -292,6 +562,8 @@ function router(pg) {
         else if(pg==='settings') renderSettings();
     } catch(e) { console.error(e); alert('頁面載入錯誤：' + e.message); }
 }
+
+// --- RENDER FUNCTIONS (UNCHANGED LOGIC) ---
 
 function renderDashboard() {
     const m = new Date().toISOString().slice(0,7);
