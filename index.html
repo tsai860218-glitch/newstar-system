@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v7.2 最終效能優化版)</title>
+    <title>新星啟動計畫系統 (v7.4 最終效能優化版)</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🚀%3C/text%3E%3C/svg%3E">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -247,7 +247,7 @@
             </div>
         </div>
         <div class="nav-group" id="group-org">
-            <div class="nav-group-title" onclick="toggleGroup('group-org')">🌳 組織結構</div>
+            <div class="nav-group-title" onclick="toggleGroup('group-org')"> 🧩 組織結構</div>
             <div class="nav-items">
                 <a onclick="router('org')" id="nav-org" class="nav-item">組織關聯圖</a>
             </div>
@@ -904,6 +904,17 @@ function editRecord(id, month) {
         
         // 🔥 FIX: Ensure DOM is ready before rendering preview
         requestAnimationFrame(() => {
+            // ✅ 修正：同步預設選項到 tempRec，避免一直顯示「請選擇夥伴」
+            const form = document.getElementById('recForm');
+            if (form) {
+                const pSel = form.querySelector('[name=partnerId]');
+                const vSel = form.querySelector('[name=planVersionId]');
+                const gpvInput = form.querySelector('[name=gpv]');
+                if (pSel) tempRec.partnerId = pSel.value || '';
+                if (vSel) tempRec.planVersionId = vSel.value || tempRec.planVersionId;
+                if (gpvInput) tempRec.gpv = Number(gpvInput.value) || 0;
+            }
+
             renderPreview();
             renderProducts();
             renderLegs(); 
