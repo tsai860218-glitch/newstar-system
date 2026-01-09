@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v5.6 最終完整版)</title>
+    <title>新星啟動計畫系統 (v6.1 非同步儲存版)</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🚀%3C/text%3E%3C/svg%3E">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -278,7 +278,7 @@
             border: 2px solid #ccc; text-decoration: none; color: #333; 
             font-size: 13px; display: inline-flex; align-items: stretch; /* Flex Layout */
             border-radius: 8px; transition: .2s; 
-            min-width: 140px; position: relative; background: white; z-index: 2;
+            min-width: 160px; position: relative; background: white; z-index: 2;
             overflow: hidden; text-align: left;
         }
         .node:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); z-index: 10; }
@@ -295,12 +295,14 @@
         .count { font-size: 10px; color: #999; margin-top: 2px; font-weight: bold; }
         
         /* Right: Content */
-        .node-content { padding: 8px 12px; flex: 1; cursor: pointer; }
-        .node-content .name { font-weight: 800; display: block; margin-bottom: 3px; font-size: 14px; }
-        .node-content .type { font-size: 11px; color: #7f8c8d; background: #f0f0f0; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px; }
-        .node-content .detail { font-size: 11px; color: #555; }
-        .node-content .tooltip { visibility: hidden; width: 180px; background: #333; color: #fff; text-align: center; border-radius: 6px; padding: 8px; position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); font-size: 11px; z-index: 20; pointer-events: none; opacity: 0; transition: 0.2s; }
-        .node-content:hover .tooltip { visibility: visible; opacity: 1; }
+        .node-content { padding: 10px; flex: 1; cursor: pointer; }
+        .node-content .name { font-weight: 800; display: block; margin-bottom: 4px; font-size: 14px; }
+        .node-content .type { font-size: 10px; color: #555; background: #f0f0f0; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 6px; }
+        .node-content .stats { font-size: 11px; color: #555; border-top: 1px dashed #eee; padding-top: 4px; margin-top: 4px; }
+        .node-content .detail { font-size: 11px; color: #555; border-top: 1px dashed #eee; padding-top: 5px; margin-top: 5px; }
+
+        /* Node Status Badges inside card */
+        .node-status { position: absolute; top: 0; right: 0; font-size: 10px; padding: 2px 6px; border-bottom-left-radius: 6px; font-weight: bold; color: white; }
 
         #loading { position: fixed; inset: 0; background: #f4f7f6; display: flex; justify-content: center; align-items: center; z-index: 3000; flex-direction: column; }
         .spinner { width: 40px; height: 40px; border: 4px solid rgba(0,0,0,0.1); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
@@ -350,7 +352,7 @@
             </div>
         </div>
     </div>
-    <div class="footer">v5.6 最終完整版</div>
+    <div class="footer">v6.1 非同步儲存版</div>
 </aside>
 
 <main id="app"></main>
@@ -510,7 +512,7 @@ const store = {
                 this.data = val;
                 ['partners','initiators','records','versions'].forEach(k => { if(!this.data[k]) this.data[k] = []; });
                 
-                // Normalize
+                // Normalization
                 (this.data.partners || []).forEach(p => { 
                     if(!p.memberType) p.memberType = 'directSeller';
                     if(!p.status) p.status = 'active'; 
@@ -520,7 +522,8 @@ const store = {
                     if(r.newRecruits && Array.isArray(r.newRecruits)) {
                         r.newRecruits.forEach(nr => { if(!nr.memberType) nr.memberType = 'directSeller'; });
                     }
-                    if(!r.products) r.products = []; 
+                    if(!r.products) r.products = [];
+                    if(!r.createdAt) r.createdAt = ''; 
                 });
             } else {
                 this.data.versions.push({id: uuid(), name:'預設版本', params:{...defaultParams}});
@@ -536,7 +539,8 @@ const store = {
             }
         }, err => { console.error(err); document.getElementById('loading').style.display = 'none'; alert('⚠️ 讀取失敗：' + err.message); router('dashboard'); });
     },
-    save() { if(isReady) db.ref('AmwaySystem/v1').set(this.data); },
+    // FIX 3: Return Promise for Async Rollback
+    save() { if(isReady) return db.ref('AmwaySystem/v1').set(this.data); return Promise.resolve(); },
     getPartner(id) { return (this.data.partners||[]).find(p=>p.id===id); },
     getInitiator(id) { return (this.data.initiators||[]).find(i=>i.id===id); },
     getRecord(id) { return (this.data.records||[]).find(r=>r.id===id); },
@@ -548,11 +552,15 @@ store.init();
 function calculate(r) {
     const p = store.getPartner(r.partnerId);
     if(!p) return null;
+    
     const v = store.getVersion(r.planVersionId);
     const params = v ? v.params : defaultParams;
+    
+    // Fix: Ensure number calculation
     const gpv = Number(r.gpv) || 0;
     const rate = getPercent(gpv);
     
+    // Fix: 9% Graduation
     let res = { 
         ...r, 
         partnerName: p.code+' '+p.name, 
@@ -569,13 +577,23 @@ function calculate(r) {
     if(!res.isGraduated && !res.isPartnerInactive && !res.isMonthlyInactive) {
         let applied = 0, txt = '';
         const hasRec = (r.newRecruits||[]).length > 0;
-        if(rate === 0 || rate === 0.03) { applied = hasRec ? params.rate_0_3_rec : params.rate_0_3_base; txt = '0-3%'; }
-        else if(rate === 0.06) { applied = hasRec ? params.rate_6_rec : params.rate_6_base; txt = '6%'; }
+        
+        // Fix: Exact rate matching
+        if(rate === 0 || rate === 0.03) { 
+            applied = hasRec ? params.rate_0_3_rec : params.rate_0_3_base; 
+            txt = '0-3%'; 
+        }
+        else if(rate === 0.06) { 
+            applied = hasRec ? params.rate_6_rec : params.rate_6_base; 
+            txt = '6%'; 
+        }
         
         if(applied > 0) {
             res.isEligible = true;
             res.appliedRateText = txt + (hasRec?' (含推薦)':' (基礎)');
             const indepBV = (r.legs||[]).filter(l=>l.isIndependent).reduce((s,l)=>s+(Number(l.bv)||0),0);
+            
+            // Fix: Use numeric gpv
             res.baseBonus = Math.max(0, (gpv*50)-indepBV) * applied;
             res.recruitBonus = (r.newRecruits||[]).reduce((s,n)=>s+(Number(n.bv)||0),0) * params.rate_recruit_bv;
             res.learningBonus = r.learningDone ? (res.baseBonus + res.recruitBonus) * params.rate_learning : 0;
@@ -713,6 +731,7 @@ function renderPartners() {
     `;
 }
 
+// FIX 3: Async Rollback
 function togglePartnerStatus(id, el) {
     const p = store.getPartner(id);
     if (!p) return;
@@ -729,15 +748,14 @@ function togglePartnerStatus(id, el) {
     const oldStatus = p.status;
     p.status = newStatus;
 
-    try {
-        store.save(); 
-        renderPartners(); 
-    } catch(e) {
-        console.error(e);
-        p.status = oldStatus; 
-        el.checked = !el.checked; 
-        alert('⚠️ 儲存失敗，請檢查網路');
-    }
+    store.save()
+        .then(() => renderPartners())
+        .catch(err => {
+            console.error(err);
+            p.status = oldStatus;
+            el.checked = !el.checked;
+            alert('⚠️ 儲存失敗，請檢查網路');
+        });
 }
 
 function setThisMonthFilter() {
@@ -835,9 +853,15 @@ function savePartner(e, id) {
     const toggle = document.getElementById('statusToggle');
     d.status = toggle.checked ? 'active' : 'inactive';
     if(store.data.partners.some(x=>x.code===d.code && x.id!==id)) return alert('編號重複');
-    if(id) { const i = store.data.partners.findIndex(x=>x.id===id); store.data.partners[i] = {...store.data.partners[i], ...d}; } 
-    else { store.data.partners.push({...d, id: uuid()}); }
-    store.save(); closeModal(); renderPartners();
+    
+    // Promise Update
+    if(id) { 
+        const i = store.data.partners.findIndex(x=>x.id===id); 
+        store.data.partners[i] = {...store.data.partners[i], ...d}; 
+    } else { 
+        store.data.partners.push({...d, id: uuid()}); 
+    }
+    store.save().then(() => { closeModal(); renderPartners(); }).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 
 function deletePartner(id) {
@@ -845,10 +869,10 @@ function deletePartner(id) {
     store.data.partners = store.data.partners.filter(x=>x.id!==id);
     store.data.partners.forEach(p => { if(p.sponsorId===id) p.sponsorId=''; }); 
     store.data.records = store.data.records.filter(r=>r.partnerId!==id);
-    store.save(); renderPartners();
+    store.save().then(() => renderPartners()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 
-// --- RECORDS ---
+// --- RECORDS (C) ---
 function renderRecords() {
     const m = localStorage.getItem('r_m') || new Date().toISOString().slice(0,7);
     const q = localStorage.getItem('r_q') || '';
@@ -893,7 +917,15 @@ function editRecord(id, month) {
         const existing = id ? store.getRecord(id) : null;
         if(existing && existing.payoutStatus==='paid' && !confirm('此紀錄已發放，確定要修改嗎？')) return;
         
-        const base = existing || { id:'', partnerId:'', month, ppv:0, pbv:0, gpv:0, legs:[], newRecruits:[], products:[], learningDone:false, participation:'active', payoutStatus:'unpaid', payoutDate: getToday(month), planVersionId: store.data.versions.find(v=>!v.archived)?.id, note:'' };
+        // C1: CreateAt logic (new=today, exist=keep)
+        const base = existing || { 
+            id:'', partnerId:'', month, ppv:0, pbv:0, gpv:0, legs:[], newRecruits:[], products:[], learningDone:false, 
+            participation:'active', payoutStatus:'unpaid', payoutDate: getToday(month), 
+            createdAt: getLocalToday(), // Default today for new
+            planVersionId: store.data.versions.find(v=>!v.archived)?.id, note:'' 
+        };
+        if(!base.createdAt) base.createdAt = getLocalToday(); // Patch old data
+
         tempRec = JSON.parse(JSON.stringify(base));
         if (!Array.isArray(tempRec.legs)) tempRec.legs = [];
         if (!Array.isArray(tempRec.newRecruits)) tempRec.newRecruits = [];
@@ -907,8 +939,13 @@ function editRecord(id, month) {
                 <div class="record-modal-grid">
                     <div class="record-form-col">
                         <div class="card">
-                            <div class="row"><div class="col"><label>夥伴</label><select name="partnerId" class="form-control" onchange="tempRec.partnerId=this.value;renderPreview();markDirty()" required>${pOpts}</select></div>
-                            <div class="col"><label>版本</label><select name="planVersionId" class="form-control" onchange="tempRec.planVersionId=this.value;renderPreview();markDirty()">${vOpts}</select></div></div>
+                            <div class="row">
+                                <div class="col"><label>夥伴</label><select name="partnerId" class="form-control" onchange="tempRec.partnerId=this.value;renderPreview();markDirty()" required>${pOpts}</select></div>
+                                <div class="col"><label>版本</label><select name="planVersionId" class="form-control" onchange="tempRec.planVersionId=this.value;renderPreview();markDirty()">${vOpts}</select></div>
+                            </div>
+                            <div class="row">
+                                <div class="col"><label>輸入日期 (新增日)</label><input type="date" name="createdAt" value="${base.createdAt}" class="form-control" oninput="markDirty()"></div>
+                            </div>
                         </div>
                         <div class="card">
                             <div class="row">
@@ -939,7 +976,7 @@ function editRecord(id, month) {
                             <div class="form-group"><label>備註</label><textarea name="note" class="form-control" oninput="markDirty()">${base.note}</textarea></div>
                             <div class="row">
                                 <div class="col"><label>發放狀態</label><select name="payoutStatus" class="form-control" onchange="markDirty()"><option value="unpaid" ${base.payoutStatus==='unpaid'?'selected':''}>未發放</option><option value="paid" ${base.payoutStatus==='paid'?'selected':''}>已發放</option></select></div>
-                                <div class="col"><label>日期</label><input type="date" name="payoutDate" value="${base.payoutDate}" class="form-control" oninput="markDirty()"></div>
+                                <div class="col"><label>發放日期</label><input type="date" name="payoutDate" value="${base.payoutDate}" class="form-control" oninput="markDirty()"></div>
                             </div>
                         </div>
                     </div>
@@ -1035,7 +1072,7 @@ function saveRecord(e, id) {
     const fd = new FormData(e.target);
     if(!id && store.data.records.some(r=>r.month===tempRec.month && r.partnerId===tempRec.partnerId)) return alert('此夥伴本月已有紀錄');
     
-    // Upsert New Recruits
+    // E: Upsert with empty joinedAt
     const parent = store.getPartner(tempRec.partnerId);
     if(parent) {
         tempRec.newRecruits.forEach(rec => {
@@ -1047,7 +1084,8 @@ function saveRecord(e, id) {
                     memberType: rec.memberType || 'directSeller',
                     sponsorId: parent.id,
                     initiatorId: parent.initiatorId || '',
-                    status: 'active', joinedAt: ''
+                    status: 'active', // Default active
+                    joinedAt: '' // E: Leave empty
                 });
             } else {
                 if(!p.sponsorId) p.sponsorId = parent.id;
@@ -1057,23 +1095,21 @@ function saveRecord(e, id) {
         });
     }
 
+    // C2: Save createdAt
     const final = { ...tempRec, ...Object.fromEntries(fd), 
         ppv: Number(fd.get('ppv')), gpv: Number(fd.get('gpv')), 
         learningDone: fd.get('learningDone')==='on' 
     };
     final.legs = tempRec.legs; final.newRecruits = tempRec.newRecruits; final.products = tempRec.products;
     
-    // Set createdAt if new
-    if(!id && !final.createdAt) final.createdAt = getLocalToday();
-
     if(id) { const i = store.data.records.findIndex(x=>x.id===id); store.data.records[i] = final; }
     else { final.id = uuid(); store.data.records.push(final); }
-    store.save(); isDirty=false; closeModal(); renderRecords();
+    store.save().then(() => { isDirty=false; closeModal(); renderRecords(); }).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 function deleteRecord(id) {
     if(!confirm('確定刪除？')) return;
     store.data.records = store.data.records.filter(r=>r.id!==id);
-    store.save(); isDirty=false; closeModal(); renderRecords();
+    store.save().then(() => { isDirty=false; closeModal(); renderRecords(); }).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 
 function renderPayout() {
@@ -1127,13 +1163,13 @@ function bulkPay(m) {
     if(!confirm('確認標記發放？')) return;
     const d = getToday(m);
     ids.forEach(id => { const r = store.getRecord(id); if(r) { r.payoutStatus='paid'; r.payoutDate=d; } });
-    store.save(); renderPayout();
+    store.save().then(() => renderPayout()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 function togglePay(id, s, m) {
     const r = store.getRecord(id);
     if(s==='paid') { if(confirm('取消發放？')) r.payoutStatus='unpaid'; }
     else { r.payoutStatus='paid'; r.payoutDate=getToday(m); }
-    store.save(); renderPayout();
+    store.save().then(() => renderPayout()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 function exportCSV(m) {
     const recs = store.getRecordsByMonth(m).map(calculate).filter(x=>x);
@@ -1198,23 +1234,23 @@ function saveInit(e, id) {
         store.data.initiators[idx] = {...store.data.initiators[idx], ...d, coachedPartnerIds: coached}; 
     }
     else { store.data.initiators.push({...d, id:uuid(), coachedPartnerIds: coached}); }
-    store.save(); closeModal(); renderInitiators();
+    store.save().then(() => { closeModal(); renderInitiators(); }).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 function delInit(id) {
     if(!confirm('刪除？這會將其下夥伴變為未指定。')) return;
     store.data.initiators = store.data.initiators.filter(i=>i.id!==id);
     store.data.partners.forEach(p => { if(p.initiatorId===id) p.initiatorId=''; });
-    store.save(); renderInitiators();
+    store.save().then(() => renderInitiators()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 
-// 7. ORG CHART - Notion Style
+// 7. ORG CHART - Notion Style (Fix 1 & 2)
 let orgCollapseState = JSON.parse(localStorage.getItem('org_collapseState') || '{}');
 
 function toggleNode(e, nodeId) {
-    e.stopPropagation(); // prevent modal
+    e.stopPropagation(); 
     orgCollapseState[nodeId] = !orgCollapseState[nodeId];
     localStorage.setItem('org_collapseState', JSON.stringify(orgCollapseState));
-    renderOrgChart(); // re-render to update view
+    renderOrgChart(); 
 }
 
 function renderOrgChart() {
@@ -1226,6 +1262,7 @@ function renderOrgChart() {
         
         partners.forEach(p => { pMap[p.id] = { ...p, children:[], record: recs.find(r=>r && r.partnerId===p.id) }; });
         
+        // Pure Tree
         const roots = [];
         partners.forEach(p => {
             if(p.sponsorId && pMap[p.sponsorId] && p.sponsorId !== p.id) {
@@ -1240,26 +1277,28 @@ function renderOrgChart() {
             const hasChildren = node.children && node.children.length > 0;
             const isCollapsed = orgCollapseState[node.id];
             
-            // Toggle Icon
-            let toggleHtml = '';
-            if (hasChildren) {
-                const icon = isCollapsed ? '▶' : '▼';
-                const count = isCollapsed ? `<div class="count">(+${node.children.length})</div>` : '';
-                toggleHtml = `<div class="node-toggle" onclick="toggleNode(event, '${node.id}')"><div class="caret">${icon}</div>${count}</div>`;
-            } else {
-                toggleHtml = `<div class="node-toggle" style="cursor:default"></div>`;
-            }
+            // Toggle
+            let toggleHtml = hasChildren 
+                ? `<div class="node-toggle" onclick="toggleNode(event, '${node.id}')"><div class="caret">${isCollapsed ? '▶' : '▼'}</div>${isCollapsed ? `<div class="count">(+${node.children.length})</div>` : ''}</div>` 
+                : `<div class="node-toggle" style="cursor:default"></div>`;
 
-            let info = '無紀錄';
-            if(node.status==='inactive') info = '未參與';
-            else if(r) {
-                if(r.isGraduated) info = '🎓 畢業';
-                else if(r.payoutStatus==='paid') info = '✅ 已發放';
-                else if(r.totalIncome>0) info = `<span style="color:#e74c3c">● 未發放</span>`;
-                else info = '無獎金';
-            }
+            // Fix 1: Correct badge logic
+            let badgeBg = '#eee', badgeColor = '#aaa', badgeText = '無紀錄';
 
-            // Children List (Hidden if collapsed)
+            if (node.status === 'inactive') {
+                badgeBg = '#95a5a6'; badgeColor = 'white'; badgeText = '未參與';
+            } else if (r) {
+                badgeColor = 'white';
+                if (r.isGraduated) { badgeBg = '#16a085'; badgeText = '🎓 畢業'; }
+                else if (r.payoutStatus === 'paid') { badgeBg = '#27ae60'; badgeText = '✅ 已發放'; }
+                else if (r.totalIncome > 0) { badgeBg = '#e74c3c'; badgeText = '🔴 未發放'; }
+                else { badgeBg = '#bdc3c7'; badgeText = '無獎金'; }
+            }
+            
+            const badgeHtml = `<div class="node-status" style="background:${badgeBg};color:${badgeColor}">${badgeText}</div>`;
+            // Fix 2: Remove extra $
+            const pvDisplay = r ? `<div style="font-weight:bold;color:${r.totalIncome>0?'#27ae60':'#999'}">PV: ${r.gpv} / ${money(r.totalIncome)}</div>` : '<div style="color:#ccc">—</div>';
+
             const childrenHtml = (hasChildren && !isCollapsed) 
                 ? `<ul>${node.children.map(renderNode).join('')}</ul>` 
                 : '';
@@ -1268,10 +1307,10 @@ function renderOrgChart() {
                 <div class="node">
                     ${toggleHtml}
                     <div class="node-content" onclick="showNode('${node.id}','${m}')">
+                        ${badgeHtml}
                         <div class="name">${node.code} ${node.name}</div>
                         <div class="type">${node.memberType === 'member' ? '生活會員' : '直銷商'}</div>
-                        <div class="detail">${info}</div>
-                        ${r ? `<div class="tooltip">PV: ${r.gpv}<br>金額: ${money(r.totalIncome)}</div>` : ''}
+                        <div class="detail">${pvDisplay}</div>
                     </div>
                 </div>
                 ${childrenHtml}
@@ -1337,14 +1376,14 @@ function saveVer(e, id) {
     const p = { rate_0_3_base:Number(fd.get('rate_0_3_base')), rate_0_3_rec:Number(fd.get('rate_0_3_rec')), rate_6_base:Number(fd.get('rate_6_base')), rate_6_rec:Number(fd.get('rate_6_rec')), rate_recruit_bv:Number(fd.get('rate_recruit_bv')), rate_learning:Number(fd.get('rate_learning')) };
     if(id){ const idx=store.data.versions.findIndex(x=>x.id===id); store.data.versions[idx] = {...store.data.versions[idx], name:fd.get('name'), params:p}; }
     else { store.data.versions.unshift({id:uuid(), name:fd.get('name'), createdAt:new Date().toISOString(), params:p}); }
-    store.save(); closeModal(); renderVersions();
+    store.save().then(() => { closeModal(); renderVersions(); }).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 function delVer(id) {
     if(!confirm('刪除？')) return;
     if(store.data.records.some(r=>r.planVersionId===id)) {
         if(confirm('此版本已被使用，是否改為封存？')) { store.getVersion(id).archived=true; store.save(); renderVersions(); }
     } else {
-        store.data.versions = store.data.versions.filter(v=>v.id!==id); store.save(); renderVersions();
+        store.data.versions = store.data.versions.filter(v=>v.id!==id); store.save().then(() => renderVersions()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
     }
 }
 
