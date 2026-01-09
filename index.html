@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v7.2 最終效能優化版)</title>
+    <title>新星啟動計畫系統 (v7.3 最終完全整合版)</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🚀%3C/text%3E%3C/svg%3E">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -75,6 +75,7 @@
         .btn-danger { background: var(--danger); }
         .btn-secondary { background: #95a5a6; }
         .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+        .btn-outline:hover { background: var(--accent); color: white; }
         
         .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 5px; font-size: 1rem; }
         .row { display: flex; gap: 15px; flex-wrap: wrap; } .col { flex: 1; min-width: 150px; }
@@ -107,6 +108,7 @@
         .summary-val { font-size: 2rem; font-weight: 800; margin: 10px 0; color: #2c3e50; }
         .summary-label { color: #7f8c8d; font-weight: 600; font-size: 0.9rem; }
 
+        /* Tables & Filters */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
         th { background: #f8f9fa; color: #555; white-space: nowrap; cursor: pointer; user-select: none; }
@@ -114,48 +116,47 @@
         tr:last-child td { border-bottom: none; }
         .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
 
+        /* Modal */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
         .modal-content { background: white; margin: 5vh auto; width: 95%; max-width: 1100px; border-radius: 12px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff; }
         .modal-body { padding: 20px; overflow-y: auto; flex: 1; background: #f9f9f9; -webkit-overflow-scrolling: touch; }
         .record-modal-grid { display: flex; gap: 20px; flex-direction: column-reverse; }
         @media (min-width: 769px) { .record-modal-grid { flex-direction: row; align-items: flex-start; } .record-form-col { flex: 1.5; } .record-preview-col { flex: 1; min-width: 280px; position: sticky; top: 0; } }
-        .preview-card { background: white; padding: 20px; border-radius: 10px; border-top: 4px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.08); min-height: 150px; }
+        .preview-card { background: white; padding: 20px; border-radius: 10px; border-top: 4px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.08); min-height: 150px; display: flex; flex-direction: column; justify-content: center; }
         .preview-amount { font-size: 2.2rem; font-weight: 800; color: var(--success); text-align: right; border-bottom: 1px solid #eee; margin-bottom: 15px; line-height: 1.2; }
         .preview-row { display: flex; justify-content: space-between; margin-bottom: 8px; color: #555; font-size: 0.9rem; }
         .modal-actions-bar { position: sticky; bottom: 0; background: white; padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; z-index: 50; }
         .modal-actions-bar button { flex: 1; padding: 12px; }
 
-        /* 🔥 Org Chart Core (Stability Fix) */
+        /* 🔥 Org Chart Core (Stability Fix v7.2) */
         .org-container { 
-            overflow: auto; /* 允許滾動 */
-            width: 100%; height: 650px; 
+            overflow: auto; width: 100%; height: 650px; 
             background: white; border-radius: 8px; 
             box-shadow: inset 0 0 20px rgba(0,0,0,0.02); 
             position: relative; cursor: grab; 
-            touch-action: none; /* 防止瀏覽器搶奪拖曳 */
-            user-select: none;
+            touch-action: none; user-select: none;
         }
         .org-container:active { cursor: grabbing; }
         
         .tree { 
-            transform-origin: 0 0; will-change: transform;
-            display: inline-block; min-width: 100%;
-            padding: 50px; box-sizing: border-box;
+            transform-origin: 0 0; will-change: transform; 
+            display: inline-block; min-width: 100%; 
+            padding: 50px; box-sizing: border-box; 
         }
 
-        /* 改用 Table Layout 確保線條不從 Flex 斷裂 */
+        /* Use Table Layout for Connectors */
         .tree ul { 
             padding-top: 20px; position: relative; transition: .3s; 
-            display: table; margin: 0 auto; white-space: nowrap;
+            display: table; margin: 0 auto; white-space: nowrap; 
         }
         .tree li { 
-            float: none; display: table-cell; vertical-align: top;
+            float: none; display: table-cell; vertical-align: top; 
             text-align: center; list-style-type: none; 
             position: relative; padding: 20px 5px 0 5px; 
         }
         
-        /* 連接線 (Connectors) */
+        /* Connectors */
         .tree li::before, .tree li::after { 
             content: ''; position: absolute; top: 0; right: 50%; 
             border-top: 1px solid #ccc; width: 50%; height: 20px; 
@@ -171,7 +172,7 @@
             border-left: 1px solid #ccc; width: 0; height: 20px; 
         }
         
-        /* 收合時隱藏子節點 (不移除 DOM，提升效能) */
+        /* Collapse Logic */
         .tree li.collapsed > ul { display: none; }
         .tree li.collapsed > .node .caret { transform: rotate(-90deg); }
 
@@ -184,11 +185,9 @@
             overflow: hidden; text-align: left;
         }
         .node:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); z-index: 10; }
-        
-        /* 視覺區分 Active / Inactive */
         .node.node-active { border-color: #27ae60; background-color: #f0fdf4; }
         .node.node-inactive { border-color: #bdc3c7; background-color: #f9f9f9; filter: grayscale(1); opacity: 0.85; }
-
+        
         .node-toggle {
             width: 40px; background: rgba(0,0,0,0.03); border-right: 1px solid rgba(0,0,0,0.1);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -202,7 +201,6 @@
         .node-content .name { font-weight: 800; display: block; margin-bottom: 3px; font-size: 14px; }
         .node-content .type { font-size: 10px; color: #555; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 6px; }
         .node-content .detail { font-size: 11px; color: #555; border-top: 1px dashed #ddd; padding-top: 5px; margin-top: 5px; }
-
         .node-status { position: absolute; top: 0; right: 0; font-size: 10px; padding: 2px 6px; border-bottom-left-radius: 6px; font-weight: bold; }
 
         #loading { position: fixed; inset: 0; background: #f4f7f6; display: flex; justify-content: center; align-items: center; z-index: 3000; flex-direction: column; }
@@ -253,7 +251,7 @@
             </div>
         </div>
     </div>
-    <div class="footer">v7.2 最終效能優化版</div>
+    <div class="footer">v7.3 最終完全整合版</div>
 </aside>
 
 <main id="app"></main>
@@ -412,17 +410,10 @@ const store = {
             if(val) {
                 this.data = val;
                 ['partners','initiators','records','versions'].forEach(k => { if(!this.data[k]) this.data[k] = []; });
-                
-                // Normalization
-                (this.data.partners || []).forEach(p => { 
-                    if(!p.memberType) p.memberType = 'directSeller';
-                    if(!p.status) p.status = 'active'; 
-                });
+                (this.data.partners || []).forEach(p => { if(!p.memberType) p.memberType = 'directSeller'; if(!p.status) p.status = 'active'; });
                 (this.data.initiators || []).forEach(i => { if(!i.memberType) i.memberType = 'directSeller'; if (!Array.isArray(i.coachedPartnerIds)) i.coachedPartnerIds = []; });
                 (this.data.records || []).forEach(r => {
-                    if(r.newRecruits && Array.isArray(r.newRecruits)) {
-                        r.newRecruits.forEach(nr => { if(!nr.memberType) nr.memberType = 'directSeller'; });
-                    }
+                    if(r.newRecruits && Array.isArray(r.newRecruits)) r.newRecruits.forEach(nr => { if(!nr.memberType) nr.memberType = 'directSeller'; });
                     if(!r.products) r.products = [];
                     if(!r.createdAt) r.createdAt = ''; 
                 });
@@ -451,17 +442,13 @@ const store = {
 store.init();
 
 function calculate(r) {
-    const p = store.getPartner(r.partnerId);
-    if(!p) return null;
-    
+    // FIX: Force return safe object even if partner missing
+    const p = store.getPartner(r.partnerId) || { code:'?', name:'未選擇', initiatorId:'' };
     const v = store.getVersion(r.planVersionId);
     const params = v ? v.params : defaultParams;
-    
-    // Fix: Ensure number calculation
     const gpv = Number(r.gpv) || 0;
     const rate = getPercent(gpv);
     
-    // Fix: 9% Graduation
     let res = { 
         ...r, 
         partnerName: p.code+' '+p.name, 
@@ -478,23 +465,11 @@ function calculate(r) {
     if(!res.isGraduated && !res.isPartnerInactive && !res.isMonthlyInactive) {
         let applied = 0, txt = '';
         const hasRec = (r.newRecruits||[]).length > 0;
-        
-        // Fix: Exact rate matching
-        if(rate === 0 || rate === 0.03) { 
-            applied = hasRec ? params.rate_0_3_rec : params.rate_0_3_base; 
-            txt = '0-3%'; 
-        }
-        else if(rate === 0.06) { 
-            applied = hasRec ? params.rate_6_rec : params.rate_6_base; 
-            txt = '6%'; 
-        }
-        
+        if(rate === 0 || rate === 0.03) { applied = hasRec ? params.rate_0_3_rec : params.rate_0_3_base; txt = '0-3%'; }
+        else if(rate === 0.06) { applied = hasRec ? params.rate_6_rec : params.rate_6_base; txt = '6%'; }
         if(applied > 0) {
-            res.isEligible = true;
-            res.appliedRateText = txt + (hasRec?' (含推薦)':' (基礎)');
+            res.isEligible = true; res.appliedRateText = txt + (hasRec?' (含推薦)':' (基礎)');
             const indepBV = (r.legs||[]).filter(l=>l.isIndependent).reduce((s,l)=>s+(Number(l.bv)||0),0);
-            
-            // Fix: Use numeric gpv
             res.baseBonus = Math.max(0, (gpv*50)-indepBV) * applied;
             res.recruitBonus = (r.newRecruits||[]).reduce((s,n)=>s+(Number(n.bv)||0),0) * params.rate_recruit_bv;
             res.learningBonus = r.learningDone ? (res.baseBonus + res.recruitBonus) * params.rate_learning : 0;
@@ -588,183 +563,66 @@ function renderPartners() {
         </div>
 
         <div class="card" style="overflow-x:auto"><table><thead>
-            <tr>
-                <th>編號</th>
-                <th>姓名</th>
-                <th>性質</th>
-                <th onclick="togglePartnerSort()" style="cursor:pointer;color:var(--accent)">
-                    加入計畫日 ${sortMode==='desc'?'↓':sortMode==='asc'?'↑':''}
-                </th>
-                <th>已加入</th>
-                <th>推薦人</th>
-                <th>發起人</th>
-                <th>狀態</th>
-                <th>操作</th>
-            </tr>
+            <tr><th>編號</th><th>姓名</th><th>性質</th><th onclick="togglePartnerSort()" style="cursor:pointer;color:var(--accent)">加入計畫日 ${sortMode==='desc'?'↓':sortMode==='asc'?'↑':''}</th><th>已加入</th><th>推薦人</th><th>發起人</th><th>狀態</th><th>操作</th></tr>
         </thead><tbody>
         ${list.map(p => {
             const isActive = (p.status || 'active') === 'active';
             const joinedDisplay = isActive ? (p.joinedAt || '<span style="color:#f39c12">未填</span>') : '<span style="color:#ccc">—</span>';
             const duration = isActive ? getDuration(p.joinedAt) : '<span style="color:#ccc">—</span>';
-            
-            return `<tr>
-            <td>${p.code}</td><td>${p.name}</td>
-            <td>${p.memberType === 'member' ? '生活會員' : '直銷商'}</td>
-            <td>${joinedDisplay}</td>
-            <td>${duration}</td>
-            <td>${store.getPartner(p.sponsorId)?.name||'-'}</td>
-            <td>${store.getInitiator(p.initiatorId)?.name||'<span style="color:red">未設定</span>'}</td>
-            <td>
-                <div style="display:flex;align-items:center;gap:8px">
-                    <label class="switch-sm" style="margin:0">
-                        <input type="checkbox" ${isActive?'checked':''} onchange="togglePartnerStatus('${p.id}', this)">
-                        <span class="slider-sm"></span>
-                    </label>
-                    <span style="font-size:0.85rem;color:${isActive?'var(--success)':'#95a5a6'};font-weight:bold">${isActive?'參與':'未參與'}</span>
-                </div>
-            </td>
-            <td>
-                <button class="btn btn-secondary" style="padding:4px 10px;font-size:0.8rem" onclick="editPartner('${p.id}')">編輯</button>
-                <button class="btn btn-danger" style="padding:4px 10px;font-size:0.8rem" onclick="deletePartner('${p.id}')">刪除</button>
-            </td>
-        </tr>`}).join('')}
+            return `<tr><td>${p.code}</td><td>${p.name}</td><td>${p.memberType === 'member' ? '生活會員' : '直銷商'}</td><td>${joinedDisplay}</td><td>${duration}</td><td>${store.getPartner(p.sponsorId)?.name||'-'}</td><td>${store.getInitiator(p.initiatorId)?.name||'<span style="color:red">未設定</span>'}</td><td><div style="display:flex;align-items:center;gap:8px"><label class="switch-sm" style="margin:0"><input type="checkbox" ${isActive?'checked':''} onchange="togglePartnerStatus('${p.id}', this)"><span class="slider-sm"></span></label><span style="font-size:0.85rem;color:${isActive?'var(--success)':'#95a5a6'};font-weight:bold">${isActive?'參與':'未參與'}</span></div></td><td><button class="btn btn-secondary" style="padding:4px 10px;font-size:0.8rem" onclick="editPartner('${p.id}')">編輯</button> <button class="btn btn-danger" style="padding:4px 10px;font-size:0.8rem" onclick="deletePartner('${p.id}')">刪除</button></td></tr>`}).join('')}
         </tbody></table></div>
     `;
 }
 
-// FIX: Async Rollback
 function togglePartnerStatus(id, el) {
     const p = store.getPartner(id);
     if (!p) return;
     const newStatus = el.checked ? 'active' : 'inactive';
-    
     if (newStatus === 'inactive') {
-        if (!confirm('確定將此夥伴設定為『未參與』嗎？\n（加入計畫日期不會被刪除，但會隱藏）')) {
-            el.checked = true; return;
-        }
-    } else {
-        if (!p.joinedAt) p.joinedAt = getLocalToday();
-    }
-
+        if (!confirm('確定將此夥伴設定為『未參與』嗎？\n（加入計畫日期不會被刪除，但會隱藏）')) { el.checked = true; return; }
+    } else { if (!p.joinedAt) p.joinedAt = getLocalToday(); }
     const oldStatus = p.status;
     p.status = newStatus;
-
-    store.save()
-        .then(() => renderPartners())
-        .catch(err => {
-            console.error(err);
-            p.status = oldStatus;
-            el.checked = !el.checked;
-            alert('⚠️ 儲存失敗，請檢查網路');
-        });
+    store.save().then(() => renderPartners()).catch(err => { console.error(err); p.status = oldStatus; el.checked = !el.checked; alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 
 function setThisMonthFilter() {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const fmt = d => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-    localStorage.setItem('p_joinedFrom', fmt(start));
-    localStorage.setItem('p_joinedTo', fmt(end));
-    renderPartners();
+    const now = new Date(); const start = new Date(now.getFullYear(), now.getMonth(), 1); const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    localStorage.setItem('p_joinedFrom', fmt(start)); localStorage.setItem('p_joinedTo', fmt(end)); renderPartners();
 }
-
-function clearPartnerFilter() {
-    localStorage.removeItem('p_joinedFrom');
-    localStorage.removeItem('p_joinedTo');
-    localStorage.setItem('p_sort', 'default');
-    localStorage.setItem('p_statusFilter', 'all');
-    renderPartners();
-}
-
-function togglePartnerSort() {
-    const current = localStorage.getItem('p_sort') || 'default';
-    const next = current === 'default' ? 'desc' : (current === 'desc' ? 'asc' : 'default');
-    localStorage.setItem('p_sort', next);
-    renderPartners();
-}
+function clearPartnerFilter() { localStorage.removeItem('p_joinedFrom'); localStorage.removeItem('p_joinedTo'); localStorage.setItem('p_sort', 'default'); localStorage.setItem('p_statusFilter', 'all'); renderPartners(); }
+function togglePartnerSort() { const current = localStorage.getItem('p_sort') || 'default'; localStorage.setItem('p_sort', current === 'default' ? 'desc' : (current === 'desc' ? 'asc' : 'default')); renderPartners(); }
 
 function editPartner(id) {
     try {
         const p = id ? store.getPartner(id) : {id:'', code:'', name:'', memberType:'directSeller', sponsorId:'', initiatorId:'', status:'active', joinedAt:''};
-        if(!p.memberType) p.memberType = 'directSeller';
-        if(!p.status) p.status = 'active';
+        if(!p.memberType) p.memberType = 'directSeller'; if(!p.status) p.status = 'active';
         if(p.status === 'active' && !p.joinedAt && !id) p.joinedAt = getLocalToday(); 
-        
-        const others = store.data.partners.filter(x=>x.id!==p.id);
-        const inits = store.data.initiators;
-
+        const others = store.data.partners.filter(x=>x.id!==p.id); const inits = store.data.initiators;
         openModal(id?'編輯夥伴':'新增夥伴', `
-            <form onsubmit="savePartner(event, '${id||''}')">
-                <div class="row">
-                    <div class="col"><label>編號 *</label><input name="code" value="${p.code}" class="form-control" required></div>
-                    <div class="col"><label>姓名 *</label><input name="name" value="${p.name}" class="form-control" required></div>
-                </div>
-                <div class="form-group"><label>會員性質 *</label>
-                    <select name="memberType" class="form-control" required>
-                        <option value="directSeller" ${p.memberType==='directSeller'?'selected':''}>直銷商</option>
-                        <option value="member" ${p.memberType==='member'?'selected':''}>生活會員</option>
-                    </select>
-                </div>
-                <div class="card" style="background:#fdfdfd;border:1px solid #eee;padding:15px">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                        <label style="margin:0">計畫狀態</label>
-                        <label class="switch">
-                            <input type="checkbox" id="statusToggle" ${p.status==='active'?'checked':''} onchange="toggleStatusUI(this)">
-                            <span class="slider"></span>
-                        </label>
-                        <span id="statusLabel" class="switch-label">${p.status==='active'?'參與':'未參與'}</span>
-                    </div>
-                    <div id="joinedAtGroup" style="display:${p.status==='active'?'block':'none'}">
-                        <label>加入計畫日期 *</label>
-                        <input type="date" name="joinedAt" id="joinedAtInput" class="form-control" value="${p.joinedAt||''}" ${p.status==='active'?'required':''}>
-                    </div>
-                </div>
-                <div class="form-group"><label>推薦人 (上線)</label>
-                    <select name="sponsorId" class="form-control"><option value="">-- 無 (頂層) --</option>${others.map(o=>`<option value="${o.id}" ${o.id===p.sponsorId?'selected':''}>${o.code} ${o.name}</option>`).join('')}</select>
-                </div>
-                <div class="form-group"><label>所屬發起人 (獎金來源)</label>
-                    <select name="initiatorId" class="form-control" required><option value="">-- 請選擇 --</option>${inits.map(i=>`<option value="${i.id}" ${i.id===p.initiatorId?'selected':''}>${i.name}</option>`).join('')}</select>
-                </div>
-                <button class="btn btn-primary" style="width:100%">儲存</button>
-            </form>
+            <form onsubmit="savePartner(event, '${id||''}')"><div class="row"><div class="col"><label>編號 *</label><input name="code" value="${p.code}" class="form-control" required></div><div class="col"><label>姓名 *</label><input name="name" value="${p.name}" class="form-control" required></div></div>
+            <div class="form-group"><label>會員性質 *</label><select name="memberType" class="form-control" required><option value="directSeller" ${p.memberType==='directSeller'?'selected':''}>直銷商</option><option value="member" ${p.memberType==='member'?'selected':''}>生活會員</option></select></div>
+            <div class="card" style="background:#fdfdfd;border:1px solid #eee;padding:15px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><label style="margin:0">計畫狀態</label><label class="switch"><input type="checkbox" id="statusToggle" ${p.status==='active'?'checked':''} onchange="toggleStatusUI(this)"><span class="slider"></span></label><span id="statusLabel" class="switch-label">${p.status==='active'?'參與':'未參與'}</span></div><div id="joinedAtGroup" style="display:${p.status==='active'?'block':'none'}"><label>加入計畫日期 *</label><input type="date" name="joinedAt" id="joinedAtInput" class="form-control" value="${p.joinedAt||''}" ${p.status==='active'?'required':''}></div></div>
+            <div class="form-group"><label>推薦人 (上線)</label><select name="sponsorId" class="form-control"><option value="">-- 無 (頂層) --</option>${others.map(o=>`<option value="${o.id}" ${o.id===p.sponsorId?'selected':''}>${o.code} ${o.name}</option>`).join('')}</select></div>
+            <div class="form-group"><label>所屬發起人 (獎金來源)</label><select name="initiatorId" class="form-control" required><option value="">-- 請選擇 --</option>${inits.map(i=>`<option value="${i.id}" ${i.id===p.initiatorId?'selected':''}>${i.name}</option>`).join('')}</select></div>
+            <button class="btn btn-primary" style="width:100%">儲存</button></form>
         `);
-        
         window.toggleStatusUI = function(el) {
-            const label = document.getElementById('statusLabel');
-            const dateGroup = document.getElementById('joinedAtGroup');
-            const dateInput = document.getElementById('joinedAtInput');
-            if (el.checked) {
-                label.innerText = "參與"; dateGroup.style.display = "block"; dateInput.required = true;
-                if (!dateInput.value) dateInput.value = getLocalToday();
-            } else {
-                label.innerText = "未參與"; dateGroup.style.display = "none"; dateInput.required = false;
-            }
+            const label = document.getElementById('statusLabel'); const dateGroup = document.getElementById('joinedAtGroup'); const dateInput = document.getElementById('joinedAtInput');
+            if (el.checked) { label.innerText = "參與"; dateGroup.style.display = "block"; dateInput.required = true; if (!dateInput.value) dateInput.value = getLocalToday(); } 
+            else { label.innerText = "未參與"; dateGroup.style.display = "none"; dateInput.required = false; }
         };
     } catch(e) { alert('開啟失敗: '+e.message); }
 }
-
 function savePartner(e, id) {
     e.preventDefault(); const fd = new FormData(e.target); const d = Object.fromEntries(fd);
-    const toggle = document.getElementById('statusToggle');
-    d.status = toggle.checked ? 'active' : 'inactive';
+    const toggle = document.getElementById('statusToggle'); d.status = toggle.checked ? 'active' : 'inactive';
     if(store.data.partners.some(x=>x.code===d.code && x.id!==id)) return alert('編號重複');
-    
-    // Promise Update
-    if(id) { 
-        const i = store.data.partners.findIndex(x=>x.id===id); 
-        store.data.partners[i] = {...store.data.partners[i], ...d}; 
-    } else { 
-        store.data.partners.push({...d, id: uuid()}); 
-    }
+    if(id) { const i = store.data.partners.findIndex(x=>x.id===id); store.data.partners[i] = {...store.data.partners[i], ...d}; } 
+    else { store.data.partners.push({...d, id: uuid()}); }
     store.save().then(() => { closeModal(); renderPartners(); }).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
-
 function deletePartner(id) {
     if(!confirm('確定刪除？')) return;
     store.data.partners = store.data.partners.filter(x=>x.id!==id);
@@ -773,40 +631,21 @@ function deletePartner(id) {
     store.save().then(() => renderPartners()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 
-// --- RECORDS (C) ---
 function renderRecords() {
     const m = localStorage.getItem('r_m') || new Date().toISOString().slice(0,7);
     const q = localStorage.getItem('r_q') || '';
     const unpaidOnly = localStorage.getItem('r_unpaid') === 'true';
-    
     let list = store.getRecordsByMonth(m).map(calculate).filter(x=>x);
     if(q) list = list.filter(r=>r.partnerName.includes(q));
     if(unpaidOnly) list = list.filter(r=>r.payoutStatus!=='paid' && r.totalIncome>0);
-    
     document.getElementById('app').innerHTML = `
         <header>${header('月份業績紀錄')}</header>
-        <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap">
-            <input type="month" value="${m}" class="form-control" style="width:auto" onchange="localStorage.setItem('r_m',this.value);renderRecords()">
-            <input placeholder="搜尋夥伴" value="${q}" class="form-control" style="width:auto" oninput="localStorage.setItem('r_q',this.value);renderRecords()">
-            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;background:white;padding:0 10px;border:1px solid #ccc;border-radius:6px">
-                <input type="checkbox" ${unpaidOnly?'checked':''} onchange="localStorage.setItem('r_unpaid',this.checked);renderRecords()"> 只看未發放
-            </label>
-            <button class="btn btn-primary" onclick="editRecord(null,'${m}')">＋ 新增紀錄</button>
-        </div>
+        <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap"><input type="month" value="${m}" class="form-control" style="width:auto" onchange="localStorage.setItem('r_m',this.value);renderRecords()"><input placeholder="搜尋夥伴" value="${q}" class="form-control" style="width:auto" oninput="localStorage.setItem('r_q',this.value);renderRecords()"><label style="display:flex;align-items:center;gap:5px;cursor:pointer;background:white;padding:0 10px;border:1px solid #ccc;border-radius:6px"><input type="checkbox" ${unpaidOnly?'checked':''} onchange="localStorage.setItem('r_unpaid',this.checked);renderRecords()"> 只看未發放</label><button class="btn btn-primary" onclick="editRecord(null,'${m}')">＋ 新增紀錄</button></div>
         <div class="card"><table><thead><tr><th>夥伴</th><th>狀態</th><th>新增日</th><th>PV / 回饋 / 產品</th><th>發放</th><th>操作</th></tr></thead><tbody>
         ${list.map(r => {
-            const pText = (r.products||[]).map(x=>`${x.name}×${x.qty}`).join('、');
-            const pDisplay = pText ? `<div style="font-size:0.8rem;color:#7f8c8d;margin-top:4px">📦 ${pText}</div>` : '';
-            
-            return `<tr>
-            <td>${r.partnerName}</td>
-            <td>${r.isGraduated?'<span class="status-badge status-active">🎓 畢業</span>':r.isPartnerInactive?'<span class="status-badge status-inactive">未參與</span>':r.isMonthlyInactive?'<span class="status-badge status-inactive">本月不計</span>':'<span class="status-badge status-active">參與</span>'}</td>
-            <td style="font-size:0.9rem;color:#777">${r.createdAt||'—'}</td>
-            <td><div>PV: ${r.gpv}</div><div style="font-weight:bold;color:${r.totalIncome>0?'var(--success)':'#aaa'}">${money(r.totalIncome)}</div>${pDisplay}</td>
-            <td><span class="status-badge ${r.payoutStatus==='paid'?'status-paid':'status-unpaid'}">${r.payoutStatus==='paid'?'已發放':'未發放'}</span></td>
-            <td><button class="btn btn-secondary" style="font-size:0.8rem;padding:4px 10px" onclick="editRecord('${r.id}')">編輯</button></td>
-        </tr>`}).join('')}
-        </tbody></table></div>
+            const pText = (r.products||[]).map(x=>`${x.name}×${x.qty}`).join('、'); const pDisplay = pText ? `<div style="font-size:0.8rem;color:#7f8c8d;margin-top:4px">📦 ${pText}</div>` : '';
+            return `<tr><td>${r.partnerName}</td><td>${r.isGraduated?'<span class="status-badge status-active">🎓 畢業</span>':r.isPartnerInactive?'<span class="status-badge status-inactive">未參與</span>':r.isMonthlyInactive?'<span class="status-badge status-inactive">本月不計</span>':'<span class="status-badge status-active">參與</span>'}</td><td style="font-size:0.9rem;color:#777">${r.createdAt||'—'}</td><td><div>PV: ${r.gpv}</div><div style="font-weight:bold;color:${r.totalIncome>0?'var(--success)':'#aaa'}">${money(r.totalIncome)}</div>${pDisplay}</td><td><span class="status-badge ${r.payoutStatus==='paid'?'status-paid':'status-unpaid'}">${r.payoutStatus==='paid'?'已發放':'未發放'}</span></td><td><button class="btn btn-secondary" style="font-size:0.8rem;padding:4px 10px" onclick="editRecord('${r.id}')">編輯</button></td></tr>`
+        }).join('')}</tbody></table></div>
     `;
 }
 
@@ -814,180 +653,58 @@ let tempRec = null; let isDirty = false;
 function markDirty() { isDirty = true; }
 function editRecord(id, month) {
     try {
-        isDirty = false;
-        const existing = id ? store.getRecord(id) : null;
+        isDirty = false; const existing = id ? store.getRecord(id) : null;
         if(existing && existing.payoutStatus==='paid' && !confirm('此紀錄已發放，確定要修改嗎？')) return;
-        
-        // C1: CreateAt logic (new=today, exist=keep)
-        const base = existing || { 
-            id:'', partnerId:'', month, ppv:0, pbv:0, gpv:0, legs:[], newRecruits:[], products:[], learningDone:false, 
-            participation:'active', payoutStatus:'unpaid', payoutDate: getToday(month), 
-            createdAt: getLocalToday(), // Default today for new
-            planVersionId: store.data.versions.find(v=>!v.archived)?.id, note:'' 
-        };
-        if(!base.createdAt) base.createdAt = getLocalToday(); // Patch old data
-
+        const base = existing || { id:'', partnerId:'', month, ppv:0, pbv:0, gpv:0, legs:[], newRecruits:[], products:[], learningDone:false, participation:'active', payoutStatus:'unpaid', payoutDate: getToday(month), createdAt: getLocalToday(), planVersionId: store.data.versions.find(v=>!v.archived)?.id, note:'' };
+        if(!base.createdAt) base.createdAt = getLocalToday();
         tempRec = JSON.parse(JSON.stringify(base));
-        if (!Array.isArray(tempRec.legs)) tempRec.legs = [];
-        if (!Array.isArray(tempRec.newRecruits)) tempRec.newRecruits = [];
-        if (!Array.isArray(tempRec.products)) tempRec.products = [];
-
+        if (!Array.isArray(tempRec.legs)) tempRec.legs = []; if (!Array.isArray(tempRec.newRecruits)) tempRec.newRecruits = []; if (!Array.isArray(tempRec.products)) tempRec.products = [];
         const pOpts = store.data.partners.map(p => `<option value="${p.id}" ${p.id===base.partnerId?'selected':''} style="${p.status==='inactive'?'color:gray':''}">${p.code} ${p.name} ${p.status==='inactive'?'(未參與)':''}</option>`).join('');
         const vOpts = store.data.versions.map(v => `<option value="${v.id}" ${v.id===base.planVersionId?'selected':''} ${v.archived?'disabled':''}>${v.name}</option>`).join('');
 
         openModal(id?'編輯紀錄':'新增紀錄', `
             <form id="recForm" onsubmit="saveRecord(event, '${id||''}')">
-                <div class="record-modal-grid">
-                    <div class="record-form-col">
-                        <div class="card">
-                            <div class="row">
-                                <div class="col"><label>夥伴</label><select name="partnerId" class="form-control" onchange="tempRec.partnerId=this.value;renderPreview();markDirty()" required>${pOpts}</select></div>
-                                <div class="col"><label>版本</label><select name="planVersionId" class="form-control" onchange="tempRec.planVersionId=this.value;renderPreview();markDirty()">${vOpts}</select></div>
-                            </div>
-                            <div class="row">
-                                <div class="col"><label>輸入日期 (新增日)</label><input type="date" name="createdAt" value="${base.createdAt}" class="form-control" oninput="markDirty()"></div>
-                            </div>
-                        </div>
-                        <div class="card">
-                            <div class="row">
-                                <div class="col"><label>個人 PV</label><input type="number" name="ppv" value="${base.ppv}" class="form-control" oninput="markDirty()"></div>
-                                <div class="col"><label>小組 PV *</label><input type="number" name="gpv" value="${base.gpv}" class="form-control" required oninput="tempRec.gpv=Number(this.value);renderPreview();markDirty()"></div>
-                            </div>
-                        </div>
-                        <div class="card">
-                            <label>產品分享 (選填)</label>
-                            <div id="productsArea"></div>
-                            <button type="button" class="btn btn-outline" onclick="addProd()">+ 產品</button>
-                        </div>
-                        <div class="card">
-                            <label>腿 (用於扣除獨立業績)</label>
-                            <div id="legsArea"></div>
-                            <button type="button" class="btn btn-outline" onclick="addLeg()">+ 腿</button>
-                        </div>
-                        <div class="card">
-                            <label>新推薦 (填入編號會自動建立組織關係)</label>
-                            <div id="recruitArea"></div>
-                            <button type="button" class="btn btn-outline" onclick="addRec()">+ 新人</button>
-                        </div>
-                        <div class="card">
-                            <div class="row">
-                                <div class="col"><label>狀態</label><select name="participation" class="form-control" onchange="tempRec.participation=this.value;renderPreview();markDirty()"><option value="active" ${base.participation==='active'?'selected':''}>參與</option><option value="inactive" ${base.participation==='inactive'?'selected':''}>本月不計</option></select></div>
-                                <div class="col" style="padding-top:25px"><label><input type="checkbox" name="learningDone" ${base.learningDone?'checked':''} onchange="tempRec.learningDone=this.checked;renderPreview();markDirty()"> 完成學習任務</label></div>
-                            </div>
-                            <div class="form-group"><label>備註</label><textarea name="note" class="form-control" oninput="markDirty()">${base.note}</textarea></div>
-                            <div class="row">
-                                <div class="col"><label>發放狀態</label><select name="payoutStatus" class="form-control" onchange="markDirty()"><option value="unpaid" ${base.payoutStatus==='unpaid'?'selected':''}>未發放</option><option value="paid" ${base.payoutStatus==='paid'?'selected':''}>已發放</option></select></div>
-                                <div class="col"><label>發放日期</label><input type="date" name="payoutDate" value="${base.payoutDate}" class="form-control" oninput="markDirty()"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="record-preview-col">
-                        <div id="previewBox">
-                            <div class="preview-card" style="display:flex;align-items:center;justify-content:center;color:#999">載入中...</div>
-                        </div>
-                        <div class="modal-actions-bar" style="margin-top:20px;display:flex;gap:10px">
-                            <button type="button" class="btn btn-secondary" onclick="closeModalSafe()">取消</button>
-                            ${id?`<button type="button" class="btn btn-danger" onclick="deleteRecord('${id}')">刪除</button>`:''}
-                            <button class="btn btn-primary">儲存</button>
-                        </div>
-                    </div>
-                </div>
-            </form>
+                <div class="record-modal-grid"><div class="record-form-col"><div class="card"><div class="row"><div class="col"><label>夥伴</label><select name="partnerId" class="form-control" onchange="tempRec.partnerId=this.value;renderPreview();markDirty()" required>${pOpts}</select></div><div class="col"><label>版本</label><select name="planVersionId" class="form-control" onchange="tempRec.planVersionId=this.value;renderPreview();markDirty()">${vOpts}</select></div></div><div class="row"><div class="col"><label>輸入日期 (新增日)</label><input type="date" name="createdAt" value="${base.createdAt}" class="form-control" oninput="markDirty()"></div></div></div>
+                <div class="card"><div class="row"><div class="col"><label>個人 PV</label><input type="number" name="ppv" value="${base.ppv}" class="form-control" oninput="markDirty()"></div><div class="col"><label>小組 PV *</label><input type="number" name="gpv" value="${base.gpv}" class="form-control" required oninput="tempRec.gpv=Number(this.value);renderPreview();markDirty()"></div></div></div>
+                <div class="card"><label>產品分享 (選填)</label><div id="productsArea"></div><button type="button" class="btn btn-outline" onclick="addProd()">+ 產品</button></div>
+                <div class="card"><label>腿 (用於扣除獨立業績)</label><div id="legsArea"></div><button type="button" class="btn btn-outline" onclick="addLeg()">+ 腿</button></div>
+                <div class="card"><label>新推薦 (填入編號會自動建立組織關係)</label><div id="recruitArea"></div><button type="button" class="btn btn-outline" onclick="addRec()">+ 新人</button></div>
+                <div class="card"><div class="row"><div class="col"><label>狀態</label><select name="participation" class="form-control" onchange="tempRec.participation=this.value;renderPreview();markDirty()"><option value="active" ${base.participation==='active'?'selected':''}>參與</option><option value="inactive" ${base.participation==='inactive'?'selected':''}>本月不計</option></select></div><div class="col" style="padding-top:25px"><label><input type="checkbox" name="learningDone" ${base.learningDone?'checked':''} onchange="tempRec.learningDone=this.checked;renderPreview();markDirty()"> 完成學習任務</label></div></div><div class="form-group"><label>備註</label><textarea name="note" class="form-control" oninput="markDirty()">${base.note}</textarea></div><div class="row"><div class="col"><label>發放狀態</label><select name="payoutStatus" class="form-control" onchange="markDirty()"><option value="unpaid" ${base.payoutStatus==='unpaid'?'selected':''}>未發放</option><option value="paid" ${base.payoutStatus==='paid'?'selected':''}>已發放</option></select></div><div class="col"><label>發放日期</label><input type="date" name="payoutDate" value="${base.payoutDate}" class="form-control" oninput="markDirty()"></div></div></div></div>
+                <div class="record-preview-col"><div id="previewBox"><div class="preview-card" style="display:flex;align-items:center;justify-content:center;color:#999">載入中...</div></div><div class="modal-actions-bar" style="margin-top:20px;display:flex;gap:10px"><button type="button" class="btn btn-secondary" onclick="closeModalSafe()">取消</button>${id?`<button type="button" class="btn btn-danger" onclick="deleteRecord('${id}')">刪除</button>`:''}<button class="btn btn-primary">儲存</button></div></div></div></form>
         `);
-        renderPreview();
-        renderProducts();
-        renderLegs(); 
-        renderRecs(); 
+        renderPreview(); renderProducts(); renderLegs(); renderRecs(); 
     } catch(e) { alert('紀錄頁錯誤: ' + e.message); }
 }
-function renderProducts() {
-    document.getElementById('productsArea').innerHTML = (tempRec.products||[]).map((p,i)=>`
-        <div style="display:flex;gap:5px;margin-bottom:5px;flex-wrap:wrap">
-            <input placeholder="品項" value="${p.name}" class="form-control" style="flex:2" oninput="tempRec.products[${i}].name=this.value;markDirty()">
-            <input type="number" placeholder="數量" value="${p.qty}" class="form-control" style="flex:1" oninput="tempRec.products[${i}].qty=Number(this.value);markDirty()">
-            <input placeholder="備註" value="${p.note}" class="form-control" style="flex:1.5" oninput="tempRec.products[${i}].note=this.value;markDirty()">
-            <button type="button" class="btn btn-danger" onclick="tempRec.products.splice(${i},1);renderProducts();markDirty()">×</button>
-        </div>
-    `).join('');
-}
+function renderProducts() { document.getElementById('productsArea').innerHTML = (tempRec.products||[]).map((p,i)=>`<div style="display:flex;gap:5px;margin-bottom:5px;flex-wrap:wrap"><input placeholder="品項" value="${p.name}" class="form-control" style="flex:2" oninput="tempRec.products[${i}].name=this.value;markDirty()"><input type="number" placeholder="數量" value="${p.qty}" class="form-control" style="flex:1" oninput="tempRec.products[${i}].qty=Number(this.value);markDirty()"><input placeholder="備註" value="${p.note}" class="form-control" style="flex:1.5" oninput="tempRec.products[${i}].note=this.value;markDirty()"><button type="button" class="btn btn-danger" onclick="tempRec.products.splice(${i},1);renderProducts();markDirty()">×</button></div>`).join(''); }
 function addProd() { tempRec.products.push({name:'', qty:1, note:''}); renderProducts(); markDirty(); }
-function renderLegs() {
-    document.getElementById('legsArea').innerHTML = tempRec.legs.map((l,i)=>`
-        <div style="display:flex;gap:5px;margin-bottom:5px">
-            <input placeholder="腿名" value="${l.name}" class="form-control" oninput="tempRec.legs[${i}].name=this.value;markDirty()">
-            <input type="number" placeholder="BV" value="${l.bv}" class="form-control" oninput="tempRec.legs[${i}].bv=Number(this.value);renderPreview();markDirty()">
-            <label style="display:flex;align-items:center;font-size:0.8rem;white-space:nowrap"><input type="checkbox" ${l.isIndependent?'checked':''} onchange="tempRec.legs[${i}].isIndependent=this.checked;renderPreview();markDirty()"> 獨立</label>
-            <button type="button" class="btn btn-danger" onclick="tempRec.legs.splice(${i},1);renderLegs();renderPreview();markDirty()">×</button>
-        </div>
-    `).join('');
-}
+function renderLegs() { document.getElementById('legsArea').innerHTML = tempRec.legs.map((l,i)=>`<div style="display:flex;gap:5px;margin-bottom:5px"><input placeholder="腿名" value="${l.name}" class="form-control" oninput="tempRec.legs[${i}].name=this.value;markDirty()"><input type="number" placeholder="BV" value="${l.bv}" class="form-control" oninput="tempRec.legs[${i}].bv=Number(this.value);renderPreview();markDirty()"><label style="display:flex;align-items:center;font-size:0.8rem;white-space:nowrap"><input type="checkbox" ${l.isIndependent?'checked':''} onchange="tempRec.legs[${i}].isIndependent=this.checked;renderPreview();markDirty()"> 獨立</label><button type="button" class="btn btn-danger" onclick="tempRec.legs.splice(${i},1);renderLegs();renderPreview();markDirty()">×</button></div>`).join(''); }
 function addLeg() { tempRec.legs.push({name:'',bv:0,isIndependent:false}); renderLegs(); renderPreview(); markDirty(); }
-function renderRecs() {
-    document.getElementById('recruitArea').innerHTML = tempRec.newRecruits.map((r,i)=>`
-        <div style="display:flex;gap:5px;margin-bottom:5px;flex-wrap:wrap;">
-            <input placeholder="編號" value="${r.code||''}" class="form-control" style="flex:1" oninput="tempRec.newRecruits[${i}].code=this.value;markDirty()">
-            <input placeholder="姓名" value="${r.name}" class="form-control" style="flex:1.5" oninput="tempRec.newRecruits[${i}].name=this.value;markDirty()">
-            <select class="form-control" style="flex:1" onchange="tempRec.newRecruits[${i}].memberType=this.value;markDirty()">
-                <option value="directSeller" ${(!r.memberType || r.memberType==='directSeller')?'selected':''}>直銷商</option>
-                <option value="member" ${r.memberType==='member'?'selected':''}>生活會員</option>
-            </select>
-            <input type="number" placeholder="BV" value="${r.bv}" class="form-control" style="flex:1" oninput="tempRec.newRecruits[${i}].bv=Number(this.value);renderPreview();markDirty()">
-            <button type="button" class="btn btn-danger" onclick="tempRec.newRecruits.splice(${i},1);renderRecs();renderPreview();markDirty()">×</button>
-        </div>
-    `).join('');
-}
+function renderRecs() { document.getElementById('recruitArea').innerHTML = tempRec.newRecruits.map((r,i)=>`<div style="display:flex;gap:5px;margin-bottom:5px;flex-wrap:wrap;"><input placeholder="編號" value="${r.code||''}" class="form-control" style="flex:1" oninput="tempRec.newRecruits[${i}].code=this.value;markDirty()"><input placeholder="姓名" value="${r.name}" class="form-control" style="flex:1.5" oninput="tempRec.newRecruits[${i}].name=this.value;markDirty()"><select class="form-control" style="flex:1" onchange="tempRec.newRecruits[${i}].memberType=this.value;markDirty()"><option value="directSeller" ${(!r.memberType || r.memberType==='directSeller')?'selected':''}>直銷商</option><option value="member" ${r.memberType==='member'?'selected':''}>生活會員</option></select><input type="number" placeholder="BV" value="${r.bv}" class="form-control" style="flex:1" oninput="tempRec.newRecruits[${i}].bv=Number(this.value);renderPreview();markDirty()"><button type="button" class="btn btn-danger" onclick="tempRec.newRecruits.splice(${i},1);renderRecs();renderPreview();markDirty()">×</button></div>`).join(''); }
 function addRec() { tempRec.newRecruits.push({code:'',name:'',memberType:'directSeller',bv:0}); renderRecs(); renderPreview(); markDirty(); }
 function renderPreview() {
     try {
-        const res = calculate(tempRec);
-        const box = document.getElementById('previewBox');
-        if(!box) return;
-        
-        if(!res) { 
-            box.innerHTML = '<div class="preview-card" style="display:flex;align-items:center;justify-content:center;color:#999">請選擇夥伴</div>'; 
-            return; 
-        }
-        
+        const res = calculate(tempRec); const box = document.getElementById('previewBox'); if(!box) return;
+        // Fix: Force Render empty state instead of hiding
         let tag = '<span class="status-badge status-active">🟢 可發放</span>';
-        if(res.isGraduated) tag = '<span class="status-badge status-active">🎓 畢業</span>';
+        if (res.isGraduated) tag = '<span class="status-badge status-active">🎓 畢業</span>';
         else if(res.isPartnerInactive) tag = '<span class="status-badge status-inactive">未參與</span>';
         else if(res.isMonthlyInactive) tag = '<span class="status-badge status-inactive">本月不計</span>';
         else if(!res.isEligible) tag = '<span class="status-badge status-unpaid">🚫 不適用</span>';
-
-        box.innerHTML = `
-            <div class="preview-card">
-                <div style="display:flex;justify-content:space-between;margin-bottom:10px;color:#777"><span>本月預估</span> ${tag}</div>
-                <div class="preview-amount" style="color:${res.starTotal>0?'var(--success)':'#ccc'}">${money(res.starTotal)}</div>
-                ${res.isEligible ? `
-                    <div class="preview-row"><span>計算比例</span><span>${res.appliedRateText}</span></div>
-                    <div class="preview-row"><span>基礎回饋</span><span>${money(res.baseBonus)}</span></div>
-                    <div class="preview-row"><span>推薦回饋</span><span>${money(res.recruitBonus)}</span></div>
-                    <div class="preview-row"><span>學習加碼</span><span>${money(res.learningBonus)}</span></div>
-                ` : `<div style="text-align:center;color:#ccc;padding:10px">無獎金產生</div>`}
-            </div>
-        `;
+        
+        box.innerHTML = `<div class="preview-card"><div style="display:flex;justify-content:space-between;margin-bottom:10px;color:#777"><span>本月預估</span> ${tag}</div><div class="preview-amount" style="color:${res.starTotal>0?'var(--success)':'#ccc'}">${money(res.starTotal)}</div>${res.isEligible ? `<div class="preview-row"><span>計算比例</span><span>${res.appliedRateText}</span></div><div class="preview-row"><span>基礎回饋</span><span>${money(res.baseBonus)}</span></div><div class="preview-row"><span>推薦回饋</span><span>${money(res.recruitBonus)}</span></div><div class="preview-row"><span>學習加碼</span><span>${money(res.learningBonus)}</span></div>` : `<div style="text-align:center;color:#ccc;padding:10px">無獎金產生</div>`}</div>`;
     } catch(e) { console.error('Preview error', e); }
 }
 function saveRecord(e, id) {
-    e.preventDefault();
-    const fd = new FormData(e.target);
+    e.preventDefault(); const fd = new FormData(e.target);
     if(!id && store.data.records.some(r=>r.month===tempRec.month && r.partnerId===tempRec.partnerId)) return alert('此夥伴本月已有紀錄');
-    
-    // E: Upsert with empty joinedAt
+    // Upsert Recruits
     const parent = store.getPartner(tempRec.partnerId);
     if(parent) {
         tempRec.newRecruits.forEach(rec => {
             if(!rec.code || !rec.name) return;
             let p = store.data.partners.find(x => x.code === rec.code);
             if(!p) {
-                store.data.partners.push({
-                    id: uuid(), code: rec.code, name: rec.name,
-                    memberType: rec.memberType || 'directSeller',
-                    sponsorId: parent.id,
-                    initiatorId: parent.initiatorId || '',
-                    status: 'active', // Default active
-                    joinedAt: '' // E: Leave empty
-                });
+                store.data.partners.push({id: uuid(), code: rec.code, name: rec.name, memberType: rec.memberType || 'directSeller', sponsorId: parent.id, initiatorId: parent.initiatorId || '', status: 'active', joinedAt: ''});
             } else {
                 if(!p.sponsorId) p.sponsorId = parent.id;
                 if(!p.initiatorId && parent.initiatorId) p.initiatorId = parent.initiatorId;
@@ -995,16 +712,10 @@ function saveRecord(e, id) {
             }
         });
     }
-
-    // C2: Save createdAt
-    const final = { ...tempRec, ...Object.fromEntries(fd), 
-        ppv: Number(fd.get('ppv')), gpv: Number(fd.get('gpv')), 
-        learningDone: fd.get('learningDone')==='on' 
-    };
+    const final = { ...tempRec, ...Object.fromEntries(fd), ppv: Number(fd.get('ppv')), gpv: Number(fd.get('gpv')), learningDone: fd.get('learningDone')==='on' };
     final.legs = tempRec.legs; final.newRecruits = tempRec.newRecruits; final.products = tempRec.products;
-    
-    if(id) { const i = store.data.records.findIndex(x=>x.id===id); store.data.records[i] = final; }
-    else { final.id = uuid(); store.data.records.push(final); }
+    if(!id && !final.createdAt) final.createdAt = getLocalToday();
+    if(id) { const i = store.data.records.findIndex(x=>x.id===id); store.data.records[i] = final; } else { final.id = uuid(); store.data.records.push(final); }
     store.save().then(() => { isDirty=false; closeModal(); renderRecords(); }).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 function deleteRecord(id) {
@@ -1013,138 +724,7 @@ function deleteRecord(id) {
     store.save().then(() => { isDirty=false; closeModal(); renderRecords(); }).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 
-function renderPayout() {
-    const m = localStorage.getItem('pay_m') || new Date().toISOString().slice(0,7);
-    const q = localStorage.getItem('pay_q') || '';
-    
-    let recs = store.getRecordsByMonth(m).map(calculate).filter(x=>x);
-    if(q) recs = recs.filter(r=>r.partnerName.includes(q) || (store.getInitiator(r.initiatorId)||{}).name?.includes(q));
-    
-    const groups = {};
-    store.data.initiators.forEach(i => { groups[i.id] = { info: i, list: [], sum:0, unpaid:0 }; });
-    groups['none'] = { info:{name:'未指定', code:'N/A'}, list:[], sum:0, unpaid:0 };
-    
-    recs.forEach(r => {
-        const gid = groups[r.initiatorId] ? r.initiatorId : 'none';
-        groups[gid].list.push(r);
-        groups[gid].sum += r.totalIncome;
-        if(r.payoutStatus!=='paid') groups[gid].unpaid += r.totalIncome;
-    });
-
-    document.getElementById('app').innerHTML = `
-        <header>${header('本月發放')}</header>
-        <div style="display:flex;gap:10px;margin-bottom:15px">
-            <input type="month" value="${m}" class="form-control" style="width:auto" onchange="localStorage.setItem('pay_m',this.value);renderPayout()">
-            <input placeholder="搜尋" value="${q}" class="form-control" style="width:auto" oninput="localStorage.setItem('pay_q',this.value);renderPayout()">
-            <button class="btn btn-primary" onclick="bulkPay('${m}')">批次發放</button>
-            <button class="btn btn-secondary" onclick="exportCSV('${m}')">匯出 CSV</button>
-        </div>
-        ${Object.values(groups).filter(g=>g.list.length>0).map(g => `
-            <div class="card">
-                <div style="display:flex;justify-content:space-between;border-bottom:2px solid var(--accent);padding-bottom:10px;margin-bottom:10px">
-                    <h3 style="margin:0">${g.info.name}</h3>
-                    <div style="font-size:0.9rem">應付：<span style="color:var(--danger)">${money(g.unpaid)}</span> / 總計：${money(g.sum)}</div>
-                </div>
-                <table><thead><tr><th width="30"><input type="checkbox" onchange="toggleGrp(this,'${g.info.id}')"></th><th>夥伴</th><th>金額</th><th>狀態</th></tr></thead><tbody>
-                ${g.list.map(r => `<tr>
-                    <td><input type="checkbox" class="chk-${g.info.id}" value="${r.id}" ${r.payoutStatus==='paid'?'disabled':''}></td>
-                    <td>${r.partnerName}</td>
-                    <td style="font-weight:bold">${money(r.totalIncome)}</td>
-                    <td><button class="btn ${r.payoutStatus==='paid'?'btn-primary':'btn-outline'}" style="padding:4px 8px;font-size:0.8rem" onclick="togglePay('${r.id}','${r.payoutStatus}','${m}')">${r.payoutStatus==='paid'?'已發放':'未發放'}</button></td>
-                </tr>`).join('')}
-                </tbody></table>
-            </div>
-        `).join('')}
-    `;
-}
-function toggleGrp(el, id) { document.querySelectorAll('.chk-'+id).forEach(c => { if(!c.disabled) c.checked = el.checked; }); }
-function bulkPay(m) {
-    const ids = Array.from(document.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.value).filter(v=>v && v.length>10);
-    if(!ids.length) return alert('未勾選');
-    if(!confirm('確認標記發放？')) return;
-    const d = getToday(m);
-    ids.forEach(id => { const r = store.getRecord(id); if(r) { r.payoutStatus='paid'; r.payoutDate=d; } });
-    store.save().then(() => renderPayout()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
-}
-function togglePay(id, s, m) {
-    const r = store.getRecord(id);
-    if(s==='paid') { if(confirm('取消發放？')) r.payoutStatus='unpaid'; }
-    else { r.payoutStatus='paid'; r.payoutDate=getToday(m); }
-    store.save().then(() => renderPayout()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
-}
-function exportCSV(m) {
-    const recs = store.getRecordsByMonth(m).map(calculate).filter(x=>x);
-    const txt = '\uFEFF月份,發起人,夥伴,金額,備註,狀態,日期\n' + recs.map(r=>`${r.month},${store.getInitiator(r.initiatorId)?.name||''},${r.partnerName},${r.starTotal},${r.note||''},${r.payoutStatus},${r.payoutDate}`).join('\n');
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt],{type:'text/csv'})); a.download = `Payout_${m}.csv`; a.click();
-}
-
-function renderInitiators() {
-    document.getElementById('app').innerHTML = `
-        <header>${header('發起人管理')} <button class="btn btn-primary" onclick="editInit()">+ 新增</button></header>
-        <div class="card"><table><thead><tr><th>編號</th><th>姓名</th><th>性質</th><th>輔導名單 (最多3位)</th><th>操作</th></tr></thead><tbody>
-        ${store.data.initiators.map(i => {
-            const names = (i.coachedPartnerIds||[]).map(pid => {
-                const p = store.getPartner(pid);
-                return p ? `${p.code} ${p.name}` : '?';
-            }).join('、') || '-';
-            return `<tr><td>${i.code}</td><td>${i.name}</td><td>${i.memberType === 'member' ? '生活會員' : '直銷商'}</td><td>${names}</td><td>
-                <button class="btn btn-secondary" style="padding:4px 10px" onclick="editInit('${i.id}')">編輯</button>
-                <button class="btn btn-danger" style="padding:4px 10px" onclick="delInit('${i.id}')">刪除</button>
-            </td></tr>`;
-        }).join('')}
-        </tbody></table></div>
-    `;
-}
-function editInit(id) {
-    try {
-        const i = id ? store.getInitiator(id) : {id:'', code:'', name:'', memberType:'directSeller', coachedPartnerIds:[]};
-        if(!i.memberType) i.memberType = 'directSeller';
-        
-        const myPartners = store.data.partners.filter(p => p.initiatorId === id);
-        const coachHTML = myPartners.map(p => {
-            const checked = (i.coachedPartnerIds||[]).includes(p.id) ? 'checked' : '';
-            return `<div style="margin-bottom:5px"><label><input type="checkbox" class="coach-chk" value="${p.id}" ${checked} onchange="checkLimit(this)"> ${p.code} ${p.name}</label></div>`;
-        }).join('') || '<div style="color:#999;font-size:0.9rem">尚無綁定此發起人的夥伴</div>';
-
-        openModal(id?'編輯':'新增', `
-            <form onsubmit="saveInit(event, '${id||''}')">
-                <div class="row"><div class="col"><label>編號</label><input name="code" value="${i.code}" class="form-control" required></div>
-                <div class="col"><label>姓名</label><input name="name" value="${i.name}" class="form-control" required></div></div>
-                <div class="form-group"><label>會員性質 *</label>
-                    <select name="memberType" class="form-control" required>
-                        <option value="directSeller" ${i.memberType==='directSeller'?'selected':''}>直銷商</option>
-                        <option value="member" ${i.memberType==='member'?'selected':''}>生活會員</option>
-                    </select>
-                </div>
-                <div class="card" style="margin-top:15px">
-                    <h4 style="margin:0 0 10px 0;font-size:1rem">輔導名單 (最多3位)</h4>
-                    <div style="max-height:150px;overflow-y:auto;border:1px solid #eee;padding:10px;border-radius:4px">${coachHTML}</div>
-                </div>
-                <button class="btn btn-primary" style="width:100%;margin-top:15px">儲存</button>
-            </form>
-        `);
-    } catch(e) { alert(e.message); }
-}
-function saveInit(e, id) {
-    e.preventDefault(); const fd = new FormData(e.target); const d = Object.fromEntries(fd);
-    if(store.data.initiators.some(x=>x.code===d.code && x.id!==id)) return alert('重複');
-    const coached = Array.from(document.querySelectorAll('.coach-chk:checked')).map(c=>c.value);
-    
-    if(id) { 
-        const idx = store.data.initiators.findIndex(x=>x.id===id); 
-        store.data.initiators[idx] = {...store.data.initiators[idx], ...d, coachedPartnerIds: coached}; 
-    }
-    else { store.data.initiators.push({...d, id:uuid(), coachedPartnerIds: coached}); }
-    store.save().then(() => { closeModal(); renderInitiators(); }).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
-}
-function delInit(id) {
-    if(!confirm('刪除？這會將其下夥伴變為未指定。')) return;
-    store.data.initiators = store.data.initiators.filter(i=>i.id!==id);
-    store.data.partners.forEach(p => { if(p.initiatorId===id) p.initiatorId=''; });
-    store.save().then(() => renderInitiators()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
-}
-
-// 7. ORG CHART - Fix D: PURE TREE + BADGES + PAN/ZOOM
+// 7. ORG CHART - Performance + Interaction + Fixes
 let orgCollapseState = JSON.parse(localStorage.getItem('org_collapseState') || '{}');
 let orgZoom = parseFloat(localStorage.getItem('org_zoom')) || 1;
 
@@ -1153,111 +733,51 @@ function enableOrgPanZoom() {
     const tree = document.querySelector('.tree');
     if (!container || !tree) return;
 
-    // ✅ 1. 解除舊監聽：防止重複綁定導致靈敏度倍增
     if (container._pzAbort) {
         try { container._pzAbort.abort(); } catch(e) {}
     }
-    
-    // 建立新的控制器並掛載到 DOM 物件上
     const ac = new AbortController();
-    const opt = { signal: ac.signal }; // 一般事件用的 option
+    const opt = { signal: ac.signal };
     container._pzAbort = ac;
 
-    // ✅ 2. 套用目前縮放 (記憶值)
     tree.style.transform = `scale(${orgZoom})`;
 
-    // --- Zoom (滾輪縮放) ---
+    // Zoom
     container.addEventListener('wheel', (e) => {
-        // 阻止瀏覽器預設捲動
         e.preventDefault();
-
         const oldZoom = orgZoom;
-        // 滾輪向下(正)縮小，向上(負)放大
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        
-        // 限制縮放範圍 0.5 ~ 2.0
         let newZoom = Math.min(Math.max(oldZoom * delta, 0.5), 2.0);
-
         if (newZoom === oldZoom) return;
 
-        // 計算滑鼠在 container 內的相對位置
         const rect = container.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
-
-        // 反推滑鼠指向的「內容實際座標」 (考慮捲動與舊縮放)
         const contentX = (container.scrollLeft + mouseX) / oldZoom;
         const contentY = (container.scrollTop + mouseY) / oldZoom;
 
-        // 更新縮放
         orgZoom = newZoom;
         tree.style.transform = `scale(${orgZoom})`;
         localStorage.setItem('org_zoom', orgZoom);
 
-        // 修正捲動位置：讓縮放後的同一個內容點，依然位於滑鼠下方
-        // 新捲動位置 = (內容座標 * 新縮放率) - 滑鼠偏移量
         container.scrollLeft = contentX * orgZoom - mouseX;
         container.scrollTop  = contentY * orgZoom - mouseY;
 
     }, { passive: false, signal: ac.signal });
 
-    // --- Pan (滑鼠拖曳與觸控平移) ---
-    let isDown = false;
-    let startX = 0, startY = 0;
-    let baseLeft = 0, baseTop = 0;
+    // Pan
+    let isDown = false; let startX, startY, baseLeft, baseTop;
+    const startDrag = (x, y) => { isDown = true; container.style.cursor = 'grabbing'; startX = x; startY = y; baseLeft = container.scrollLeft; baseTop = container.scrollTop; };
+    const moveDrag = (x, y) => { if (!isDown) return; const dx = (x - startX) * 1.5; const dy = (y - startY) * 1.5; container.scrollLeft = baseLeft - dx; container.scrollTop = baseTop - dy; };
+    const stopDrag = () => { isDown = false; container.style.cursor = 'grab'; };
 
-    const startDrag = (x, y) => {
-        isDown = true;
-        container.style.cursor = 'grabbing';
-        startX = x;
-        startY = y;
-        baseLeft = container.scrollLeft;
-        baseTop = container.scrollTop;
-    };
-
-    const moveDrag = (x, y) => {
-        if (!isDown) return;
-        // 1.5 倍速拖曳手感較佳
-        const dx = (x - startX) * 1.5;
-        const dy = (y - startY) * 1.5;
-        container.scrollLeft = baseLeft - dx;
-        container.scrollTop  = baseTop - dy;
-    };
-
-    const stopDrag = () => {
-        isDown = false;
-        container.style.cursor = 'grab';
-    };
-
-    // -- Mouse Events --
-    container.addEventListener('mousedown', (e) => startDrag(e.pageX, e.pageY), opt);
-    
-    container.addEventListener('mousemove', (e) => {
-        if (!isDown) return;
-        e.preventDefault(); // 防止選取文字
-        moveDrag(e.pageX, e.pageY);
-    }, { passive: false, signal: ac.signal });
-
+    container.addEventListener('mousedown', e => startDrag(e.pageX, e.pageY), opt);
+    container.addEventListener('mousemove', e => { if(isDown) e.preventDefault(); moveDrag(e.pageX, e.pageY); }, { passive: false, signal: ac.signal });
     container.addEventListener('mouseup', stopDrag, opt);
     container.addEventListener('mouseleave', stopDrag, opt);
 
-    // -- Touch Events (iOS/Mobile) --
-    container.addEventListener('touchstart', (e) => {
-        if (!e.touches || !e.touches[0]) return;
-        startDrag(e.touches[0].pageX, e.touches[0].pageY);
-    }, { passive: true, signal: ac.signal });
-
-    container.addEventListener('touchmove', (e) => {
-        if (!isDown) return;
-        if (!e.touches || !e.touches[0]) return;
-        
-        // ✅ 關鍵：設為 passive: false 並呼叫 preventDefault
-        // 這能阻止手機瀏覽器的「下拉刷新」或「頁面整體捲動」
-        if(e.cancelable) e.preventDefault(); 
-        
-        moveDrag(e.touches[0].pageX, e.touches[0].pageY);
-    }, { passive: false, signal: ac.signal });
-
+    container.addEventListener('touchstart', e => { if(e.touches[0]) startDrag(e.touches[0].pageX, e.touches[0].pageY); }, { passive: true, signal: ac.signal });
+    container.addEventListener('touchmove', e => { if(isDown && e.touches[0]) { if(e.cancelable) e.preventDefault(); moveDrag(e.touches[0].pageX, e.touches[0].pageY); } }, { passive: false, signal: ac.signal });
     container.addEventListener('touchend', stopDrag, opt);
     container.addEventListener('touchcancel', stopDrag, opt);
 }
