@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v5.4 產品紀錄版)</title>
+    <title>新星啟動計畫系統 (v5.6 最終完整版)</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🚀%3C/text%3E%3C/svg%3E">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -191,6 +192,7 @@
         .btn-danger { background: var(--danger); }
         .btn-secondary { background: #95a5a6; }
         .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+        .btn-outline:hover { background: var(--accent); color: white; }
         
         .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 5px; font-size: 1rem; }
         .row { display: flex; gap: 15px; flex-wrap: wrap; } .col { flex: 1; min-width: 150px; }
@@ -252,10 +254,13 @@
         .modal-actions-bar { position: sticky; bottom: 0; background: white; padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; z-index: 50; }
         .modal-actions-bar button { flex: 1; padding: 12px; }
 
-        /* Org Chart */
+        /* 🔥 Org Chart - Notion Style */
         .org-container { overflow: auto; padding: 40px; height: 650px; background: white; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,0,0,0.02); text-align: center; cursor: grab; -webkit-overflow-scrolling: touch; }
-        .tree ul { padding-top: 20px; position: relative; transition: .5s; display: inline-flex; justify-content: center; }
-        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; transition: .5s; }
+        
+        .tree ul { padding-top: 20px; position: relative; transition: .3s; display: inline-flex; justify-content: center; }
+        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; transition: .3s; }
+        
+        /* Connectors */
         .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 1px solid #ccc; width: 50%; height: 20px; }
         .tree li::after { right: auto; left: 50%; border-left: 1px solid #ccc; }
         .tree li:only-child::after, .tree li:only-child::before { display: none; }
@@ -265,21 +270,37 @@
         .tree li:first-child::after { border-radius: 5px 0 0 0; }
         .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 1px solid #ccc; width: 0; height: 20px; }
         
+        /* Hide Connectors when collapsed */
+        .tree li.collapsed > ul { display: none; }
+
+        /* Notion Node Style */
         .node { 
-            border: 2px solid #ccc; padding: 8px 12px; text-decoration: none; color: #333; 
-            font-size: 13px; display: inline-block; border-radius: 8px; transition: .3s; 
-            min-width: 130px; position: relative; background: white; z-index: 2; 
+            border: 2px solid #ccc; text-decoration: none; color: #333; 
+            font-size: 13px; display: inline-flex; align-items: stretch; /* Flex Layout */
+            border-radius: 8px; transition: .2s; 
+            min-width: 140px; position: relative; background: white; z-index: 2;
+            overflow: hidden; text-align: left;
         }
-        .node:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.15); z-index: 10; }
-        .node .name { font-weight: 800; display: block; margin-bottom: 3px; font-size: 14px; }
-        .node .type { font-size: 11px; color: #7f8c8d; background: #f0f0f0; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px; }
-        .node .detail { font-size: 11px; color: #555; }
-        .node.in-scope { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.3); background: #e8f8f5; }
-        .node.out-scope { border-color: #ddd; background: #f9f9f9; color: #aaa; opacity: 0.8; border-style: dashed; }
-        .node.breakaway { border-color: #8e44ad; background: #f4ecf7; color: #8e44ad; }
-        .node-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); padding: 2px 6px; border-radius: 4px; font-size: 10px; color: white; background: #95a5a6; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .node.in-scope .node-badge { background: var(--accent); }
-        .node.breakaway .node-badge { background: #8e44ad; }
+        .node:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); z-index: 10; }
+        
+        /* Left: Toggle Control */
+        .node-toggle {
+            width: 40px; background: #f8f9fa; border-right: 1px solid #eee;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; user-select: none; transition: background .2s; flex-shrink: 0;
+        }
+        .node-toggle:hover { background: #e0e0e0; }
+        .node-toggle:active { background: #d0d0d0; }
+        .caret { font-size: 14px; color: #777; transition: transform 0.2s; }
+        .count { font-size: 10px; color: #999; margin-top: 2px; font-weight: bold; }
+        
+        /* Right: Content */
+        .node-content { padding: 8px 12px; flex: 1; cursor: pointer; }
+        .node-content .name { font-weight: 800; display: block; margin-bottom: 3px; font-size: 14px; }
+        .node-content .type { font-size: 11px; color: #7f8c8d; background: #f0f0f0; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 4px; }
+        .node-content .detail { font-size: 11px; color: #555; }
+        .node-content .tooltip { visibility: hidden; width: 180px; background: #333; color: #fff; text-align: center; border-radius: 6px; padding: 8px; position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); font-size: 11px; z-index: 20; pointer-events: none; opacity: 0; transition: 0.2s; }
+        .node-content:hover .tooltip { visibility: visible; opacity: 1; }
 
         #loading { position: fixed; inset: 0; background: #f4f7f6; display: flex; justify-content: center; align-items: center; z-index: 3000; flex-direction: column; }
         .spinner { width: 40px; height: 40px; border: 4px solid rgba(0,0,0,0.1); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
@@ -329,7 +350,7 @@
             </div>
         </div>
     </div>
-    <div class="footer">v5.4 產品紀錄版</div>
+    <div class="footer">v5.6 最終完整版</div>
 </aside>
 
 <main id="app"></main>
@@ -499,7 +520,7 @@ const store = {
                     if(r.newRecruits && Array.isArray(r.newRecruits)) {
                         r.newRecruits.forEach(nr => { if(!nr.memberType) nr.memberType = 'directSeller'; });
                     }
-                    if(!r.products) r.products = []; // Normalize Products
+                    if(!r.products) r.products = []; 
                 });
             } else {
                 this.data.versions.push({id: uuid(), name:'預設版本', params:{...defaultParams}});
@@ -507,10 +528,9 @@ const store = {
             }
             document.getElementById('loading').style.display = 'none';
             const active = document.querySelector('.nav-item.active');
-            // If active page exists, re-render it (e.g. list update), else go dashboard
             if (active) {
                 const pageId = active.id.replace('nav-', '');
-                if (pageId === 'records' || pageId === 'partners') router(pageId); 
+                if (pageId === 'records' || pageId === 'partners' || pageId === 'org') router(pageId); 
             } else {
                 router('dashboard');
             }
@@ -1187,14 +1207,23 @@ function delInit(id) {
     store.save(); renderInitiators();
 }
 
+// 7. ORG CHART - Notion Style
+let orgCollapseState = JSON.parse(localStorage.getItem('org_collapseState') || '{}');
+
+function toggleNode(e, nodeId) {
+    e.stopPropagation(); // prevent modal
+    orgCollapseState[nodeId] = !orgCollapseState[nodeId];
+    localStorage.setItem('org_collapseState', JSON.stringify(orgCollapseState));
+    renderOrgChart(); // re-render to update view
+}
+
 function renderOrgChart() {
     try {
         const m = localStorage.getItem('org_m') || new Date().toISOString().slice(0,7);
-        const viewerId = localStorage.getItem('org_viewer');
-        
         const partners = store.data.partners;
         const recs = store.getRecordsByMonth(m).map(calculate);
         const pMap = {};
+        
         partners.forEach(p => { pMap[p.id] = { ...p, children:[], record: recs.find(r=>r && r.partnerId===p.id) }; });
         
         const roots = [];
@@ -1206,42 +1235,20 @@ function renderOrgChart() {
             }
         });
 
-        const scopeStatus = {}; 
-        const generations = {};
-
-        if(viewerId) {
-            const viewerInit = store.getInitiator(viewerId);
-            const rootIds = viewerInit ? (viewerInit.coachedPartnerIds || []) : [];
-            rootIds.forEach(rid => { if(pMap[rid]) traverseScope(pMap[rid], 1, true); });
-        }
-
-        function traverseScope(node, gen, isChainValid) {
-            let currentStatus = null;
-            const isBreakaway = !!node.initiatorId && node.initiatorId !== viewerId;
-
-            if (isBreakaway) {
-                currentStatus = 'breakaway';
-                isChainValid = false;
-            } else if (isChainValid) {
-                currentStatus = gen <= 5 ? 'in' : 'out';
-                generations[node.id] = gen;
-            } else {
-                currentStatus = 'out';
-            }
-            scopeStatus[node.id] = currentStatus;
-            node.children.forEach(child => traverseScope(child, gen + 1, isChainValid && currentStatus !== 'breakaway'));
-        }
-
         function renderNode(node) {
             const r = node.record;
-            const st = scopeStatus[node.id];
-            const gen = generations[node.id];
-            let cls = ['node'];
-            let badge = '';
+            const hasChildren = node.children && node.children.length > 0;
+            const isCollapsed = orgCollapseState[node.id];
             
-            if(st === 'breakaway') { cls.push('breakaway'); badge = `<div class="node-badge" style="background:#8e44ad">獨立體系</div>`; }
-            else if(st === 'in') { cls.push('in-scope'); if(gen) badge = `<div class="node-badge" style="background:var(--accent)">發起人第${gen}代</div>`; }
-            else if(viewerId) { cls.push('out-scope'); } 
+            // Toggle Icon
+            let toggleHtml = '';
+            if (hasChildren) {
+                const icon = isCollapsed ? '▶' : '▼';
+                const count = isCollapsed ? `<div class="count">(+${node.children.length})</div>` : '';
+                toggleHtml = `<div class="node-toggle" onclick="toggleNode(event, '${node.id}')"><div class="caret">${icon}</div>${count}</div>`;
+            } else {
+                toggleHtml = `<div class="node-toggle" style="cursor:default"></div>`;
+            }
 
             let info = '無紀錄';
             if(node.status==='inactive') info = '未參與';
@@ -1252,15 +1259,22 @@ function renderOrgChart() {
                 else info = '無獎金';
             }
 
+            // Children List (Hidden if collapsed)
+            const childrenHtml = (hasChildren && !isCollapsed) 
+                ? `<ul>${node.children.map(renderNode).join('')}</ul>` 
+                : '';
+
             return `<li>
-                <div class="${cls.join(' ')}" onclick="showNode('${node.id}','${m}')">
-                    ${badge}
-                    <span class="name">${node.code} ${node.name}</span>
-                    <div class="type">${node.memberType === 'member' ? '生活會員' : '直銷商'}</div>
-                    <div class="detail">${info}</div>
-                    ${r ? `<div class="tooltip">PV: ${r.gpv}<br>金額: ${money(r.totalIncome)}</div>` : ''}
+                <div class="node">
+                    ${toggleHtml}
+                    <div class="node-content" onclick="showNode('${node.id}','${m}')">
+                        <div class="name">${node.code} ${node.name}</div>
+                        <div class="type">${node.memberType === 'member' ? '生活會員' : '直銷商'}</div>
+                        <div class="detail">${info}</div>
+                        ${r ? `<div class="tooltip">PV: ${r.gpv}<br>金額: ${money(r.totalIncome)}</div>` : ''}
+                    </div>
                 </div>
-                ${node.children.length ? `<ul>${node.children.map(renderNode).join('')}</ul>` : ''}
+                ${childrenHtml}
             </li>`;
         }
 
@@ -1268,12 +1282,8 @@ function renderOrgChart() {
             <header>${header('組織關聯圖')}</header>
             <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
                 <input type="month" value="${m}" class="form-control" style="width:auto" onchange="localStorage.setItem('org_m',this.value);renderOrgChart()">
-                <select class="form-control" style="width:auto" onchange="localStorage.setItem('org_viewer',this.value);renderOrgChart()">
-                    <option value="">👁️ 選擇視角 (查看輔導範圍)...</option>
-                    ${store.data.initiators.map(i=>`<option value="${i.id}" ${i.id===viewerId?'selected':''}>${i.name}</option>`).join('')}
-                </select>
                 <div style="font-size:0.8rem;color:#777;margin-left:auto">
-                    此圖僅顯示上下推薦關係
+                    點擊 ▶ 展開 / ▼ 收合
                 </div>
             </div>
             <div class="org-container"><div class="tree"><ul>${roots.map(renderNode).join('')}</ul></div></div>
