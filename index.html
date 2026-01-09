@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v6.1 非同步儲存版)</title>
+    <title>新星啟動計畫系統 (v7.2 最終效能優化版)</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🚀%3C/text%3E%3C/svg%3E">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -38,149 +38,32 @@
         }
 
         /* --- Sidebar --- */
-        aside {
-            width: var(--sidebar-width);
-            background: var(--primary);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-            z-index: 1000;
-            height: 100%;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        aside h2 {
-            padding: 0 20px;
-            margin: 0;
-            font-size: 1.1rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            height: var(--header-height);
-            display: flex;
-            align-items: center;
-            flex-shrink: 0;
-        }
-
-        .sidebar-scroll {
-            flex: 1;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            padding: 10px 0;
-        }
-
-        .nav-group-title {
-            padding: 12px 20px;
-            color: #bdc3c7;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: color 0.2s;
-            user-select: none;
-        }
+        aside { width: var(--sidebar-width); background: var(--primary); color: white; display: flex; flex-direction: column; flex-shrink: 0; z-index: 1000; height: 100%; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        aside.collapsed { width: 0; opacity: 0; overflow: hidden; }
+        aside h2 { padding: 0 20px; margin: 0; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); height: var(--header-height); display: flex; align-items: center; flex-shrink: 0; }
+        .sidebar-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px 0; }
+        .nav-group-title { padding: 12px 20px; color: #bdc3c7; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: color 0.2s; user-select: none; }
         .nav-group-title:hover { color: white; }
-        .nav-group-title::after {
-            content: '›';
-            font-size: 1.2em;
-            transition: transform 0.3s;
-            transform: rotate(90deg);
-        }
+        .nav-group-title::after { content: '›'; font-size: 1.2em; transition: transform 0.3s; transform: rotate(90deg); }
         .nav-group.collapsed .nav-group-title::after { transform: rotate(0deg); }
-
-        .nav-items {
-            max-height: 500px;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out;
-            background: rgba(0,0,0,0.1);
-        }
+        .nav-items { max-height: 500px; overflow: hidden; transition: max-height 0.3s ease-out; background: rgba(0,0,0,0.1); }
         .nav-group.collapsed .nav-items { max-height: 0; }
-
-        .nav-item {
-            display: block;
-            padding: 10px 20px 10px 35px;
-            color: #bdc3c7;
-            text-decoration: none;
-            font-size: 0.95rem;
-            border-left: 4px solid transparent;
-            cursor: pointer;
-            transition: 0.2s;
-        }
+        .nav-item { display: block; padding: 10px 20px 10px 35px; color: #bdc3c7; text-decoration: none; font-size: 0.95rem; border-left: 4px solid transparent; cursor: pointer; transition: 0.2s; }
         .nav-item:hover { color: white; background: rgba(255,255,255,0.05); }
-        .nav-item.active {
-            color: white;
-            background: rgba(255,255,255,0.1);
-            border-left-color: var(--accent);
-        }
-
-        aside .footer {
-            padding: 15px;
-            font-size: 0.75rem;
-            color: #95a5a6;
-            text-align: center;
-            border-top: 1px solid rgba(255,255,255,0.05);
-            flex-shrink: 0;
-        }
+        .nav-item.active { color: white; background: rgba(255,255,255,0.1); border-left-color: var(--accent); }
+        aside .footer { padding: 15px; font-size: 0.75rem; color: #95a5a6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; }
 
         /* --- Main Content --- */
-        main {
-            flex: 1;
-            height: 100%;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            padding: 20px;
-            position: relative;
-            background-color: var(--bg);
-        }
-
-        header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .menu-btn {
-            display: none;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: var(--primary);
-            padding: 5px;
-            margin-right: 10px;
-        }
-
+        main { flex: 1; height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px; position: relative; background-color: var(--bg); }
+        header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; flex-wrap: wrap; gap: 10px; }
+        .menu-btn { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--primary); padding: 5px; margin-right: 10px; }
         h1 { margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; }
 
-        /* Mobile / Tablet Styles */
         @media (max-width: 1023px) {
             .menu-btn { display: block; }
-            aside {
-                position: fixed;
-                top: 0;
-                left: 0;
-                bottom: 0;
-                transform: translateX(-100%);
-                box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-            }
+            aside { position: fixed; top: 0; left: 0; bottom: 0; transform: translateX(-100%); box-shadow: 2px 0 10px rgba(0,0,0,0.2); }
             aside.open { transform: translateX(0); }
-            #drawer-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0,0,0,0.5);
-                z-index: 999;
-                opacity: 0;
-                visibility: hidden;
-                transition: opacity 0.3s;
-                backdrop-filter: blur(2px);
-            }
+            #drawer-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; opacity: 0; visibility: hidden; transition: opacity 0.3s; backdrop-filter: blur(2px); }
             #drawer-overlay.visible { opacity: 1; visibility: visible; }
         }
 
@@ -192,12 +75,11 @@
         .btn-danger { background: var(--danger); }
         .btn-secondary { background: #95a5a6; }
         .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
-        .btn-outline:hover { background: var(--accent); color: white; }
         
         .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; margin-bottom: 5px; font-size: 1rem; }
         .row { display: flex; gap: 15px; flex-wrap: wrap; } .col { flex: 1; min-width: 150px; }
         
-        /* Toggle Switch CSS */
+        /* Toggle Switch */
         .switch { position: relative; display: inline-block; width: 50px; height: 26px; vertical-align: middle; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -205,7 +87,6 @@
         input:checked + .slider { background-color: var(--success); }
         input:checked + .slider:before { transform: translateX(24px); }
         .switch-label { margin-left: 10px; font-weight: bold; vertical-align: middle; color: #555; }
-
         .switch-sm { position: relative; display: inline-block; width: 40px; height: 22px; vertical-align: middle; flex-shrink: 0; }
         .switch-sm input { opacity: 0; width: 0; height: 0; }
         .slider-sm { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -213,7 +94,6 @@
         input:checked + .slider-sm { background-color: var(--success); }
         input:checked + .slider-sm:before { transform: translateX(18px); }
 
-        /* Status & Badges */
         .status-badge { padding: 4px 10px; border-radius: 15px; font-size: 0.8rem; font-weight: bold; white-space: nowrap; }
         .status-active { background: #e8f8f5; color: var(--success); }
         .status-inactive { background: #f2f3f4; color: var(--gray); }
@@ -227,7 +107,6 @@
         .summary-val { font-size: 2rem; font-weight: 800; margin: 10px 0; color: #2c3e50; }
         .summary-label { color: #7f8c8d; font-weight: 600; font-size: 0.9rem; }
 
-        /* Tables & Filters */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.95rem; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; vertical-align: middle; }
         th { background: #f8f9fa; color: #555; white-space: nowrap; cursor: pointer; user-select: none; }
@@ -235,74 +114,96 @@
         tr:last-child td { border-bottom: none; }
         .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center; background: #fff; padding: 15px; border-radius: 10px; border: 1px solid #eee; }
 
-        /* Modal */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
         .modal-content { background: white; margin: 5vh auto; width: 95%; max-width: 1100px; border-radius: 12px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
         .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff; }
         .modal-body { padding: 20px; overflow-y: auto; flex: 1; background: #f9f9f9; -webkit-overflow-scrolling: touch; }
-        
         .record-modal-grid { display: flex; gap: 20px; flex-direction: column-reverse; }
-        @media (min-width: 769px) {
-            .record-modal-grid { flex-direction: row; align-items: flex-start; }
-            .record-form-col { flex: 1.5; }
-            .record-preview-col { flex: 1; min-width: 280px; position: sticky; top: 0; }
-        }
-        
+        @media (min-width: 769px) { .record-modal-grid { flex-direction: row; align-items: flex-start; } .record-form-col { flex: 1.5; } .record-preview-col { flex: 1; min-width: 280px; position: sticky; top: 0; } }
         .preview-card { background: white; padding: 20px; border-radius: 10px; border-top: 4px solid var(--accent); box-shadow: 0 4px 15px rgba(0,0,0,0.08); min-height: 150px; }
         .preview-amount { font-size: 2.2rem; font-weight: 800; color: var(--success); text-align: right; border-bottom: 1px solid #eee; margin-bottom: 15px; line-height: 1.2; }
         .preview-row { display: flex; justify-content: space-between; margin-bottom: 8px; color: #555; font-size: 0.9rem; }
         .modal-actions-bar { position: sticky; bottom: 0; background: white; padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; z-index: 50; }
         .modal-actions-bar button { flex: 1; padding: 12px; }
 
-        /* 🔥 Org Chart - Notion Style */
-        .org-container { overflow: auto; padding: 40px; height: 650px; background: white; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,0,0,0.02); text-align: center; cursor: grab; -webkit-overflow-scrolling: touch; }
+        /* 🔥 Org Chart Core (Stability Fix) */
+        .org-container { 
+            overflow: auto; /* 允許滾動 */
+            width: 100%; height: 650px; 
+            background: white; border-radius: 8px; 
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.02); 
+            position: relative; cursor: grab; 
+            touch-action: none; /* 防止瀏覽器搶奪拖曳 */
+            user-select: none;
+        }
+        .org-container:active { cursor: grabbing; }
         
-        .tree ul { padding-top: 20px; position: relative; transition: .3s; display: inline-flex; justify-content: center; }
-        .tree li { float: left; text-align: center; list-style-type: none; position: relative; padding: 20px 5px 0 5px; transition: .3s; }
+        .tree { 
+            transform-origin: 0 0; will-change: transform;
+            display: inline-block; min-width: 100%;
+            padding: 50px; box-sizing: border-box;
+        }
+
+        /* 改用 Table Layout 確保線條不從 Flex 斷裂 */
+        .tree ul { 
+            padding-top: 20px; position: relative; transition: .3s; 
+            display: table; margin: 0 auto; white-space: nowrap;
+        }
+        .tree li { 
+            float: none; display: table-cell; vertical-align: top;
+            text-align: center; list-style-type: none; 
+            position: relative; padding: 20px 5px 0 5px; 
+        }
         
-        /* Connectors */
-        .tree li::before, .tree li::after { content: ''; position: absolute; top: 0; right: 50%; border-top: 1px solid #ccc; width: 50%; height: 20px; }
+        /* 連接線 (Connectors) */
+        .tree li::before, .tree li::after { 
+            content: ''; position: absolute; top: 0; right: 50%; 
+            border-top: 1px solid #ccc; width: 50%; height: 20px; 
+        }
         .tree li::after { right: auto; left: 50%; border-left: 1px solid #ccc; }
         .tree li:only-child::after, .tree li:only-child::before { display: none; }
         .tree li:only-child { padding-top: 0; }
         .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
         .tree li:last-child::before { border-right: 1px solid #ccc; border-radius: 0 5px 0 0; }
         .tree li:first-child::after { border-radius: 5px 0 0 0; }
-        .tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; border-left: 1px solid #ccc; width: 0; height: 20px; }
+        .tree ul ul::before { 
+            content: ''; position: absolute; top: 0; left: 50%; 
+            border-left: 1px solid #ccc; width: 0; height: 20px; 
+        }
         
-        /* Hide Connectors when collapsed */
+        /* 收合時隱藏子節點 (不移除 DOM，提升效能) */
         .tree li.collapsed > ul { display: none; }
+        .tree li.collapsed > .node .caret { transform: rotate(-90deg); }
 
-        /* Notion Node Style */
+        /* Node Style */
         .node { 
             border: 2px solid #ccc; text-decoration: none; color: #333; 
-            font-size: 13px; display: inline-flex; align-items: stretch; /* Flex Layout */
+            font-size: 13px; display: inline-flex; align-items: stretch; 
             border-radius: 8px; transition: .2s; 
             min-width: 160px; position: relative; background: white; z-index: 2;
             overflow: hidden; text-align: left;
         }
         .node:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); z-index: 10; }
         
-        /* Left: Toggle Control */
+        /* 視覺區分 Active / Inactive */
+        .node.node-active { border-color: #27ae60; background-color: #f0fdf4; }
+        .node.node-inactive { border-color: #bdc3c7; background-color: #f9f9f9; filter: grayscale(1); opacity: 0.85; }
+
         .node-toggle {
-            width: 40px; background: #f8f9fa; border-right: 1px solid #eee;
+            width: 40px; background: rgba(0,0,0,0.03); border-right: 1px solid rgba(0,0,0,0.1);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            cursor: pointer; user-select: none; transition: background .2s; flex-shrink: 0;
+            cursor: pointer; transition: background .2s; flex-shrink: 0;
         }
-        .node-toggle:hover { background: #e0e0e0; }
-        .node-toggle:active { background: #d0d0d0; }
+        .node-toggle:hover { background: rgba(0,0,0,0.08); }
         .caret { font-size: 14px; color: #777; transition: transform 0.2s; }
         .count { font-size: 10px; color: #999; margin-top: 2px; font-weight: bold; }
         
-        /* Right: Content */
         .node-content { padding: 10px; flex: 1; cursor: pointer; }
-        .node-content .name { font-weight: 800; display: block; margin-bottom: 4px; font-size: 14px; }
-        .node-content .type { font-size: 10px; color: #555; background: #f0f0f0; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 6px; }
-        .node-content .stats { font-size: 11px; color: #555; border-top: 1px dashed #eee; padding-top: 4px; margin-top: 4px; }
-        .node-content .detail { font-size: 11px; color: #555; border-top: 1px dashed #eee; padding-top: 5px; margin-top: 5px; }
+        .node-content .name { font-weight: 800; display: block; margin-bottom: 3px; font-size: 14px; }
+        .node-content .type { font-size: 10px; color: #555; background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 6px; }
+        .node-content .detail { font-size: 11px; color: #555; border-top: 1px dashed #ddd; padding-top: 5px; margin-top: 5px; }
 
-        /* Node Status Badges inside card */
-        .node-status { position: absolute; top: 0; right: 0; font-size: 10px; padding: 2px 6px; border-bottom-left-radius: 6px; font-weight: bold; color: white; }
+        .node-status { position: absolute; top: 0; right: 0; font-size: 10px; padding: 2px 6px; border-bottom-left-radius: 6px; font-weight: bold; }
 
         #loading { position: fixed; inset: 0; background: #f4f7f6; display: flex; justify-content: center; align-items: center; z-index: 3000; flex-direction: column; }
         .spinner { width: 40px; height: 40px; border: 4px solid rgba(0,0,0,0.1); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
@@ -352,7 +253,7 @@
             </div>
         </div>
     </div>
-    <div class="footer">v6.1 非同步儲存版</div>
+    <div class="footer">v7.2 最終效能優化版</div>
 </aside>
 
 <main id="app"></main>
@@ -539,7 +440,7 @@ const store = {
             }
         }, err => { console.error(err); document.getElementById('loading').style.display = 'none'; alert('⚠️ 讀取失敗：' + err.message); router('dashboard'); });
     },
-    // FIX 3: Return Promise for Async Rollback
+    // FIX: Return Promise for Async Rollback
     save() { if(isReady) return db.ref('AmwaySystem/v1').set(this.data); return Promise.resolve(); },
     getPartner(id) { return (this.data.partners||[]).find(p=>p.id===id); },
     getInitiator(id) { return (this.data.initiators||[]).find(i=>i.id===id); },
@@ -731,7 +632,7 @@ function renderPartners() {
     `;
 }
 
-// FIX 3: Async Rollback
+// FIX: Async Rollback
 function togglePartnerStatus(id, el) {
     const p = store.getPartner(id);
     if (!p) return;
@@ -1243,14 +1144,142 @@ function delInit(id) {
     store.save().then(() => renderInitiators()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
 
-// 7. ORG CHART - Notion Style (Fix 1 & 2)
+// 7. ORG CHART - Fix D: PURE TREE + BADGES + PAN/ZOOM
 let orgCollapseState = JSON.parse(localStorage.getItem('org_collapseState') || '{}');
+let orgZoom = parseFloat(localStorage.getItem('org_zoom')) || 1;
+
+function enableOrgPanZoom() {
+    const container = document.querySelector('.org-container');
+    const tree = document.querySelector('.tree');
+    if (!container || !tree) return;
+
+    // ✅ 1. 解除舊監聽：防止重複綁定導致靈敏度倍增
+    if (container._pzAbort) {
+        try { container._pzAbort.abort(); } catch(e) {}
+    }
+    
+    // 建立新的控制器並掛載到 DOM 物件上
+    const ac = new AbortController();
+    const opt = { signal: ac.signal }; // 一般事件用的 option
+    container._pzAbort = ac;
+
+    // ✅ 2. 套用目前縮放 (記憶值)
+    tree.style.transform = `scale(${orgZoom})`;
+
+    // --- Zoom (滾輪縮放) ---
+    container.addEventListener('wheel', (e) => {
+        // 阻止瀏覽器預設捲動
+        e.preventDefault();
+
+        const oldZoom = orgZoom;
+        // 滾輪向下(正)縮小，向上(負)放大
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        
+        // 限制縮放範圍 0.5 ~ 2.0
+        let newZoom = Math.min(Math.max(oldZoom * delta, 0.5), 2.0);
+
+        if (newZoom === oldZoom) return;
+
+        // 計算滑鼠在 container 內的相對位置
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // 反推滑鼠指向的「內容實際座標」 (考慮捲動與舊縮放)
+        const contentX = (container.scrollLeft + mouseX) / oldZoom;
+        const contentY = (container.scrollTop + mouseY) / oldZoom;
+
+        // 更新縮放
+        orgZoom = newZoom;
+        tree.style.transform = `scale(${orgZoom})`;
+        localStorage.setItem('org_zoom', orgZoom);
+
+        // 修正捲動位置：讓縮放後的同一個內容點，依然位於滑鼠下方
+        // 新捲動位置 = (內容座標 * 新縮放率) - 滑鼠偏移量
+        container.scrollLeft = contentX * orgZoom - mouseX;
+        container.scrollTop  = contentY * orgZoom - mouseY;
+
+    }, { passive: false, signal: ac.signal });
+
+    // --- Pan (滑鼠拖曳與觸控平移) ---
+    let isDown = false;
+    let startX = 0, startY = 0;
+    let baseLeft = 0, baseTop = 0;
+
+    const startDrag = (x, y) => {
+        isDown = true;
+        container.style.cursor = 'grabbing';
+        startX = x;
+        startY = y;
+        baseLeft = container.scrollLeft;
+        baseTop = container.scrollTop;
+    };
+
+    const moveDrag = (x, y) => {
+        if (!isDown) return;
+        // 1.5 倍速拖曳手感較佳
+        const dx = (x - startX) * 1.5;
+        const dy = (y - startY) * 1.5;
+        container.scrollLeft = baseLeft - dx;
+        container.scrollTop  = baseTop - dy;
+    };
+
+    const stopDrag = () => {
+        isDown = false;
+        container.style.cursor = 'grab';
+    };
+
+    // -- Mouse Events --
+    container.addEventListener('mousedown', (e) => startDrag(e.pageX, e.pageY), opt);
+    
+    container.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault(); // 防止選取文字
+        moveDrag(e.pageX, e.pageY);
+    }, { passive: false, signal: ac.signal });
+
+    container.addEventListener('mouseup', stopDrag, opt);
+    container.addEventListener('mouseleave', stopDrag, opt);
+
+    // -- Touch Events (iOS/Mobile) --
+    container.addEventListener('touchstart', (e) => {
+        if (!e.touches || !e.touches[0]) return;
+        startDrag(e.touches[0].pageX, e.touches[0].pageY);
+    }, { passive: true, signal: ac.signal });
+
+    container.addEventListener('touchmove', (e) => {
+        if (!isDown) return;
+        if (!e.touches || !e.touches[0]) return;
+        
+        // ✅ 關鍵：設為 passive: false 並呼叫 preventDefault
+        // 這能阻止手機瀏覽器的「下拉刷新」或「頁面整體捲動」
+        if(e.cancelable) e.preventDefault(); 
+        
+        moveDrag(e.touches[0].pageX, e.touches[0].pageY);
+    }, { passive: false, signal: ac.signal });
+
+    container.addEventListener('touchend', stopDrag, opt);
+    container.addEventListener('touchcancel', stopDrag, opt);
+}
 
 function toggleNode(e, nodeId) {
-    e.stopPropagation(); 
+    e.stopPropagation();
     orgCollapseState[nodeId] = !orgCollapseState[nodeId];
     localStorage.setItem('org_collapseState', JSON.stringify(orgCollapseState));
-    renderOrgChart(); 
+    
+    // Direct DOM manipulation
+    const li = document.getElementById(`li-${nodeId}`);
+    if(li) {
+        if(orgCollapseState[nodeId]) {
+            li.classList.add('collapsed');
+            const caret = li.querySelector('.caret'); if(caret) caret.innerText = '▶';
+            const count = li.querySelector('.count'); if(count) count.style.display = 'block';
+        } else {
+            li.classList.remove('collapsed');
+            const caret = li.querySelector('.caret'); if(caret) caret.innerText = '▼';
+            const count = li.querySelector('.count'); if(count) count.style.display = 'none';
+        }
+    }
 }
 
 function renderOrgChart() {
@@ -1259,82 +1288,57 @@ function renderOrgChart() {
         const partners = store.data.partners;
         const recs = store.getRecordsByMonth(m).map(calculate);
         const pMap = {};
-        
         partners.forEach(p => { pMap[p.id] = { ...p, children:[], record: recs.find(r=>r && r.partnerId===p.id) }; });
-        
-        // Pure Tree
         const roots = [];
-        partners.forEach(p => {
-            if(p.sponsorId && pMap[p.sponsorId] && p.sponsorId !== p.id) {
-                pMap[p.sponsorId].children.push(pMap[p.id]);
-            } else {
-                roots.push(pMap[p.id]);
-            }
-        });
+        partners.forEach(p => { if(p.sponsorId && pMap[p.sponsorId] && p.sponsorId !== p.id) { pMap[p.sponsorId].children.push(pMap[p.id]); } else { roots.push(pMap[p.id]); } });
+
+        // Init collapse if first time
+        if(!localStorage.getItem('org_inited')) {
+            partners.forEach(p => { if(p.sponsorId) orgCollapseState[p.id] = true; });
+            localStorage.setItem('org_collapseState', JSON.stringify(orgCollapseState));
+            localStorage.setItem('org_inited', '1');
+        }
 
         function renderNode(node) {
             const r = node.record;
             const hasChildren = node.children && node.children.length > 0;
-            const isCollapsed = orgCollapseState[node.id];
+            const isCollapsed = !!orgCollapseState[node.id];
             
-            // Toggle
             let toggleHtml = hasChildren 
-                ? `<div class="node-toggle" onclick="toggleNode(event, '${node.id}')"><div class="caret">${isCollapsed ? '▶' : '▼'}</div>${isCollapsed ? `<div class="count">(+${node.children.length})</div>` : ''}</div>` 
-                : `<div class="node-toggle" style="cursor:default"></div>`;
+                ? `<div class="node-toggle" onclick="toggleNode(event, '${node.id}')"><div class="caret">${isCollapsed?'▶':'▼'}</div><div class="count" style="${isCollapsed?'':'display:none'}">(+${node.children.length})</div></div>` 
+                : `<div class="node-toggle" style="cursor:default;opacity:0"></div>`;
 
-            // Fix 1: Correct badge logic
             let badgeBg = '#eee', badgeColor = '#aaa', badgeText = '無紀錄';
+            let activeClass = 'node-inactive'; 
+            if (node.status === 'active') activeClass = 'node-active';
 
-            if (node.status === 'inactive') {
-                badgeBg = '#95a5a6'; badgeColor = 'white'; badgeText = '未參與';
-            } else if (r) {
+            if (node.status === 'inactive') { badgeBg = '#95a5a6'; badgeColor = 'white'; badgeText = '未參與'; }
+            else if (r) {
                 badgeColor = 'white';
                 if (r.isGraduated) { badgeBg = '#16a085'; badgeText = '🎓 畢業'; }
                 else if (r.payoutStatus === 'paid') { badgeBg = '#27ae60'; badgeText = '✅ 已發放'; }
                 else if (r.totalIncome > 0) { badgeBg = '#e74c3c'; badgeText = '🔴 未發放'; }
                 else { badgeBg = '#bdc3c7'; badgeText = '無獎金'; }
             }
-            
             const badgeHtml = `<div class="node-status" style="background:${badgeBg};color:${badgeColor}">${badgeText}</div>`;
-            // Fix 2: Remove extra $
             const pvDisplay = r ? `<div style="font-weight:bold;color:${r.totalIncome>0?'#27ae60':'#999'}">PV: ${r.gpv} / ${money(r.totalIncome)}</div>` : '<div style="color:#ccc">—</div>';
 
-            const childrenHtml = (hasChildren && !isCollapsed) 
-                ? `<ul>${node.children.map(renderNode).join('')}</ul>` 
-                : '';
-
-            return `<li>
-                <div class="node">
-                    ${toggleHtml}
-                    <div class="node-content" onclick="showNode('${node.id}','${m}')">
-                        ${badgeHtml}
-                        <div class="name">${node.code} ${node.name}</div>
-                        <div class="type">${node.memberType === 'member' ? '生活會員' : '直銷商'}</div>
-                        <div class="detail">${pvDisplay}</div>
-                    </div>
-                </div>
-                ${childrenHtml}
-            </li>`;
+            return `<li id="li-${node.id}" class="${isCollapsed && hasChildren ? 'collapsed' : ''}"><div class="node ${activeClass}">${toggleHtml}<div class="node-content" onclick="showNode('${node.id}','${m}')">${badgeHtml}<div class="name">${node.code} ${node.name}</div><div class="type">${node.memberType === 'member' ? '生活會員' : '直銷商'}</div><div class="detail">${pvDisplay}</div></div></div><ul>${node.children.map(renderNode).join('')}</ul></li>`;
         }
 
         document.getElementById('app').innerHTML = `
             <header>${header('組織關聯圖')}</header>
-            <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-                <input type="month" value="${m}" class="form-control" style="width:auto" onchange="localStorage.setItem('org_m',this.value);renderOrgChart()">
-                <div style="font-size:0.8rem;color:#777;margin-left:auto">
-                    點擊 ▶ 展開 / ▼ 收合
-                </div>
-            </div>
+            <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input type="month" value="${m}" class="form-control" style="width:auto" onchange="localStorage.setItem('org_m',this.value);renderOrgChart()"><div style="font-size:0.8rem;color:#777;margin-left:auto">滾輪縮放 / 拖曳平移 / 點擊 ▶ 展開</div></div>
             <div class="org-container"><div class="tree"><ul>${roots.map(renderNode).join('')}</ul></div></div>
         `;
-    } catch(e) { alert('組織圖渲染錯誤: ' + e.message); }
+        enableOrgPanZoom();
+    } catch(e) { console.error(e); alert('組織圖渲染錯誤: ' + e.message); }
 }
 
 function showNode(partnerId, m) {
     const r = (store.data.records || []).find(x => x.partnerId === partnerId && x.month === m);
-    if (r) {
-        editRecord(r.id);
-    } else if (confirm('無本月紀錄，要建立嗎？')) {
+    if (r) { editRecord(r.id); } 
+    else if (confirm('無本月紀錄，要建立嗎？')) {
         editRecord(null, m);
         tempRec.partnerId = partnerId;
         setTimeout(() => {
@@ -1381,9 +1385,10 @@ function saveVer(e, id) {
 function delVer(id) {
     if(!confirm('刪除？')) return;
     if(store.data.records.some(r=>r.planVersionId===id)) {
-        if(confirm('此版本已被使用，是否改為封存？')) { store.getVersion(id).archived=true; store.save(); renderVersions(); }
+        if(confirm('此版本已被使用，是否改為封存？')) { store.getVersion(id).archived=true; store.save().then(() => renderVersions()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); }); }
     } else {
-        store.data.versions = store.data.versions.filter(v=>v.id!==id); store.save().then(() => renderVersions()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
+        store.data.versions = store.data.versions.filter(v=>v.id!==id); 
+        store.save().then(() => renderVersions()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
     }
 }
 
@@ -1408,10 +1413,10 @@ function dlBackup() {
 function ulBackup(el) {
     const f=el.files[0]; if(!f)return;
     const r=new FileReader(); r.onload=e=>{
-        try{ const d=JSON.parse(e.target.result); if(d.partners && confirm('確定覆蓋現有資料？')){ store.data=d; store.save(); location.reload(); } } catch(err){alert('格式錯誤');}
+        try{ const d=JSON.parse(e.target.result); if(d.partners && confirm('確定覆蓋現有資料？')){ store.data=d; store.save().then(()=>location.reload()); } } catch(err){alert('格式錯誤');}
     }; r.readAsText(f);
 }
-function resetAll() { if(prompt('輸入 DELETE 確認清除')==='DELETE') { db.ref('AmwaySystem/v1').remove(); location.reload(); } }
+function resetAll() { if(prompt('輸入 DELETE 確認清除')==='DELETE') { db.ref('AmwaySystem/v1').remove().then(() => location.reload()); } }
 
 function closeModalSafe() { if(isDirty && !confirm('有未儲存變更，確定離開？')) return; closeModal(); }
 function closeModal() { document.getElementById('modal').style.display = 'none'; }
