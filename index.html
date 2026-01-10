@@ -1032,32 +1032,6 @@ function renderProducts() {
 
                 <input type="number" placeholder="數量" value="${p.qty||1}" class="form-control" style="width:90px;margin:0"
                     oninput="tempRec.products[${i}].qty=Number(this.value)||1;markDirty();renderProducts();renderPreview()">
-<input type="number" step="0.01" placeholder="PV" value="${(p.pv ?? '')}"
-  class="form-control" style="width:90px;margin:0"
-  oninput="
-    tempRec.products[${i}].pv = (this.value===''? null : Number(this.value));
-    if((tempRec.products[${i}].bv==null || tempRec.products[${i}].bv==='') && this.value!==''){
-      tempRec.products[${i}].bv = Math.round((Number(this.value)||0) * PV_RATE);
-    }
-    markDirty(); renderProducts(); renderPreview();
-  ">
-
-<input type="number" placeholder="BV" value="${(p.bv ?? '')}"
-  class="form-control" style="width:90px;margin:0"
-  oninput="
-    tempRec.products[${i}].bv = (this.value===''? null : Number(this.value));
-    if((tempRec.products[${i}].pv==null || tempRec.products[${i}].pv==='') && this.value!==''){
-      tempRec.products[${i}].pv = parseFloat(((Number(this.value)||0)/PV_RATE).toFixed(2));
-    }
-    markDirty(); renderProducts(); renderPreview();
-  ">
-
-<input type="number" placeholder="DP" value="${(p.dp ?? '')}"
-  class="form-control" style="width:90px;margin:0"
-  oninput="
-    tempRec.products[${i}].dp = (this.value===''? null : Number(this.value));
-    markDirty(); renderProducts(); renderPreview();
-  ">
 
                 <button type="button" class="btn btn-danger" style="padding:6px 10px" 
                     onclick="tempRec.products.splice(${i},1);renderProducts();markDirty();renderPreview()">×</button>
