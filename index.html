@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v7.5 雙軌運算版)</title>
+    <title>新星啟動計畫系統 (v7.6 產品資料庫預覽版)</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🚀%3C/text%3E%3C/svg%3E">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -253,7 +253,7 @@
             </div>
         </div>
     </div>
-    <div class="footer">v7.5 雙軌運算版</div>
+    <div class="footer">v7.6 產品資料庫預覽版/div>
 </aside>
 
 <main id="app"></main>
@@ -438,7 +438,9 @@ const store = {
             const val = snap.val();
             if(val) {
                 this.data = val;
-                ['partners','initiators','records','versions'].forEach(k => { if(!this.data[k]) this.data[k] = []; });
+                ['partners','initiators','records','versions','productCatalog'].forEach(k => { 
+    if(!this.data[k]) this.data[k] = (k==='productCatalog'? {} : []); 
+});
                 
                 // Normalization
                 (this.data.partners || []).forEach(p => { 
@@ -482,6 +484,22 @@ const store = {
     getVersion(id) { return (this.data.versions||[]).find(v=>v.id===id) || this.data.versions[0]; }
 };
 store.init();
+// ✅【測試用】如果產品資料庫是空的，就先塞 2 筆，讓下拉選單一定看得到
+setTimeout(() => {
+  try{
+    if(!store.data.productCatalog) store.data.productCatalog = {};
+    const catalog = store.data.productCatalog;
+
+    if(Object.keys(catalog).length === 0){
+      const a = { id:"A001", name:"（測試）紐崔萊 維他命C", pv:10, bv:500, dp:350 };
+      const b = { id:"A002", name:"（測試）L.O.C. 多用途清潔劑", pv:5,  bv:250, dp:180 };
+      catalog[a.id] = a;
+      catalog[b.id] = b;
+
+      store.save().then(()=>console.log("✅ 已加入測試產品 2 筆"));
+    }
+  }catch(e){ console.error(e); }
+}, 2000);
 
 function calculate(r) {
     const p = store.getPartner(r.partnerId);
@@ -985,16 +1003,66 @@ function editRecord(id, month) {
     } catch(e) { alert('紀錄頁錯誤: ' + e.message); }
 }
 function renderProducts() {
-    document.getElementById('productsArea').innerHTML = (tempRec.products||[]).map((p,i)=>`
-        <div style="display:flex;gap:5px;margin-bottom:5px;flex-wrap:wrap">
-            <input placeholder="品項" value="${p.name}" class="form-control" style="flex:2" oninput="tempRec.products[${i}].name=this.value;markDirty()">
-            <input type="number" placeholder="數量" value="${p.qty}" class="form-control" style="flex:1" oninput="tempRec.products[${i}].qty=Number(this.value);markDirty()">
-            <input placeholder="備註" value="${p.note}" class="form-control" style="flex:1.5" oninput="tempRec.products[${i}].note=this.value;markDirty()">
-            <button type="button" class="btn btn-danger" onclick="tempRec.products.splice(${i},1);renderProducts();markDirty()">×</button>
-        </div>
-    `).join('');
+    const area = document.getElementById('productsArea');
+    if(!area) return;
+
+    const catalog = store.data.productCatalog || {};
+    const catalogList = Object.values(catalog);
+if(!(tempRec.products||[]).length){
+  area.innerHTML = `<div style="color:#999;font-size:0.9rem">尚未新增產品，請按「+ 產品」</div>`;
+  return;
 }
-function addProd() { tempRec.products.push({name:'', qty:1, note:''}); renderProducts(); markDirty(); }
+    area.innerHTML = (tempRec.products||[]).map((p,i)=>{
+
+        const selected = p.productId ? catalog[p.productId] : null;
+
+        return `
+        <div style="border:1px solid #eee;padding:10px;border-radius:8px;margin-bottom:10px;background:#fafafa">
+            
+            <!-- ✅ 產品資料庫下拉選單 -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+
+                <select class="form-control" style="flex:2;min-width:220px;margin:0"
+                    onchange="pickCatalogProduct(${i}, this.value)">
+                    <option value="">-- 選產品(資料庫) --</option>
+                    ${catalogList.map(x=>`
+                        <option value="${x.id}" ${p.productId===x.id?'selected':''}>
+                            ${x.id}｜${x.name}｜PV:${x.pv} BV:${x.bv}
+                        </option>
+                    `).join('')}
+                </select>
+
+                <!-- 你原本的「品項」欄：仍保留（手動也可打） -->
+                <input placeholder="品項(可手打)" value="${p.name||''}" class="form-control" style="flex:2;min-width:180px;margin:0"
+                    oninput="tempRec.products[${i}].name=this.value;markDirty()">
+
+                <input type="number" placeholder="數量" value="${p.qty||1}" class="form-control" style="width:90px;margin:0"
+                    oninput="tempRec.products[${i}].qty=Number(this.value)||1;markDirty();renderProducts();renderPreview()">
+
+                <button type="button" class="btn btn-danger" style="padding:6px 10px" 
+                    onclick="tempRec.products.splice(${i},1);renderProducts();markDirty();renderPreview()">×</button>
+            </div>
+
+            <!-- ✅ 自動預覽 PV/BV/DP -->
+            <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:0.85rem;color:#555">
+                <div>PV：<b>${p.pv ?? '-'}</b></div>
+                <div>BV：<b>${p.bv ?? '-'}</b></div>
+                <div>DP：<b>${p.dp ?? '-'}</b></div>
+                <div style="margin-left:auto;color:#888">
+                    小計PV：<b>${(p.pv!=null)?((Number(p.pv)||0)*(p.qty||1)).toFixed(2):'-'}</b>｜
+                    小計BV：<b>${(p.bv!=null)?Math.round((Number(p.bv)||0)*(p.qty||1)):'-'}</b>
+                </div>
+            </div>
+
+            <div style="margin-top:6px">
+                <input placeholder="備註" value="${p.note||''}" class="form-control" style="margin:0"
+                    oninput="tempRec.products[${i}].note=this.value;markDirty()">
+            </div>
+
+        </div>
+        `;
+    }).join('');
+}
 function renderLegs() {
     document.getElementById('legsArea').innerHTML = tempRec.legs.map((l,i)=>`
         <div style="display:flex;gap:5px;margin-bottom:5px">
@@ -1021,6 +1089,14 @@ function renderRecs() {
     `).join('');
 }
 function addRec() { tempRec.newRecruits.push({code:'',name:'',memberType:'directSeller',bv:0}); renderRecs(); renderPreview(); markDirty(); }
+function addProd(){
+  if(!tempRec) return;
+  if(!Array.isArray(tempRec.products)) tempRec.products = [];
+  tempRec.products.push({ productId:'', name:'', qty:1, pv:null, bv:null, dp:null, note:'' });
+  renderProducts();
+  markDirty();
+  renderPreview();
+}
 function renderPreview() {
     try {
         const res = calculate(tempRec);
@@ -1520,7 +1596,22 @@ function ulBackup(el) {
     }; r.readAsText(f);
 }
 function resetAll() { if(prompt('輸入 DELETE 確認清除')==='DELETE') { db.ref('AmwaySystem/v1').remove().then(() => location.reload()); } }
+function pickCatalogProduct(i, pid){
+    const catalog = store.data.productCatalog || {};
+    const prod = catalog[pid];
+    if(!prod) return;
 
+    // ✅ 寫回 tempRec.products[i]
+    tempRec.products[i].productId = prod.id;
+    tempRec.products[i].name = prod.name;
+    tempRec.products[i].pv = prod.pv;
+    tempRec.products[i].bv = prod.bv;
+    tempRec.products[i].dp = prod.dp;
+
+    markDirty();
+    renderProducts();
+    renderPreview();
+}
 function closeModalSafe() { if(isDirty && !confirm('有未儲存變更，確定離開？')) return; closeModal(); }
 function closeModal() { document.getElementById('modal').style.display = 'none'; }
 </script>
