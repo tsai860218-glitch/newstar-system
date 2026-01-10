@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v7.6 產品資料庫預覽版)</title>
+    <title>新星啟動計畫系統 (v7.7 產品資料庫預覽版)</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🚀%3C/text%3E%3C/svg%3E">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -253,7 +253,7 @@
             </div>
         </div>
     </div>
-    <div class="footer">v7.6 產品資料庫預覽版/div>
+    <div class="footer">v7.7 產品資料庫預覽版</div>
 </aside>
 
 <main id="app"></main>
@@ -1008,13 +1008,21 @@ function renderProducts() {
 
     const catalog = store.data.productCatalog || {};
     const catalogList = Object.values(catalog);
-if(!(tempRec.products||[]).length){
-  area.innerHTML = `<div style="color:#999;font-size:0.9rem">尚未新增產品，請按「+ 產品」</div>`;
-  return;
-}
-    area.innerHTML = (tempRec.products||[]).map((p,i)=>{
 
-        const selected = p.productId ? catalog[p.productId] : null;
+    // ✅ 先算總小計（PV/BV/DP）
+    const totals = (tempRec.products || []).reduce((acc, p) => {
+        const qty = Number(p.qty) || 1;
+        const pv = (p.pv == null) ? 0 : (Number(p.pv) || 0);
+        const bv = (p.bv == null) ? 0 : (Number(p.bv) || 0);
+        const dp = (p.dp == null) ? 0 : (Number(p.dp) || 0);
+
+        acc.pv += pv * qty;
+        acc.bv += bv * qty;
+        acc.dp += dp * qty;
+        return acc;
+    }, { pv: 0, bv: 0, dp: 0 });
+
+    const listHtml = (tempRec.products||[]).map((p,i)=>{
 
         return `
         <div style="border:1px solid #eee;padding:10px;border-radius:8px;margin-bottom:10px;background:#fafafa">
@@ -1027,33 +1035,63 @@ if(!(tempRec.products||[]).length){
                     <option value="">-- 選產品(資料庫) --</option>
                     ${catalogList.map(x=>`
                         <option value="${x.id}" ${p.productId===x.id?'selected':''}>
-                            ${x.id}｜${x.name}｜PV:${x.pv} BV:${x.bv}
+                            ${x.id}｜${x.name}｜PV:${x.pv} BV:${x.bv} DP:${x.dp ?? ''}
                         </option>
                     `).join('')}
                 </select>
 
-                <!-- 你原本的「品項」欄：仍保留（手動也可打） -->
-                <input placeholder="品項(可手打)" value="${p.name||''}" class="form-control" style="flex:2;min-width:180px;margin:0"
-                    oninput="tempRec.products[${i}].name=this.value;markDirty()">
+                <!-- 手動品項欄（保留） -->
+                <input placeholder="${p.productId ? '已選資料庫產品（如需改名請先清空選單）' : '品項(可手打)'}"
+  value="${p.name||''}" class="form-control" style="flex:2;min-width:180px;margin:0"
+  ${p.productId ? 'disabled' : ''}
+  oninput="tempRec.products[${i}].name=this.value;markDirty()">
 
                 <input type="number" placeholder="數量" value="${p.qty||1}" class="form-control" style="width:90px;margin:0"
                     oninput="tempRec.products[${i}].qty=Number(this.value)||1;markDirty();renderProducts();renderPreview()">
+<input type="number" step="0.01" placeholder="PV" value="${(p.pv ?? '')}"
+  class="form-control" style="width:90px;margin:0"
+  oninput="
+    tempRec.products[${i}].pv = (this.value===''? null : Number(this.value));
+    if((tempRec.products[${i}].bv==null || tempRec.products[${i}].bv==='') && this.value!==''){
+      tempRec.products[${i}].bv = Math.round((Number(this.value)||0) * PV_RATE);
+    }
+    markDirty(); renderProducts(); renderPreview();
+  ">
+
+<input type="number" placeholder="BV" value="${(p.bv ?? '')}"
+  class="form-control" style="width:90px;margin:0"
+  oninput="
+    tempRec.products[${i}].bv = (this.value===''? null : Number(this.value));
+    if((tempRec.products[${i}].pv==null || tempRec.products[${i}].pv==='') && this.value!==''){
+      tempRec.products[${i}].pv = parseFloat(((Number(this.value)||0)/PV_RATE).toFixed(2));
+    }
+    markDirty(); renderProducts(); renderPreview();
+  ">
+
+<input type="number" placeholder="DP" value="${(p.dp ?? '')}"
+  class="form-control" style="width:90px;margin:0"
+  oninput="
+    tempRec.products[${i}].dp = (this.value===''? null : Number(this.value));
+    markDirty(); renderProducts(); renderPreview();
+  ">
 
                 <button type="button" class="btn btn-danger" style="padding:6px 10px" 
                     onclick="tempRec.products.splice(${i},1);renderProducts();markDirty();renderPreview()">×</button>
             </div>
 
-            <!-- ✅ 自動預覽 PV/BV/DP -->
+                        <!-- ✅ 單筆預覽 PV/BV/DP -->
             <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:0.85rem;color:#555">
-                <div>PV：<b>${p.pv ?? '-'}</b></div>
-                <div>BV：<b>${p.bv ?? '-'}</b></div>
-                <div>DP：<b>${p.dp ?? '-'}</b></div>
+                <div>單價PV：<b>${p.pv ?? '-'}</b></div>
+                <div>單價BV：<b>${p.bv ?? '-'}</b></div>
+                <div>單價DP：<b>${p.dp ?? '-'}</b></div>
                 <div style="margin-left:auto;color:#888">
                     小計PV：<b>${(p.pv!=null)?((Number(p.pv)||0)*(p.qty||1)).toFixed(2):'-'}</b>｜
-                    小計BV：<b>${(p.bv!=null)?Math.round((Number(p.bv)||0)*(p.qty||1)):'-'}</b>
+                    小計BV：<b>${(p.bv!=null)?((Number(p.bv)||0)*(p.qty||1)).toFixed(0):'-'}</b>｜
+                    小計DP：<b>${(p.dp!=null)?((Number(p.dp)||0)*(p.qty||1)).toFixed(0):'-'}</b>
                 </div>
             </div>
 
+            <!-- ✅ 備註 -->
             <div style="margin-top:6px">
                 <input placeholder="備註" value="${p.note||''}" class="form-control" style="margin:0"
                     oninput="tempRec.products[${i}].note=this.value;markDirty()">
@@ -1062,6 +1100,18 @@ if(!(tempRec.products||[]).length){
         </div>
         `;
     }).join('');
+
+    // ✅ 最下方總小計（你要的「牙膏PV20 + 沐浴乳PV10 = PV30」就在這）
+    const totalHtml = `
+        <div style="margin-top:10px;padding:12px;border:1px dashed #ccc;border-radius:10px;background:#fff;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+            <b style="color:#2c3e50">📌 本次產品小計</b>
+            <div>PV：<b>${totals.pv.toFixed(2)}</b></div>
+            <div>BV：<b>${totals.bv.toFixed(0)}</b></div>
+            <div>DP：<b>${totals.dp.toFixed(0)}</b></div>
+        </div>
+    `;
+
+    area.innerHTML = listHtml + ( (tempRec.products||[]).length ? totalHtml : '' );
 }
 function renderLegs() {
     document.getElementById('legsArea').innerHTML = tempRec.legs.map((l,i)=>`
@@ -1601,12 +1651,31 @@ function pickCatalogProduct(i, pid){
     const prod = catalog[pid];
     if(!prod) return;
 
+    // ✅【防重複】如果其他列已經選過同一個 productId，就把數量+1，並刪掉目前這列
+    const existIndex = (tempRec.products || []).findIndex((x, idx) => idx !== i && x.productId === prod.id);
+    if (existIndex !== -1) {
+        const oldQty = Number(tempRec.products[existIndex].qty) || 1;
+        tempRec.products[existIndex].qty = oldQty + 1;
+
+        // 刪掉目前這列（避免重複）
+        tempRec.products.splice(i, 1);
+
+        markDirty();
+        renderProducts();
+        renderPreview();
+        return;
+    }
+
     // ✅ 寫回 tempRec.products[i]
+    if(!tempRec.products[i]) tempRec.products[i] = { qty: 1 };
     tempRec.products[i].productId = prod.id;
     tempRec.products[i].name = prod.name;
     tempRec.products[i].pv = prod.pv;
     tempRec.products[i].bv = prod.bv;
     tempRec.products[i].dp = prod.dp;
+
+    // 沒填數量就補 1
+    if(!tempRec.products[i].qty) tempRec.products[i].qty = 1;
 
     markDirty();
     renderProducts();
