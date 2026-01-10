@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v7.4 最終效能優化版)</title>
+    <title>新星啟動計畫系統 (v7.5 雙軌運算版)</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🚀%3C/text%3E%3C/svg%3E">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -119,7 +119,6 @@
         .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fff; }
         .modal-body { padding: 20px; overflow-y: auto; flex: 1; background: #f9f9f9; -webkit-overflow-scrolling: touch; }
         
-        /* 🔥 CSS 修正：手機版改為 column，桌機版 row */
         .record-modal-grid { display: flex; gap: 20px; flex-direction: column; }
         @media (min-width: 769px) { 
             .record-modal-grid { flex-direction: row; align-items: flex-start; } 
@@ -133,14 +132,13 @@
         .modal-actions-bar { position: sticky; bottom: 0; background: white; padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; z-index: 50; }
         .modal-actions-bar button { flex: 1; padding: 12px; }
 
-        /* 🔥 Org Chart Core (Stability Fix) */
         .org-container { 
-            overflow: auto; /* 允許滾動 */
+            overflow: auto;
             width: 100%; height: 650px; 
             background: white; border-radius: 8px; 
             box-shadow: inset 0 0 20px rgba(0,0,0,0.02); 
             position: relative; cursor: grab; 
-            touch-action: none; /* 防止瀏覽器搶奪拖曳 */
+            touch-action: none;
             user-select: none;
         }
         .org-container:active { cursor: grabbing; }
@@ -151,7 +149,6 @@
             padding: 50px; box-sizing: border-box;
         }
 
-        /* 改用 Table Layout 確保線條不從 Flex 斷裂 */
         .tree ul { 
             padding-top: 20px; position: relative; transition: .3s; 
             display: table; margin: 0 auto; white-space: nowrap;
@@ -162,7 +159,6 @@
             position: relative; padding: 20px 5px 0 5px; 
         }
         
-        /* 連接線 (Connectors) */
         .tree li::before, .tree li::after { 
             content: ''; position: absolute; top: 0; right: 50%; 
             border-top: 1px solid #ccc; width: 50%; height: 20px; 
@@ -178,11 +174,9 @@
             border-left: 1px solid #ccc; width: 0; height: 20px; 
         }
         
-        /* 收合時隱藏子節點 (不移除 DOM，提升效能) */
         .tree li.collapsed > ul { display: none; }
         .tree li.collapsed > .node .caret { transform: rotate(-90deg); }
 
-        /* Node Style */
         .node { 
             border: 2px solid #ccc; text-decoration: none; color: #333; 
             font-size: 13px; display: inline-flex; align-items: stretch; 
@@ -192,7 +186,6 @@
         }
         .node:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.15); z-index: 10; }
         
-        /* 視覺區分 Active / Inactive */
         .node.node-active { border-color: #27ae60; background-color: #f0fdf4; }
         .node.node-inactive { border-color: #bdc3c7; background-color: #f9f9f9; filter: grayscale(1); opacity: 0.85; }
 
@@ -260,7 +253,7 @@
             </div>
         </div>
     </div>
-    <div class="footer">v7.2 最終效能優化版</div>
+    <div class="footer">v7.5 雙軌運算版</div>
 </aside>
 
 <main id="app"></main>
@@ -362,6 +355,33 @@ function getToday(m) {
     return getLocalToday();
 }
 
+// --- NEW PV/BV UTILS ---
+const PV_RATE = 50; // 1 PV = 50 BV
+function getPvViewMode() { return localStorage.getItem('pv_view_mode') || 'both'; }
+function pvToBv(pv) { return Math.round((Number(pv)||0) * PV_RATE); }
+function bvToPv(bv) { return parseFloat(((Number(bv)||0) / PV_RATE).toFixed(2)); }
+
+function formatPvBv(pv, bv) {
+    const mode = getPvViewMode();
+    const p = Number(pv)||0;
+    const b = (bv !== undefined && bv !== null) ? Number(bv) : pvToBv(p);
+    
+    if (mode === 'pv') return `PV: ${p}`;
+    if (mode === 'bv') return `BV: ${b}`;
+    return `PV/BV: ${p} / ${b}`;
+}
+
+function getPvViewSelect(onchangeFnName) {
+    const m = getPvViewMode();
+    return `
+        <select class="form-control" style="width:auto;margin:0;font-size:0.85rem;padding:4px 8px" onchange="localStorage.setItem('pv_view_mode',this.value);${onchangeFnName}()">
+            <option value="both" ${m==='both'?'selected':''}>PV + BV</option>
+            <option value="pv" ${m==='pv'?'selected':''}>只看 PV</option>
+            <option value="bv" ${m==='bv'?'selected':''}>只看 BV</option>
+        </select>
+    `;
+}
+
 function header(t) { return `<h1><button class="menu-btn" onclick="openDrawer()">☰</button> ${t}</h1>`; }
 function openModal(title, content) {
     document.getElementById('modal-title').innerText = title;
@@ -432,6 +452,13 @@ const store = {
                     }
                     if(!r.products) r.products = [];
                     if(!r.createdAt) r.createdAt = ''; 
+                    
+                    // 【B】舊資料相容：補齊 PV/BV
+                    if (r.ppv !== undefined && r.pbv === undefined) r.pbv = pvToBv(r.ppv);
+                    else if (r.pbv !== undefined && r.ppv === undefined) r.ppv = bvToPv(r.pbv);
+                    
+                    if (r.gpv !== undefined && r.gbv === undefined) r.gbv = pvToBv(r.gpv);
+                    else if (r.gbv !== undefined && r.gpv === undefined) r.gpv = bvToPv(r.gbv);
                 });
             } else {
                 this.data.versions.push({id: uuid(), name:'預設版本', params:{...defaultParams}});
@@ -447,7 +474,6 @@ const store = {
             }
         }, err => { console.error(err); document.getElementById('loading').style.display = 'none'; alert('⚠️ 讀取失敗：' + err.message); router('dashboard'); });
     },
-    // FIX: Return Promise for Async Rollback
     save() { if(isReady) return db.ref('AmwaySystem/v1').set(this.data); return Promise.resolve(); },
     getPartner(id) { return (this.data.partners||[]).find(p=>p.id===id); },
     getInitiator(id) { return (this.data.initiators||[]).find(i=>i.id===id); },
@@ -464,11 +490,10 @@ function calculate(r) {
     const v = store.getVersion(r.planVersionId);
     const params = v ? v.params : defaultParams;
     
-    // Fix: Ensure number calculation
-    const gpv = Number(r.gpv) || 0;
+    // Ensure number calculation (Use GPV for rate)
+    const gpv = Number(r.gpv) || 0; 
     const rate = getPercent(gpv);
     
-    // Fix: 9% Graduation
     let res = { 
         ...r, 
         partnerName: p.code+' '+p.name, 
@@ -486,7 +511,6 @@ function calculate(r) {
         let applied = 0, txt = '';
         const hasRec = (r.newRecruits||[]).length > 0;
         
-        // Fix: Exact rate matching
         if(rate === 0 || rate === 0.03) { 
             applied = hasRec ? params.rate_0_3_rec : params.rate_0_3_base; 
             txt = '0-3%'; 
@@ -501,11 +525,13 @@ function calculate(r) {
             res.appliedRateText = txt + (hasRec?' (含推薦)':' (基礎)');
             const indepBV = (r.legs||[]).filter(l=>l.isIndependent).reduce((s,l)=>s+(Number(l.bv)||0),0);
             
-            // Fix: Use numeric gpv
-            res.baseBonus = Math.max(0, (gpv*50)-indepBV) * applied;
-            res.recruitBonus = (r.newRecruits||[]).reduce((s,n)=>s+(Number(n.bv)||0),0) * params.rate_recruit_bv;
-            res.learningBonus = r.learningDone ? (res.baseBonus + res.recruitBonus) * params.rate_learning : 0;
-            res.starTotal = res.baseBonus + res.recruitBonus + res.learningBonus;
+            // 【C】獎金計算四捨五入 Math.round
+            const calcBase = Math.max(0, (gpv * 50) - indepBV);
+            
+            res.baseBonus = Math.round(calcBase * applied);
+            res.recruitBonus = Math.round((r.newRecruits||[]).reduce((s,n)=>s+(Number(n.bv)||0),0) * params.rate_recruit_bv);
+            res.learningBonus = r.learningDone ? Math.round((res.baseBonus + res.recruitBonus) * params.rate_learning) : 0;
+            res.starTotal = Math.round(res.baseBonus + res.recruitBonus + res.learningBonus);
             res.totalIncome = res.starTotal;
         }
     }
@@ -639,7 +665,6 @@ function renderPartners() {
     `;
 }
 
-// FIX: Async Rollback
 function togglePartnerStatus(id, el) {
     const p = store.getPartner(id);
     if (!p) return;
@@ -762,7 +787,6 @@ function savePartner(e, id) {
     d.status = toggle.checked ? 'active' : 'inactive';
     if(store.data.partners.some(x=>x.code===d.code && x.id!==id)) return alert('編號重複');
     
-    // Promise Update
     if(id) { 
         const i = store.data.partners.findIndex(x=>x.id===id); 
         store.data.partners[i] = {...store.data.partners[i], ...d}; 
@@ -792,24 +816,26 @@ function renderRecords() {
     
     document.getElementById('app').innerHTML = `
         <header>${header('月份業績紀錄')}</header>
-        <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap">
-            <input type="month" value="${m}" class="form-control" style="width:auto" onchange="localStorage.setItem('r_m',this.value);renderRecords()">
-            <input placeholder="搜尋夥伴" value="${q}" class="form-control" style="width:auto" oninput="localStorage.setItem('r_q',this.value);renderRecords()">
-            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;background:white;padding:0 10px;border:1px solid #ccc;border-radius:6px">
-                <input type="checkbox" ${unpaidOnly?'checked':''} onchange="localStorage.setItem('r_unpaid',this.checked);renderRecords()"> 只看未發放
+        <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;align-items:center">
+            <input type="month" value="${m}" class="form-control" style="width:auto;margin:0" onchange="localStorage.setItem('r_m',this.value);renderRecords()">
+            <input placeholder="搜尋夥伴" value="${q}" class="form-control" style="width:auto;margin:0" oninput="localStorage.setItem('r_q',this.value);renderRecords()">
+            ${getPvViewSelect('renderRecords')}
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;background:white;padding:5px 10px;border:1px solid #ccc;border-radius:6px;margin:0">
+                <input type="checkbox" ${unpaidOnly?'checked':''} onchange="localStorage.setItem('r_unpaid',this.checked);renderRecords()"> <small>未發放</small>
             </label>
-            <button class="btn btn-primary" onclick="editRecord(null,'${m}')">＋ 新增紀錄</button>
+            <button class="btn btn-primary" onclick="editRecord(null,'${m}')">＋ 紀錄</button>
         </div>
-        <div class="card"><table><thead><tr><th>夥伴</th><th>狀態</th><th>新增日</th><th>PV / 回饋 / 產品</th><th>發放</th><th>操作</th></tr></thead><tbody>
+        <div class="card"><table><thead><tr><th>夥伴</th><th>狀態</th><th>PV/BV</th><th>獎金 / 產品</th><th>發放</th><th>操作</th></tr></thead><tbody>
         ${list.map(r => {
             const pText = (r.products||[]).map(x=>`${x.name}×${x.qty}`).join('、');
             const pDisplay = pText ? `<div style="font-size:0.8rem;color:#7f8c8d;margin-top:4px">📦 ${pText}</div>` : '';
+            const pvDisplay = formatPvBv(r.gpv, r.gbv);
             
             return `<tr>
             <td>${r.partnerName}</td>
             <td>${r.isGraduated?'<span class="status-badge status-active">🎓 畢業</span>':r.isPartnerInactive?'<span class="status-badge status-inactive">未參與</span>':r.isMonthlyInactive?'<span class="status-badge status-inactive">本月不計</span>':'<span class="status-badge status-active">參與</span>'}</td>
-            <td style="font-size:0.9rem;color:#777">${r.createdAt||'—'}</td>
-            <td><div>PV: ${r.gpv}</div><div style="font-weight:bold;color:${r.totalIncome>0?'var(--success)':'#aaa'}">${money(r.totalIncome)}</div>${pDisplay}</td>
+            <td><div style="font-weight:bold;color:#2c3e50;font-size:0.95rem">${pvDisplay}</div><div style="font-size:0.8rem;color:#aaa">${r.createdAt||''}</div></td>
+            <td><div style="font-weight:bold;color:${r.totalIncome>0?'var(--success)':'#aaa'}">${money(r.totalIncome)}</div>${pDisplay}</td>
             <td><span class="status-badge ${r.payoutStatus==='paid'?'status-paid':'status-unpaid'}">${r.payoutStatus==='paid'?'已發放':'未發放'}</span></td>
             <td><button class="btn btn-secondary" style="font-size:0.8rem;padding:4px 10px" onclick="editRecord('${r.id}')">編輯</button></td>
         </tr>`}).join('')}
@@ -819,20 +845,27 @@ function renderRecords() {
 
 let tempRec = null; let isDirty = false;
 function markDirty() { isDirty = true; }
+
 function editRecord(id, month) {
     try {
         isDirty = false;
         const existing = id ? store.getRecord(id) : null;
         if(existing && existing.payoutStatus==='paid' && !confirm('此紀錄已發放，確定要修改嗎？')) return;
         
-        // C1: CreateAt logic (new=today, exist=keep)
+        // Init base structure
         const base = existing || { 
-            id:'', partnerId:'', month, ppv:0, pbv:0, gpv:0, legs:[], newRecruits:[], products:[], learningDone:false, 
+            id:'', partnerId:'', month, 
+            ppv:0, pbv:0, gpv:0, gbv:0, // Ensure fields exist
+            legs:[], newRecruits:[], products:[], learningDone:false, 
             participation:'active', payoutStatus:'unpaid', payoutDate: getToday(month), 
-            createdAt: getLocalToday(), // Default today for new
+            createdAt: getLocalToday(), 
             planVersionId: store.data.versions.find(v=>!v.archived)?.id, note:'' 
         };
-        if(!base.createdAt) base.createdAt = getLocalToday(); // Patch old data
+        if(!base.createdAt) base.createdAt = getLocalToday();
+
+        // Ensure cross-values exist for legacy data (normalization safety)
+        if(base.pbv === undefined) base.pbv = pvToBv(base.ppv);
+        if(base.gbv === undefined) base.gbv = pvToBv(base.gpv);
 
         tempRec = JSON.parse(JSON.stringify(base));
         if (!Array.isArray(tempRec.legs)) tempRec.legs = [];
@@ -841,6 +874,14 @@ function editRecord(id, month) {
 
         const pOpts = store.data.partners.map(p => `<option value="${p.id}" ${p.id===base.partnerId?'selected':''} style="${p.status==='inactive'?'color:gray':''}">${p.code} ${p.name} ${p.status==='inactive'?'(未參與)':''}</option>`).join('');
         const vOpts = store.data.versions.map(v => `<option value="${v.id}" ${v.id===base.planVersionId?'selected':''} ${v.archived?'disabled':''}>${v.name}</option>`).join('');
+
+        // 【A】雙欄互轉 Helper (Inline)
+        const syncScript = (type) => {
+            if(type === 'ppv') return `this.form.pbv.value=Math.round(this.value*${PV_RATE}); tempRec.ppv=Number(this.value); tempRec.pbv=Number(this.form.pbv.value); markDirty();`;
+            if(type === 'pbv') return `this.form.ppv.value=parseFloat((this.value/${PV_RATE}).toFixed(2)); tempRec.pbv=Number(this.value); tempRec.ppv=Number(this.form.ppv.value); markDirty();`;
+            if(type === 'gpv') return `this.form.gbv.value=Math.round(this.value*${PV_RATE}); tempRec.gpv=Number(this.value); tempRec.gbv=Number(this.form.gbv.value); renderPreview(); markDirty();`;
+            if(type === 'gbv') return `this.form.gpv.value=parseFloat((this.value/${PV_RATE}).toFixed(2)); tempRec.gbv=Number(this.value); tempRec.gpv=Number(this.form.gpv.value); renderPreview(); markDirty();`;
+        };
 
         openModal(id?'編輯紀錄':'新增紀錄', `
             <form id="recForm" onsubmit="saveRecord(event, '${id||''}')">
@@ -852,27 +893,45 @@ function editRecord(id, month) {
                                 <div class="col"><label>版本</label><select name="planVersionId" class="form-control" onchange="tempRec.planVersionId=this.value;renderPreview();markDirty()">${vOpts}</select></div>
                             </div>
                             <div class="row">
-                                <div class="col"><label>輸入日期 (新增日)</label><input type="date" name="createdAt" value="${base.createdAt}" class="form-control" oninput="markDirty()"></div>
+                                <div class="col"><label>輸入日期</label><input type="date" name="createdAt" value="${base.createdAt}" class="form-control" oninput="markDirty()"></div>
                             </div>
                         </div>
-                        <div class="card">
+                        
+                        <div class="card" style="background:#f8f9fa">
+                            <div class="row" style="margin-bottom:10px">
+                                <div class="col">
+                                    <label>個人 PV</label>
+                                    <input type="number" step="0.01" name="ppv" value="${base.ppv}" class="form-control" oninput="${syncScript('ppv')}">
+                                </div>
+                                <div class="col">
+                                    <label>個人 BV</label>
+                                    <input type="number" name="pbv" value="${base.pbv}" class="form-control" oninput="${syncScript('pbv')}">
+                                </div>
+                            </div>
                             <div class="row">
-                                <div class="col"><label>個人 PV</label><input type="number" name="ppv" value="${base.ppv}" class="form-control" oninput="markDirty()"></div>
-                                <div class="col"><label>小組 PV *</label><input type="number" name="gpv" value="${base.gpv}" class="form-control" required oninput="tempRec.gpv=Number(this.value);renderPreview();markDirty()"></div>
+                                <div class="col">
+                                    <label>小組 PV *</label>
+                                    <input type="number" step="0.01" name="gpv" value="${base.gpv}" class="form-control" required oninput="${syncScript('gpv')}">
+                                </div>
+                                <div class="col">
+                                    <label>小組 BV *</label>
+                                    <input type="number" name="gbv" value="${base.gbv}" class="form-control" required oninput="${syncScript('gbv')}">
+                                </div>
                             </div>
                         </div>
+
                         <div class="card">
-                            <label>產品分享 (選填)</label>
+                            <label>產品分享</label>
                             <div id="productsArea"></div>
                             <button type="button" class="btn btn-outline" onclick="addProd()">+ 產品</button>
                         </div>
                         <div class="card">
-                            <label>腿 (用於扣除獨立業績)</label>
+                            <label>腿 (扣除獨立業績)</label>
                             <div id="legsArea"></div>
                             <button type="button" class="btn btn-outline" onclick="addLeg()">+ 腿</button>
                         </div>
                         <div class="card">
-                            <label>新推薦 (填入編號會自動建立組織關係)</label>
+                            <label>新推薦</label>
                             <div id="recruitArea"></div>
                             <button type="button" class="btn btn-outline" onclick="addRec()">+ 新人</button>
                         </div>
@@ -889,10 +948,8 @@ function editRecord(id, month) {
                         </div>
                     </div>
                     <div class="record-preview-col">
-                        <div id="previewBox">
-                            <div class="preview-card" style="display:flex;align-items:center;justify-content:center;color:#999">載入中...</div>
-                        </div>
-                        <div class="modal-actions-bar" style="margin-top:20px;display:flex;gap:10px">
+                        <div id="previewBox"></div>
+                        <div class="modal-actions-bar">
                             <button type="button" class="btn btn-secondary" onclick="closeModalSafe()">取消</button>
                             ${id?`<button type="button" class="btn btn-danger" onclick="deleteRecord('${id}')">刪除</button>`:''}
                             <button class="btn btn-primary">儲存</button>
@@ -902,19 +959,23 @@ function editRecord(id, month) {
             </form>
         `);
         
-        // 🔥 FIX: Ensure DOM is ready before rendering preview
         requestAnimationFrame(() => {
-            // ✅ 修正：同步預設選項到 tempRec，避免一直顯示「請選擇夥伴」
             const form = document.getElementById('recForm');
             if (form) {
                 const pSel = form.querySelector('[name=partnerId]');
                 const vSel = form.querySelector('[name=planVersionId]');
                 const gpvInput = form.querySelector('[name=gpv]');
+                const gbvInput = form.querySelector('[name=gbv]');
+                const ppvInput = form.querySelector('[name=ppv]');
+                const pbvInput = form.querySelector('[name=pbv]');
+                
                 if (pSel) tempRec.partnerId = pSel.value || '';
                 if (vSel) tempRec.planVersionId = vSel.value || tempRec.planVersionId;
-                if (gpvInput) tempRec.gpv = Number(gpvInput.value) || 0;
+                if (gpvInput) tempRec.gpv = Number(gpvInput.value)||0;
+                if (gbvInput) tempRec.gbv = Number(gbvInput.value)||0;
+                if (ppvInput) tempRec.ppv = Number(ppvInput.value)||0;
+                if (pbvInput) tempRec.pbv = Number(pbvInput.value)||0;
             }
-
             renderPreview();
             renderProducts();
             renderLegs(); 
@@ -996,7 +1057,7 @@ function saveRecord(e, id) {
     const fd = new FormData(e.target);
     if(!id && store.data.records.some(r=>r.month===tempRec.month && r.partnerId===tempRec.partnerId)) return alert('此夥伴本月已有紀錄');
     
-    // E: Upsert with empty joinedAt
+    // Check Partner Create
     const parent = store.getPartner(tempRec.partnerId);
     if(parent) {
         tempRec.newRecruits.forEach(rec => {
@@ -1008,8 +1069,7 @@ function saveRecord(e, id) {
                     memberType: rec.memberType || 'directSeller',
                     sponsorId: parent.id,
                     initiatorId: parent.initiatorId || '',
-                    status: 'active', // Default active
-                    joinedAt: '' // E: Leave empty
+                    status: 'active', joinedAt: ''
                 });
             } else {
                 if(!p.sponsorId) p.sponsorId = parent.id;
@@ -1019,12 +1079,21 @@ function saveRecord(e, id) {
         });
     }
 
-    // C2: Save createdAt
-    const final = { ...tempRec, ...Object.fromEntries(fd), 
-        ppv: Number(fd.get('ppv')), gpv: Number(fd.get('gpv')), 
-        learningDone: fd.get('learningDone')==='on' 
-    };
-    final.legs = tempRec.legs; final.newRecruits = tempRec.newRecruits; final.products = tempRec.products;
+    // Capture Base Fields
+    const final = { ...tempRec, ...Object.fromEntries(fd) };
+    
+    // 【A】Ensure Numeric & Complete PV/BV Logic
+    final.ppv = Number(fd.get('ppv')) || 0;
+    final.pbv = Number(fd.get('pbv')) || 0;
+    final.gpv = Number(fd.get('gpv')) || 0;
+    final.gbv = Number(fd.get('gbv')) || 0;
+    if(final.gpv > 0 && final.gbv === 0) final.gbv = pvToBv(final.gpv);
+    if(final.gbv > 0 && final.gpv === 0) final.gpv = bvToPv(final.gbv);
+    
+    final.learningDone = fd.get('learningDone')==='on';
+    final.legs = tempRec.legs; 
+    final.newRecruits = tempRec.newRecruits; 
+    final.products = tempRec.products;
     
     if(id) { const i = store.data.records.findIndex(x=>x.id===id); store.data.records[i] = final; }
     else { final.id = uuid(); store.data.records.push(final); }
@@ -1095,10 +1164,30 @@ function togglePay(id, s, m) {
     else { r.payoutStatus='paid'; r.payoutDate=getToday(m); }
     store.save().then(() => renderPayout()).catch(err => { console.error(err); alert('⚠️ 儲存失敗，請檢查網路'); });
 }
+
 function exportCSV(m) {
+    const mode = getPvViewMode();
     const recs = store.getRecordsByMonth(m).map(calculate).filter(x=>x);
-    const txt = '\uFEFF月份,發起人,夥伴,金額,備註,狀態,日期\n' + recs.map(r=>`${r.month},${store.getInitiator(r.initiatorId)?.name||''},${r.partnerName},${r.starTotal},${r.note||''},${r.payoutStatus},${r.payoutDate}`).join('\n');
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt],{type:'text/csv'})); a.download = `Payout_${m}.csv`; a.click();
+    
+    let header = '月份,發起人,夥伴';
+    if(mode === 'both') header += ',PV,BV';
+    else if(mode === 'pv') header += ',PV';
+    else if(mode === 'bv') header += ',BV';
+    header += ',金額,備註,狀態,日期';
+    
+    const rows = recs.map(r => {
+        const initName = store.getInitiator(r.initiatorId)?.name||'';
+        const basic = `${r.month},${initName},${r.partnerName}`;
+        let metric = '';
+        if(mode === 'both') metric = `${r.gpv},${r.gbv}`;
+        else if(mode === 'pv') metric = `${r.gpv}`;
+        else if(mode === 'bv') metric = `${r.gbv}`;
+        
+        return `${basic},${metric},${r.starTotal},${r.note||''},${r.payoutStatus},${r.payoutDate}`;
+    }).join('\n');
+
+    const txt = `\uFEFF${header}\n${rows}`;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt],{type:'text/csv'})); a.download = `Payout_${m}_${mode}.csv`; a.click();
 }
 
 function renderInitiators() {
@@ -1176,55 +1265,44 @@ function enableOrgPanZoom() {
     const tree = document.querySelector('.tree');
     if (!container || !tree) return;
 
-    // ✅ 1. 解除舊監聽：防止重複綁定導致靈敏度倍增
     if (container._pzAbort) {
         try { container._pzAbort.abort(); } catch(e) {}
     }
     
-    // 建立新的控制器並掛載到 DOM 物件上
     const ac = new AbortController();
-    const opt = { signal: ac.signal }; // 一般事件用的 option
+    const opt = { signal: ac.signal }; 
     container._pzAbort = ac;
 
-    // ✅ 2. 套用目前縮放 (記憶值)
     tree.style.transform = `scale(${orgZoom})`;
 
-    // --- Zoom (滾輪縮放) ---
+    // --- Zoom ---
     container.addEventListener('wheel', (e) => {
-        // 阻止瀏覽器預設捲動
         e.preventDefault();
 
         const oldZoom = orgZoom;
-        // 滾輪向下(正)縮小，向上(負)放大
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
         
-        // 限制縮放範圍 0.5 ~ 2.0
         let newZoom = Math.min(Math.max(oldZoom * delta, 0.5), 2.0);
 
         if (newZoom === oldZoom) return;
 
-        // 計算滑鼠在 container 內的相對位置
         const rect = container.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
 
-        // 反推滑鼠指向的「內容實際座標」 (考慮捲動與舊縮放)
         const contentX = (container.scrollLeft + mouseX) / oldZoom;
         const contentY = (container.scrollTop + mouseY) / oldZoom;
 
-        // 更新縮放
         orgZoom = newZoom;
         tree.style.transform = `scale(${orgZoom})`;
         localStorage.setItem('org_zoom', orgZoom);
 
-        // 修正捲動位置：讓縮放後的同一個內容點，依然位於滑鼠下方
-        // 新捲動位置 = (內容座標 * 新縮放率) - 滑鼠偏移量
         container.scrollLeft = contentX * orgZoom - mouseX;
         container.scrollTop  = contentY * orgZoom - mouseY;
 
     }, { passive: false, signal: ac.signal });
 
-    // --- Pan (滑鼠拖曳與觸控平移) ---
+    // --- Pan ---
     let isDown = false;
     let startX = 0, startY = 0;
     let baseLeft = 0, baseTop = 0;
@@ -1240,7 +1318,6 @@ function enableOrgPanZoom() {
 
     const moveDrag = (x, y) => {
         if (!isDown) return;
-        // 1.5 倍速拖曳手感較佳
         const dx = (x - startX) * 1.5;
         const dy = (y - startY) * 1.5;
         container.scrollLeft = baseLeft - dx;
@@ -1252,19 +1329,17 @@ function enableOrgPanZoom() {
         container.style.cursor = 'grab';
     };
 
-    // -- Mouse Events --
     container.addEventListener('mousedown', (e) => startDrag(e.pageX, e.pageY), opt);
     
     container.addEventListener('mousemove', (e) => {
         if (!isDown) return;
-        e.preventDefault(); // 防止選取文字
+        e.preventDefault(); 
         moveDrag(e.pageX, e.pageY);
     }, { passive: false, signal: ac.signal });
 
     container.addEventListener('mouseup', stopDrag, opt);
     container.addEventListener('mouseleave', stopDrag, opt);
 
-    // -- Touch Events (iOS/Mobile) --
     container.addEventListener('touchstart', (e) => {
         if (!e.touches || !e.touches[0]) return;
         startDrag(e.touches[0].pageX, e.touches[0].pageY);
@@ -1274,8 +1349,6 @@ function enableOrgPanZoom() {
         if (!isDown) return;
         if (!e.touches || !e.touches[0]) return;
         
-        // ✅ 關鍵：設為 passive: false 並呼叫 preventDefault
-        // 這能阻止手機瀏覽器的「下拉刷新」或「頁面整體捲動」
         if(e.cancelable) e.preventDefault(); 
         
         moveDrag(e.touches[0].pageX, e.touches[0].pageY);
@@ -1290,7 +1363,6 @@ function toggleNode(e, nodeId) {
     orgCollapseState[nodeId] = !orgCollapseState[nodeId];
     localStorage.setItem('org_collapseState', JSON.stringify(orgCollapseState));
     
-    // Direct DOM manipulation
     const li = document.getElementById(`li-${nodeId}`);
     if(li) {
         if(orgCollapseState[nodeId]) {
@@ -1315,7 +1387,6 @@ function renderOrgChart() {
         const roots = [];
         partners.forEach(p => { if(p.sponsorId && pMap[p.sponsorId] && p.sponsorId !== p.id) { pMap[p.sponsorId].children.push(pMap[p.id]); } else { roots.push(pMap[p.id]); } });
 
-        // Init collapse if first time
         if(!localStorage.getItem('org_inited')) {
             partners.forEach(p => { if(p.sponsorId) orgCollapseState[p.id] = true; });
             localStorage.setItem('org_collapseState', JSON.stringify(orgCollapseState));
@@ -1344,14 +1415,23 @@ function renderOrgChart() {
                 else { badgeBg = '#bdc3c7'; badgeText = '無獎金'; }
             }
             const badgeHtml = `<div class="node-status" style="background:${badgeBg};color:${badgeColor}">${badgeText}</div>`;
-            const pvDisplay = r ? `<div style="font-weight:bold;color:${r.totalIncome>0?'#27ae60':'#999'}">PV: ${r.gpv} / ${money(r.totalIncome)}</div>` : '<div style="color:#ccc">—</div>';
+            
+            let pvDisplay = '<div style="color:#ccc">—</div>';
+            if (r) {
+                const txt = formatPvBv(r.gpv, r.gbv);
+                pvDisplay = `<div style="font-weight:bold;color:${r.totalIncome>0?'#27ae60':'#999'}">${txt}</div><div style="font-size:0.85em;color:#7f8c8d">${money(r.totalIncome)}</div>`;
+            }
 
             return `<li id="li-${node.id}" class="${isCollapsed && hasChildren ? 'collapsed' : ''}"><div class="node ${activeClass}">${toggleHtml}<div class="node-content" onclick="showNode('${node.id}','${m}')">${badgeHtml}<div class="name">${node.code} ${node.name}</div><div class="type">${node.memberType === 'member' ? '生活會員' : '直銷商'}</div><div class="detail">${pvDisplay}</div></div></div><ul>${node.children.map(renderNode).join('')}</ul></li>`;
         }
 
         document.getElementById('app').innerHTML = `
             <header>${header('組織關聯圖')}</header>
-            <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input type="month" value="${m}" class="form-control" style="width:auto" onchange="localStorage.setItem('org_m',this.value);renderOrgChart()"><div style="font-size:0.8rem;color:#777;margin-left:auto">滾輪縮放 / 拖曳平移 / 點擊 ▶ 展開</div></div>
+            <div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <input type="month" value="${m}" class="form-control" style="width:auto;margin:0" onchange="localStorage.setItem('org_m',this.value);renderOrgChart()">
+                ${getPvViewSelect('renderOrgChart')}
+                <div style="font-size:0.8rem;color:#777;margin-left:auto">滾輪縮放 / 拖曳平移 / 點擊 ▶ 展開</div>
+            </div>
             <div class="org-container"><div class="tree"><ul>${roots.map(renderNode).join('')}</ul></div></div>
         `;
         enableOrgPanZoom();
