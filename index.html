@@ -264,6 +264,16 @@
         <div class="modal-body" id="modal-body"></div>
     </div>
 </div>
+<!-- ✅ Catalog Modal (獨立，不覆蓋紀錄編輯 modal) -->
+<div id="catalogModal" class="modal">
+  <div class="modal-content" style="max-width:700px">
+    <div class="modal-header">
+      <h2 id="catalogModalTitle">新增產品到資料庫</h2>
+      <span class="close" onclick="closeCatalogModal()">&times;</span>
+    </div>
+    <div class="modal-body" id="catalogModalBody"></div>
+  </div>
+</div>
 
 <script>
 window.onerror = function(msg, url, line, col, error) {
@@ -387,6 +397,14 @@ function openModal(title, content) {
     document.getElementById('modal-title').innerText = title;
     document.getElementById('modal-body').innerHTML = content;
     document.getElementById('modal').style.display = 'block';
+}
+function openCatalogModal(title, content){
+  document.getElementById('catalogModalTitle').innerText = title || '產品資料庫';
+  document.getElementById('catalogModalBody').innerHTML = content || '';
+  document.getElementById('catalogModal').style.display = 'block';
+}
+function closeCatalogModal(){
+  document.getElementById('catalogModal').style.display = 'none';
 }
 window.checkLimit = function(el) {
     if(document.querySelectorAll('.coach-chk:checked').length > 3) {
@@ -923,10 +941,16 @@ function editRecord(id, month) {
                         </div>
 
                         <div class="card">
-                            <label>產品分享</label>
+                               <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+                                   <label style="margin:0">產品分享</label>
+                                   <button type="button" class="btn btn-outline" style="padding:6px 10px;font-size:0.85rem" 
+      onclick="openAddCatalogModal()">
+                            ＋ 新增到產品資料庫
+                                </button>
+                            </div>
                             <div id="productsArea"></div>
-                            <button type="button" class="btn btn-outline" onclick="addProd()">+ 產品</button>
-                        </div>
+                           <button type="button" class="btn btn-outline" onclick="addProd()">+ 產品</button>
+                         </div>
                         <div class="card">
                             <label>腿 (扣除獨立業績)</label>
                             <div id="legsArea"></div>
@@ -1639,6 +1663,125 @@ function pickCatalogProduct(i, pid){
     renderProducts();
     renderPreview();
 }
+function openAddCatalogModal(){
+  const catalog = store.data.productCatalog || {};
+
+  // ✅ 掃描所有產品編號，找出最大的流水號（避免 uuid key 造成跳號）
+  let maxNo = 0;
+  Object.values(catalog).forEach(v => {
+    const pid = (v?.id || '').trim();      // 例如 P0007
+    const m = pid.match(/^P(\d+)$/i);      // 抓數字部分
+    if(m) maxNo = Math.max(maxNo, parseInt(m[1], 10));
+  });
+
+  const nextId = `P${String(maxNo + 1).padStart(4,'0')}`;
+
+  openCatalogModal('新增產品到資料庫', `
+    <form onsubmit="saveCatalogProduct(event)">
+      <div class="row">
+        <div class="col">
+          <label>產品編號 *</label>
+          <input name="pid" class="form-control" required value="${nextId}">
+          <small style="color:#999">建議格式：P0001、P0002...</small>
+        </div>
+        <div class="col">
+          <label>產品名稱 *</label>
+          <input name="name" class="form-control" required placeholder="例如：安麗牙膏">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>PV *</label>
+          <input name="pv" type="number" step="0.01" class="form-control" required>
+        </div>
+        <div class="col">
+          <label>BV *</label>
+          <input name="bv" type="number" class="form-control" required>
+        </div>
+        <div class="col">
+          <label>DP</label>
+          <input name="dp" type="number" class="form-control">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:15px">
+        <button type="button" class="btn btn-secondary" onclick="closeCatalogModal()">取消</button>
+        <button class="btn btn-primary">儲存到資料庫</button>
+      </div>
+    </form>
+  `);
+}
+      <div class="row">
+        <div class="col">
+          <label>產品編號 *</label>
+          <input name="pid" class="form-control" required value="${nextId}">
+          <small style="color:#999">建議格式：P0001、P0002...</small>
+        </div>
+        <div class="col">
+          <label>產品名稱 *</label>
+          <input name="name" class="form-control" required placeholder="例如：安麗牙膏">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>PV *</label>
+          <input name="pv" type="number" step="0.01" class="form-control" required>
+        </div>
+        <div class="col">
+          <label>BV *</label>
+          <input name="bv" type="number" class="form-control" required>
+        </div>
+        <div class="col">
+          <label>DP</label>
+          <input name="dp" type="number" class="form-control">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:15px">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
+        <button class="btn btn-primary">儲存到資料庫</button>
+      </div>
+    </form>
+  `);
+}
+
+function saveCatalogProduct(e){
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const pid = (fd.get('pid')||'').trim();
+  const name = (fd.get('name')||'').trim();
+
+  if(!pid || !name) return alert('請填寫編號與名稱');
+
+  // 防呆：避免重複ID
+  const catalog = store.data.productCatalog || {};
+  const exist = Object.entries(catalog).find(([k,v]) => (v?.id||k) === pid);
+  if(exist) return alert('❌ 此產品編號已存在，請換一個');
+
+  const key = uuid(); // 用 uuid 當 catalog key，避免被 P0001 之類覆蓋
+  catalog[key] = {
+    id: pid,
+    name,
+    pv: Number(fd.get('pv')) || 0,
+    bv: Number(fd.get('bv')) || 0,
+    dp: fd.get('dp')==='' ? null : (Number(fd.get('dp'))||0)
+  };
+
+  store.data.productCatalog = catalog;
+
+  store.save().then(()=>{
+    alert('✅ 已加入產品資料庫');
+    closeCatalogModal();
+    // 重新 renderProducts 讓下拉立即出現
+    renderProducts();
+  }).catch(err=>{
+    console.error(err);
+    alert('⚠️ 儲存失敗，請檢查網路');
+  });
+}
+
 function closeModalSafe() { if(isDirty && !confirm('有未儲存變更，確定離開？')) return; closeModal(); }
 function closeModal() { document.getElementById('modal').style.display = 'none'; }
 </script>
