@@ -1712,41 +1712,7 @@ function openAddCatalogModal(){
     </form>
   `);
 }
-      <div class="row">
-        <div class="col">
-          <label>產品編號 *</label>
-          <input name="pid" class="form-control" required value="${nextId}">
-          <small style="color:#999">建議格式：P0001、P0002...</small>
-        </div>
-        <div class="col">
-          <label>產品名稱 *</label>
-          <input name="name" class="form-control" required placeholder="例如：安麗牙膏">
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col">
-          <label>PV *</label>
-          <input name="pv" type="number" step="0.01" class="form-control" required>
-        </div>
-        <div class="col">
-          <label>BV *</label>
-          <input name="bv" type="number" class="form-control" required>
-        </div>
-        <div class="col">
-          <label>DP</label>
-          <input name="dp" type="number" class="form-control">
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;margin-top:15px">
-        <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
-        <button class="btn btn-primary">儲存到資料庫</button>
-      </div>
-    </form>
-  `);
-}
-
+   
 function saveCatalogProduct(e){
   e.preventDefault();
   const fd = new FormData(e.target);
