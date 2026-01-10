@@ -484,22 +484,6 @@ const store = {
     getVersion(id) { return (this.data.versions||[]).find(v=>v.id===id) || this.data.versions[0]; }
 };
 store.init();
-// ✅【測試用】如果產品資料庫是空的，就先塞 2 筆，讓下拉選單一定看得到
-setTimeout(() => {
-  try{
-    if(!store.data.productCatalog) store.data.productCatalog = {};
-    const catalog = store.data.productCatalog;
-
-    if(Object.keys(catalog).length === 0){
-      const a = { id:"A001", name:"（測試）紐崔萊 維他命C", pv:10, bv:500, dp:350 };
-      const b = { id:"A002", name:"（測試）L.O.C. 多用途清潔劑", pv:5,  bv:250, dp:180 };
-      catalog[a.id] = a;
-      catalog[b.id] = b;
-
-      store.save().then(()=>console.log("✅ 已加入測試產品 2 筆"));
-    }
-  }catch(e){ console.error(e); }
-}, 2000);
 
 function calculate(r) {
     const p = store.getPartner(r.partnerId);
@@ -1007,7 +991,7 @@ function renderProducts() {
     if(!area) return;
 
     const catalog = store.data.productCatalog || {};
-    const catalogList = Object.values(catalog);
+    const catalogList = Object.entries(catalog).map(([key, val]) => ({ key, ...val }));
 
     // ✅ 先算總小計（PV/BV/DP）
     const totals = (tempRec.products || []).reduce((acc, p) => {
@@ -1034,8 +1018,8 @@ function renderProducts() {
                     onchange="pickCatalogProduct(${i}, this.value)">
                     <option value="">-- 選產品(資料庫) --</option>
                     ${catalogList.map(x=>`
-                        <option value="${x.id}" ${p.productId===x.id?'selected':''}>
-                            ${x.id}｜${x.name}｜PV:${x.pv} BV:${x.bv} DP:${x.dp ?? ''}
+                        <option value="${x.key}" ${p.productId===x.key?'selected':''}>
+                           ${x.id || x.key}｜${x.name}｜PV:${x.pv} BV:${x.bv} DP:${x.dp ?? ''}
                         </option>
                     `).join('')}
                 </select>
@@ -1652,7 +1636,7 @@ function pickCatalogProduct(i, pid){
     if(!prod) return;
 
     // ✅【防重複】如果其他列已經選過同一個 productId，就把數量+1，並刪掉目前這列
-    const existIndex = (tempRec.products || []).findIndex((x, idx) => idx !== i && x.productId === prod.id);
+    const existIndex = (tempRec.products || []).findIndex((x, idx) => idx !== i && x.productId === pid);
     if (existIndex !== -1) {
         const oldQty = Number(tempRec.products[existIndex].qty) || 1;
         tempRec.products[existIndex].qty = oldQty + 1;
@@ -1668,7 +1652,7 @@ function pickCatalogProduct(i, pid){
 
     // ✅ 寫回 tempRec.products[i]
     if(!tempRec.products[i]) tempRec.products[i] = { qty: 1 };
-    tempRec.products[i].productId = prod.id;
+    tempRec.products[i].productId = pid;
     tempRec.products[i].name = prod.name;
     tempRec.products[i].pv = prod.pv;
     tempRec.products[i].bv = prod.bv;
