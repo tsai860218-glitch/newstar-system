@@ -3,35 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v9.3 UI優化版)</title>
+    <title>新星啟動計畫系統 (v9.6 修正版)</title>
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Ctext x='50%25' y='58%25' text-anchor='middle' font-size='120'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
+
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        background: '#0a0a0b',
-                        foreground: '#fafafa',
-                        card: '#18181b',
-                        'card-foreground': '#fafafa',
-                        border: '#27272a',
-                        muted: '#27272a',
-                        'muted-foreground': '#a1a1aa',
-                        primary: '#10b981',
-                        'primary-foreground': '#022c22',
-                        secondary: '#27272a',
-                        'secondary-foreground': '#fafafa',
-                        accent: '#10b981',
-                        destructive: '#ef4444',
-                        success: '#10b981',
-                        warning: '#f59e0b',
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'Microsoft JhengHei', 'sans-serif'],
-                    },
-                }
-            }
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            background: 'rgb(var(--background) / <alpha-value>)',
+            foreground: 'rgb(var(--foreground) / <alpha-value>)',
+            card: 'rgb(var(--card) / <alpha-value>)',
+            'card-foreground': 'rgb(var(--card-foreground) / <alpha-value>)',
+            border: 'rgb(var(--border) / <alpha-value>)',
+            muted: 'rgb(var(--muted) / <alpha-value>)',
+            'muted-foreground': 'rgb(var(--muted-foreground) / <alpha-value>)',
+            primary: 'rgb(var(--primary) / <alpha-value>)',
+            'primary-foreground': 'rgb(var(--primary-foreground) / <alpha-value>)',
+            secondary: 'rgb(var(--secondary) / <alpha-value>)',
+            'secondary-foreground': 'rgb(var(--secondary-foreground) / <alpha-value>)',
+            accent: 'rgb(var(--accent) / <alpha-value>)',
+            destructive: 'rgb(var(--destructive) / <alpha-value>)',
+            success: 'rgb(var(--success) / <alpha-value>)',
+            warning: 'rgb(var(--warning) / <alpha-value>)'
+          }
         }
+      }
+    }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -40,12 +42,87 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
     <style>
+        :root {
+            /* Auth bar vars */
+            --authbar-h: 52px;
+            --authbar-gap: 16px;
+
+            /* 預設：深色 */
+            --background: 10 10 11;
+            --foreground: 250 250 250;
+            --card: 24 24 27;
+            --card-foreground: 250 250 250;
+            --border: 39 39 42;
+            --muted: 39 39 42;
+            --muted-foreground: 161 161 170;
+
+            --primary: 16 185 129;
+            --primary-foreground: 2 44 34;
+
+            --secondary: 39 39 42;
+            --secondary-foreground: 250 250 250;
+
+            --accent: 16 185 129;
+            --destructive: 239 68 68;
+            --success: 16 185 129;
+            --warning: 245 158 11;
+
+            /* 額外：用於 hover/陰影 */
+            --hover: 255 255 255;
+            --shadow: 0 0 0;
+
+            /* Org Chart vars - Dark */
+            --org-line: 63 63 70;              /* #3f3f46 */
+            --org-node-bg: 24 24 27;           /* card */
+            --org-node-border: 82 82 91;       /* #52525b */
+            --org-node-hover-border: 113 113 122;
+            --org-toggle-bg: 255 255 255;      /* 用 alpha */
+            --org-text: 250 250 250;
+            --org-subtext: 161 161 170;
+            --org-chip-bg: 255 255 255;        /* alpha */
+        }
+
+        :root[data-theme="light"] {
+            --background: 246 247 251;
+            --foreground: 15 23 42;
+            --card: 255 255 255;
+            --card-foreground: 15 23 42;
+            --border: 229 231 235;
+            --muted: 241 245 249;
+            --muted-foreground: 100 116 139;
+
+            --primary: 16 185 129;
+            --primary-foreground: 2 44 34;
+
+            --secondary: 241 245 249;
+            --secondary-foreground: 15 23 42;
+
+            --accent: 16 185 129;
+            --destructive: 239 68 68;
+            --success: 16 185 129;
+            --warning: 245 158 11;
+
+            --hover: 0 0 0;
+            --shadow: 0 0 0;
+
+            /* Org Chart vars - Light */
+            --org-line: 203 213 225;           /* slate-300 */
+            --org-node-bg: 255 255 255;        /* white */
+            --org-node-border: 148 163 184;    /* slate-400 */
+            --org-node-hover-border: 100 116 139;
+            --org-toggle-bg: 0 0 0;            /* 用 alpha */
+            --org-text: 15 23 42;
+            --org-subtext: 100 116 139;
+            --org-chip-bg: 0 0 0;              /* alpha */
+        }
+
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
+        /* Body */
         body { 
             margin: 0; 
-            background-color: #0a0a0b; 
-            color: #fafafa; 
+            background-color: rgb(var(--background)); 
+            color: rgb(var(--foreground)); 
             overflow: hidden; 
             height: 100vh; 
             height: calc(var(--vh, 1vh) * 100);
@@ -53,32 +130,33 @@
             font-family: 'Inter', 'Microsoft JhengHei', system-ui, sans-serif;
         }
 
-        /* Custom Scrollbar */
+        /* Custom Scrollbar - 修正B */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+        ::-webkit-scrollbar-thumb { background: rgb(var(--border)); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgb(var(--muted-foreground)); }
 
         /* Sidebar */
         aside { 
             width: 260px; 
-            background: linear-gradient(180deg, #18181b 0%, #0f0f10 100%); 
-            color: white; 
+            background: linear-gradient(180deg, rgb(var(--card)) 0%, rgb(var(--background)) 100%);
+            color: rgb(var(--foreground)); 
             display: flex; 
             flex-direction: column; 
             flex-shrink: 0; 
             z-index: 1000; 
             height: 100%; 
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-right: 1px solid #27272a;
+            border-right: 1px solid rgb(var(--border));
         }
         aside.collapsed { width: 0; opacity: 0; overflow: hidden; }
         
         .sidebar-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 0; }
         
+        /* Sidebar Title - 修正B */
         .nav-group-title { 
             padding: 10px 16px; 
-            color: #71717a; 
+            color: rgb(var(--muted-foreground));
             font-size: 0.75rem; 
             font-weight: 600; 
             cursor: pointer; 
@@ -90,7 +168,7 @@
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
-        .nav-group-title:hover { color: #a1a1aa; }
+        .nav-group-title:hover { color: rgb(var(--foreground)); }
         .nav-group-title::after { 
             content: ''; 
             width: 0; 
@@ -123,8 +201,8 @@
             margin: 2px 8px;
         }
         .nav-item:hover { 
-            color: #fafafa; 
-            background: rgba(255,255,255,0.05); 
+            color: rgb(var(--foreground)); 
+            background: rgb(var(--hover) / 0.06); 
         }
         .nav-item.active { 
             color: #10b981; 
@@ -138,8 +216,9 @@
             overflow-y: auto; 
             -webkit-overflow-scrolling: touch; 
             padding: 24px; 
+            padding-top: calc(24px + var(--authbar-h) + var(--authbar-gap));
             position: relative; 
-            background-color: #0a0a0b; 
+            background-color: rgb(var(--background)); 
         }
 
         @media (max-width: 1023px) {
@@ -205,16 +284,16 @@
         table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
         th, td { padding: 12px 16px; text-align: left; vertical-align: middle; }
         th { 
-            background: #18181b; 
-            color: #a1a1aa; 
+            background: rgb(var(--card)); 
+            color: rgb(var(--muted-foreground)); 
             font-weight: 500;
             font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            border-bottom: 1px solid #27272a;
+            border-bottom: 1px solid rgb(var(--border));
         }
-        td { border-bottom: 1px solid #27272a; }
-        tr:hover td { background: rgba(255,255,255,0.02); }
+        td { border-bottom: 1px solid rgb(var(--border)); }
+        tr:hover td { background: rgb(var(--hover) / 0.03); }
         tr:last-child td { border-bottom: none; }
 
         /* Modal */
@@ -228,7 +307,7 @@
             backdrop-filter: blur(4px); 
         }
         .modal-content { 
-            background: #18181b; 
+            background: rgb(var(--card)); 
             margin: 5vh auto; 
             width: 95%; 
             max-width: 1100px; 
@@ -237,12 +316,12 @@
             display: flex; 
             flex-direction: column; 
             overflow: hidden; 
-            border: 1px solid #27272a;
+            border: 1px solid rgb(var(--border));
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
         .modal-header { 
             padding: 20px 24px; 
-            border-bottom: 1px solid #27272a; 
+            border-bottom: 1px solid rgb(var(--border)); 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
@@ -251,164 +330,174 @@
             padding: 24px; 
             overflow-y: auto; 
             flex: 1; 
-            background: #0f0f10; 
+            background: rgb(var(--background)); 
             -webkit-overflow-scrolling: touch; 
         }
 
-        /* Org Chart */
+        /* Org Chart - 修正C: 完整變數化 */
         .org-container { 
-            overflow: auto;
-            width: 100%; 
-            height: 600px; 
-            background: #18181b; 
-            border-radius: 12px; 
-            position: relative; 
-            cursor: grab; 
-            touch-action: none;
-            user-select: none;
-            border: 1px solid #27272a;
+          overflow: auto;
+          width: 100%; 
+          height: 600px; 
+          background: rgb(var(--card)); 
+          border-radius: 12px; 
+          position: relative; 
+          cursor: grab; 
+          touch-action: none;
+          user-select: none;
+          border: 1px solid rgb(var(--border));
         }
         .org-container:active { cursor: grabbing; }
-        
         .tree { 
-            transform-origin: 0 0; 
-            will-change: transform;
-            display: inline-block; 
-            min-width: 100%;
-            padding: 40px; 
-            box-sizing: border-box;
+          transform-origin: 0 0; 
+          will-change: transform;
+          display: inline-block; 
+          min-width: 100%;
+          padding: 40px; 
+          box-sizing: border-box;
         }
-
         .tree ul { 
-            padding-top: 20px; 
-            position: relative; 
-            transition: .3s; 
-            display: table; 
-            margin: 0 auto; 
-            white-space: nowrap;
+          padding-top: 20px; 
+          position: relative; 
+          transition: .3s; 
+          display: table; 
+          margin: 0 auto; 
+          white-space: nowrap;
         }
         .tree li { 
-            float: none; 
-            display: table-cell; 
-            vertical-align: top;
-            text-align: center; 
-            list-style-type: none; 
-            position: relative; 
-            padding: 20px 5px 0 5px; 
+          float: none; 
+          display: table-cell; 
+          vertical-align: top;
+          text-align: center; 
+          list-style-type: none; 
+          position: relative; 
+          padding: 20px 5px 0 5px; 
         }
-        
         .tree li::before, .tree li::after { 
-            content: ''; 
-            position: absolute; 
-            top: 0; 
-            right: 50%; 
-            border-top: 1px solid #3f3f46; 
-            width: 50%; 
-            height: 20px; 
+          content: ''; 
+          position: absolute; 
+          top: 0; 
+          right: 50%; 
+          border-top: 1px solid rgb(var(--org-line)); 
+          width: 50%; 
+          height: 20px; 
         }
         .tree li::after { 
-            right: auto; 
-            left: 50%; 
-            border-left: 1px solid #3f3f46; 
+          right: auto; 
+          left: 50%; 
+          border-left: 1px solid rgb(var(--org-line)); 
         }
         .tree li:only-child::after, .tree li:only-child::before { display: none; }
         .tree li:only-child { padding-top: 0; }
         .tree li:first-child::before, .tree li:last-child::after { border: 0 none; }
-        .tree li:last-child::before { border-right: 1px solid #3f3f46; border-radius: 0 8px 0 0; }
+        .tree li:last-child::before { 
+          border-right: 1px solid rgb(var(--org-line)); 
+          border-radius: 0 8px 0 0; 
+        }
         .tree li:first-child::after { border-radius: 8px 0 0 0; }
         .tree ul ul::before { 
-            content: ''; 
-            position: absolute; 
-            top: 0; 
-            left: 50%; 
-            border-left: 1px solid #3f3f46; 
-            width: 0; 
-            height: 20px; 
+          content: ''; 
+          position: absolute; 
+          top: 0; 
+          left: 50%; 
+          border-left: 1px solid rgb(var(--org-line)); 
+          width: 0; 
+          height: 20px; 
         }
-        
         .tree li.collapsed > ul { display: none; }
         .tree li.collapsed > .node .caret { transform: rotate(-90deg); }
-
         .node { 
-            border: 1px solid #3f3f46; 
-            text-decoration: none; 
-            color: #fafafa; 
-            font-size: 12px; 
-            display: inline-flex; 
-            align-items: stretch; 
-            border-radius: 12px; 
-            transition: all 0.2s; 
-            min-width: 180px; 
-            position: relative; 
-            background: #18181b; 
-            z-index: 2;
-            overflow: hidden; 
-            text-align: left;
+          border: 1px solid rgb(var(--org-node-border)); 
+          text-decoration: none; 
+          color: rgb(var(--org-text)); 
+          font-size: 12px; 
+          display: inline-flex; 
+          align-items: stretch; 
+          border-radius: 12px; 
+          transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+          min-width: 190px; 
+          position: relative; 
+          background: rgb(var(--org-node-bg)); 
+          z-index: 2;
+          overflow: hidden; 
+          text-align: left;
+          box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        :root[data-theme="light"] .node{
+          box-shadow: 0 10px 25px rgba(0,0,0,0.08);
         }
         .node:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 8px 25px rgba(0,0,0,0.4); 
-            z-index: 10; 
-            border-color: #52525b;
+          transform: translateY(-2px); 
+          z-index: 10; 
+          border-color: rgb(var(--org-node-hover-border));
         }
-        
-        .node.node-active { border-color: #10b981; background: linear-gradient(135deg, #18181b 0%, #064e3b 100%); }
-        .node.node-inactive { border-color: #3f3f46; background: #18181b; opacity: 0.6; }
-
+        .node.node-active { 
+          border-color: rgb(var(--primary)); 
+          background: linear-gradient(135deg, rgb(var(--org-node-bg)) 0%, rgb(var(--primary) / 0.12) 100%);
+        }
+        .node.node-inactive { 
+          border-color: rgb(var(--border)); 
+          opacity: 0.65; 
+        }
         .node-toggle {
-            width: 36px; 
-            background: rgba(255,255,255,0.03); 
-            border-right: 1px solid rgba(255,255,255,0.1);
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center;
-            cursor: pointer; 
-            transition: background .2s; 
-            flex-shrink: 0;
+          width: 38px; 
+          background: rgb(var(--org-toggle-bg) / 0.06); 
+          border-right: 1px solid rgb(var(--border) / 1);
+          display: flex; 
+          flex-direction: column; 
+          align-items: center; 
+          justify-content: center;
+          cursor: pointer; 
+          transition: background .2s; 
+          flex-shrink: 0;
         }
-        .node-toggle:hover { background: rgba(255,255,255,0.08); }
-        .caret { font-size: 12px; color: #a1a1aa; transition: transform 0.2s; }
-        .count { font-size: 10px; color: #71717a; margin-top: 2px; font-weight: 600; }
-        
+        .node-toggle:hover { background: rgb(var(--org-toggle-bg) / 0.10); }
+        .caret { font-size: 12px; color: rgb(var(--org-subtext)); transition: transform 0.2s; }
+        .count { font-size: 10px; color: rgb(var(--org-subtext)); margin-top: 2px; font-weight: 700; }
         .node-content { padding: 12px; flex: 1; cursor: pointer; }
-        .node-content .name { font-weight: 700; display: block; margin-bottom: 4px; font-size: 13px; color: #fafafa; }
+        .node-content .name { 
+          font-weight: 800; 
+          display: block; 
+          margin-bottom: 4px; 
+          font-size: 13px; 
+          color: rgb(var(--org-text)); 
+        }
         .node-content .type { 
-            font-size: 10px; 
-            color: #a1a1aa; 
-            background: rgba(255,255,255,0.05); 
-            padding: 2px 8px; 
-            border-radius: 4px; 
-            display: inline-block; 
-            margin-bottom: 8px; 
+          font-size: 10px; 
+          color: rgb(var(--org-subtext)); 
+          background: rgb(var(--org-chip-bg) / 0.06); 
+          padding: 2px 8px; 
+          border-radius: 6px; 
+          display: inline-block; 
+          margin-bottom: 8px; 
+          border: 1px solid rgb(var(--border));
         }
         .node-content .detail { 
-            font-size: 11px; 
-            color: #a1a1aa; 
-            border-top: 1px solid rgba(255,255,255,0.1); 
-            padding-top: 8px; 
-            margin-top: 8px; 
+          font-size: 11px; 
+          color: rgb(var(--org-subtext)); 
+          border-top: 1px solid rgb(var(--border)); 
+          padding-top: 8px; 
+          margin-top: 8px; 
         }
-
         .node-status { 
-            position: absolute; 
-            top: 0; 
-            right: 0; 
-            font-size: 9px; 
-            padding: 3px 8px; 
-            border-bottom-left-radius: 8px; 
-            font-weight: 600;
-            letter-spacing: 0.02em;
+          position: absolute; 
+          top: 0; 
+          right: 0; 
+          font-size: 9px; 
+          padding: 3px 8px; 
+          border-bottom-left-radius: 10px; 
+          font-weight: 800;
+          letter-spacing: 0.02em;
         }
 
         /* Form inputs */
         .form-input, .form-control {
             width: 100%;
             padding: 10px 14px;
-            background: #27272a;
-            border: 1px solid #3f3f46;
+            background: rgb(var(--card));
+            border: 1px solid rgb(var(--border));
             border-radius: 8px;
-            color: #fafafa;
+            color: rgb(var(--foreground));
             font-size: 0.875rem;
             transition: all 0.15s;
             margin-bottom: 5px;
@@ -418,7 +507,7 @@
             border-color: #10b981;
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
         }
-        .form-input::placeholder { color: #71717a; }
+        .form-input::placeholder { color: rgb(var(--muted-foreground)); }
 
         select.form-input, select.form-control {
             appearance: none;
@@ -444,7 +533,7 @@
             width: min(420px, 92vw); background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.5);
         }
         
-        /* Auth Buttons (Top Right) */
+        /* Auth Buttons */
         .auth-buttons{
           position: fixed;
           top: max(10px, env(safe-area-inset-top));
@@ -501,8 +590,12 @@
         .logout-btn:hover{
           border-color: rgba(248,113,113,.35) !important;
         }
+        
         /* Mobile: shrink & stack if too narrow */
         @media (max-width: 420px){
+          :root {
+            --authbar-h: 58px;
+          }
           .auth-buttons{
             right: 8px;
             top: max(8px, env(safe-area-inset-top));
@@ -524,8 +617,9 @@
 
 <div class="auth-buttons">
     <span id="userEmailBadge" class="user-email" style="display:none;"></span>
+    <button id="themeBtn" class="logout-btn" onclick="toggleTheme()" type="button" title="切換深/淺模式" style="display:none;">🌓</button>
     <button class="login-btn" onclick="login()">Google 登入</button>
-    <button class="logout-btn" onclick="logout()" style="display:none;">登出</button>
+    <button id="logoutBtn" class="logout-btn" onclick="logout()" style="display:none;">登出</button>
 </div>
 
 <div id="loading"><div class="spinner"></div><div>系統載入中...</div></div>
@@ -538,7 +632,7 @@
         </div>
         <div>
             <div class="text-sm font-bold text-foreground">新星啟動計畫</div>
-            <div class="text-xs text-muted-foreground">管理系統 v9.3</div>
+            <div class="text-xs text-muted-foreground">管理系統 v9.6</div>
         </div>
     </div>
     
@@ -633,6 +727,32 @@
 </div>
 
 <script>
+// --- 主題切換邏輯 ---
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+
+  const btn = document.getElementById('themeBtn');
+  if(btn){
+    btn.textContent = (theme === 'light') ? '🌙' : '☀️';
+    btn.title = (theme === 'light') ? '切換深色模式' : '切換淺色模式';
+  }
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(cur === 'dark' ? 'light' : 'dark');
+}
+(function initTheme(){
+  const saved = localStorage.getItem('theme');
+  if(saved){
+    applyTheme(saved);
+    return;
+  }
+  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  applyTheme(prefersLight ? 'light' : 'dark');
+})();
+
+// --- Error Throttling ---
 let _errFlag = false;
 window.onerror = function(msg, url, line, col, error) {
     console.error(error);
@@ -698,11 +818,15 @@ function setOverlay(show){
     if (el) el.style.display = show ? "flex" : "none";
 }
 
+// 修正A: setAuthButtons 抓錯按鈕（logout/theme 混淆）
 function setAuthButtons(isLoggedIn){
-    const loginBtn = document.querySelector(".auth-buttons .login-btn");
-    const logoutBtn = document.querySelector(".auth-buttons .logout-btn");
-    if(loginBtn) loginBtn.style.display = isLoggedIn ? "none" : "inline-flex";
-    if(logoutBtn) logoutBtn.style.display = isLoggedIn ? "inline-flex" : "none";
+  const loginBtn  = document.querySelector(".auth-buttons .login-btn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const themeBtn  = document.getElementById("themeBtn");
+
+  if(loginBtn)  loginBtn.style.display  = isLoggedIn ? "none" : "inline-flex";
+  if(logoutBtn) logoutBtn.style.display = isLoggedIn ? "inline-flex" : "none";
+  if(themeBtn)  themeBtn.style.display  = "inline-flex"; // 登入前後都能切換主題
 }
 
 function setUserBadge(user){
@@ -754,6 +878,8 @@ try {
             isReady = false;
             _didInitAfterLogin = false;
             document.getElementById('loading').style.display = 'none';
+            // 登入前仍顯示主題按鈕
+            document.getElementById("themeBtn").style.display = "inline-flex"; 
             return;
         }
         const email = (user.email || "").toLowerCase().trim();
@@ -909,6 +1035,35 @@ function openCatalogModal(title, content){
 // 2. 關閉產品資料庫視窗 (不檢查 isDirty，因為這不是主表單)
 function closeCatalogModal(){
     document.getElementById('catalogModal').style.display = 'none';
+}
+
+// 3. 儲存產品並即時更新 UI
+function saveCatalogProduct(e){
+    e.preventDefault(); 
+    const fd = new FormData(e.target); 
+    const pid = (fd.get('pid')||'').trim(); 
+    const name = (fd.get('name')||'').trim();
+    
+    if(!pid || !name) return alert('請填寫完整');
+    
+    const catalog = store.data.productCatalog || {};
+    const exist = Object.entries(catalog).find(([k,v]) => (v?.id||k) === pid); 
+    if(exist) return alert('編號已存在');
+    
+    catalog[uuid()] = { 
+        id: pid, name, 
+        pv: Number(fd.get('pv')) || 0, bv: Number(fd.get('bv')) || 0, 
+        dp: fd.get('dp')==='' ? null : (Number(fd.get('dp'))||0) 
+    };
+    
+    store.data.productCatalog = catalog; 
+    store.save().then(() => { 
+        alert('已加入資料庫'); 
+        closeCatalogModal(); 
+        if(document.getElementById('modal').style.display === 'block') { renderProducts(); }
+    }).catch(err => {
+        alert('加入失敗\n' + getFirebaseErrorMsg(err));
+    });
 }
 
 window.checkLimit = function(el) {
@@ -1882,7 +2037,7 @@ function renderSettings() {
             <p class="text-sm text-muted-foreground mb-4">清除所有本地快取，或重置資料庫（請謹慎操作）。</p>
             <button class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg" onclick="if(confirm('確定清除本地快取？不會影響雲端資料。')){localStorage.clear();location.reload();}">清除瀏覽器快取</button>
         </div>
-        <div class="text-center text-xs text-muted-foreground mt-8">系統版本 v9.3 | 開發者: Gemini & Celia</div>
+        <div class="text-center text-xs text-muted-foreground mt-8">系統版本 v9.6 | 開發者: Gemini & Celia</div>
     </div>`;
 }
 function downloadBackup() {
