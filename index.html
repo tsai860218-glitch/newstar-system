@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v7.7 產品資料庫預覽版)</title>
+    <title>新星啟動計畫系統 (v8.2 使用者登入版)</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🚀%3C/text%3E%3C/svg%3E">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 
     <style>
         :root {
@@ -212,6 +213,9 @@
 </head>
 <body>
 
+<button onclick="login()">Google 登入</button>
+<button onclick="logout()">登出</button>
+
 <div id="loading"><div class="spinner"></div><div>載入中...</div></div>
 
 <div id="drawer-overlay" onclick="closeDrawer()"></div>
@@ -253,7 +257,7 @@
             </div>
         </div>
     </div>
-    <div class="footer">v7.7 產品資料庫預覽版</div>
+    <div class="footer">v8.2 使用者登入版</div>
 </aside>
 
 <main id="app"></main>
@@ -343,6 +347,39 @@ let db = null;
 try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
+// ✅ Auth 初始化
+const auth = firebase.auth();
+const provider = new firebase.auth.GoogleAuthProvider();
+
+// ✅ 登入（電腦用 popup）
+function login() {
+  auth.signInWithPopup(provider).catch(err => {
+    console.error(err);
+    alert("❌ 登入失敗：" + err.message);
+  });
+}
+
+// ✅ 登出
+function logout() {
+  auth.signOut();
+}
+
+// ✅ 登入狀態監聽：登入後才開始讀/寫資料庫
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    console.log("✅ 已登入：", user.email);
+    initAfterLogin();   // ✅ 你的資料載入搬到這裡
+  } else {
+    console.log("尚未登入");
+  }
+});
+
+// ✅ 你原本「一進頁面就 load 資料」的程式，全部搬到這裡
+function initAfterLogin() {
+  console.log("開始載入資料...");
+
+  // TODO：把你的 db.ref(...).on(...) / loadXXX() 放進來
+}
     isReady = true;
 } catch (e) { document.getElementById('loading').innerHTML = '<h3 style="color:red">⚠️ Firebase 連線錯誤</h3>'; }
 
