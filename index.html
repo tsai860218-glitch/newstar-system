@@ -535,13 +535,18 @@ document.getElementById('sidebar');
 sidebarEl.addEventListener('touchstart', e
 => { touchStartX = e.changedTouches[0].screenX; touchStartY =
 e.changedTouches[0].screenY; }, {passive: true});
-sidebarEl.addEventListener('touchend', e
-=> {
-   const deltaX = e.changedTouches[0].screenX - touchStartX;
-   const deltaY = e.changedTouches[0].screenY - touchStartY;
-   if (deltaX < -50 && Math.abs(deltaY) < 50) closeDrawer();
-}, {passive: true});
- 
+const sidebarEl = document.getElementById('sidebar');
+
+sidebarEl.addEventListener('touchstart', (e) => {
+  touchStartX = e.changedTouches[0].screenX;
+  touchStartY = e.changedTouches[0].screenY;
+}, { passive: true });
+
+sidebarEl.addEventListener('touchend', (e) => {
+  const deltaX = e.changedTouches[0].screenX - touchStartX;
+  const deltaY = e.changedTouches[0].screenY - touchStartY;
+  if (deltaX < -50 && Math.abs(deltaY) < 50) closeDrawer();
+}, { passive: true }); 
 // --- FIREBASE ---
 const firebaseConfig = {
     apiKey: "AIzaSyCanDeinCJyZFeHUGnYVEmalCYxjwaIw-4",
@@ -1239,13 +1244,13 @@ required></div>
 class="form-group"><label>會員性質 *</label>
                    <select
 name="memberType" class="form-control" required>
-                       <option
+                       <option
 value="directSeller"
 ${p.memberType==='directSeller'?'selected':''}>直銷商</option>
                         <option
 value="member" ${p.memberType==='member'?'selected':''}>生活會員</option>
                    </select>
-               </div>
+               </div>
                <div class="card"
 style="background:#fdfdfd;border:1px solid #eee;padding:15px">
                    <div
@@ -1281,7 +1286,7 @@ name="sponsorId" class="form-control"><option
 value="">-- 無 (頂層) --</option>${others.map(o=>`<option
 value="${o.id}" ${o.id===p.sponsorId?'selected':''}>${o.code}
 ${o.name}</option>`).join('')}</select>
-               </div>
+               </div>
                <div
 class="form-group"><label>所屬發起人 (獎金來源)</label>
                    <select
@@ -1296,7 +1301,7 @@ btn-primary" style="width:100%">儲存</button>
        `);
        
        window.toggleStatusUI = function(el) {
-            const label =
+            const label =
 document.getElementById('statusLabel');
            const dateGroup = document.getElementById('joinedAtGroup');
            const dateInput = document.getElementById('joinedAtInput');
@@ -1428,7 +1433,7 @@ getToday(month),
        if(!base.createdAt) base.createdAt = getLocalToday();
  
        // Ensure cross-values exist for legacy data (normalization safety)
-        if(base.pbv === undefined) base.pbv =
+        if(base.pbv === undefined) base.pbv =
 pvToBv(base.ppv);
        if(base.gbv === undefined) base.gbv = pvToBv(base.gpv);
  
@@ -1509,7 +1514,7 @@ class="col">
                                    <input
 type="number" name="pbv" value="${base.pbv}"
 class="form-control" oninput="${syncScript('pbv')}">
-                                        </div>
+                                        </div>
                            </div>
                            <div
 class="row">
@@ -1530,7 +1535,7 @@ class="form-control" required
 oninput="${syncScript('gbv')}">
                                </div>
                            </div>
-                       </div>
+                       </div>
  
                        <div
 class="card">
@@ -1559,7 +1564,7 @@ id="legsArea"></div>
                            <button
 type="button" class="btn btn-outline"
 onclick="addLeg()">+ 腿</button>
-                        </div>
+                        </div>
                        <div
 class="card">
                            <label>新推薦</label>
@@ -1578,18 +1583,18 @@ class="col"><label>狀態</label><select name="participation"
 class="form-control" onchange="tempRec.participation=this.value;renderPreview();markDirty()"><option
 value="active" ${base.participation==='active'?'selected':''}>參與</option><option
 value="inactive" ${base.participation==='inactive'?'selected':''}>本月不計</option></select></div>
-                                <div class="col"
+                                <div class="col"
 style="padding-top:25px"><label><input
 type="checkbox" name="learningDone"
 ${base.learningDone?'checked':''} onchange="tempRec.learningDone=this.checked;renderPreview();markDirty()">完成學習任務</label></div>
-                            </div>
+                            </div>
                            <div
 class="form-group"><label>備註</label><textarea
 name="note" class="form-control"
 oninput="markDirty()">${base.note}</textarea></div>
                            <div
 class="row">
-                               <div
+                               <div
 class="col"><label>發放狀態</label><select name="payoutStatus"
 class="form-control" onchange="markDirty()"><option
 value="unpaid" ${base.payoutStatus==='unpaid'?'selected':''}>未發放</option><option
@@ -1664,7 +1669,7 @@ function renderProducts() {
    if(!area) return;
  
    const catalog = store.data.productCatalog || {};
-   const catalogList =
+   const catalogList =
 Object.entries(catalog).map(([key, val]) => ({ key, ...val }));
  
    // ✅ 先算總小計（PV/BV/DP）
@@ -1965,7 +1970,7 @@ onchange="localStorage.setItem('pay_m',this.value);renderPayout()">
            <input placeholder="搜尋" value="${q}" class="form-control"
 style="width:auto"
 oninput="localStorage.setItem('pay_q',this.value);renderPayout()">
-           <button class="btn
+           <button class="btn
 btn-primary" onclick="bulkPay('${m}')">批次發放</button>
            <button class="btn btn-secondary"
 onclick="exportCSV('${m}')">匯出 CSV</button>
@@ -1984,7 +1989,7 @@ style="font-size:0.9rem">應付：<span style="color:var(--danger)">${money(g.un
               <table><thead><tr><th
 width="30"><input type="checkbox"
 onchange="toggleGrp(this,'${g.info.id}')"></th><th>夥伴</th><th>金額</th><th>狀態</th></tr></thead><tbody>
-               ${g.list.map(r => `<tr>
+               ${g.list.map(r => `<tr>
                    <td><input
 type="checkbox" class="chk-${g.info.id}"
 value="${r.id}"
@@ -2097,7 +2102,7 @@ memberType:'directSeller', coachedPartnerIds:[]};
        const myPartners = store.data.partners.filter(p => p.initiatorId ===
 id);
        const coachHTML = myPartners.map(p => {
-            const checked =
+            const checked =
 (i.coachedPartnerIds||[]).includes(p.id) ? 'checked' : '';
            return `<div
 style="margin-bottom:5px"><label><input
