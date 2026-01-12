@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v9.2 完整版)</title>
+    <title>新星啟動計畫系統 (v9.3 UI優化版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -443,11 +443,81 @@
         .login-card {
             width: min(420px, 92vw); background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 30px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,.5);
         }
-        .auth-buttons { position: fixed; top: 14px; right: 16px; z-index: 99999; display: flex; gap: 10px; }
-        .auth-buttons button { padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; border:none; font-size:0.85rem; }
-        .login-btn { background: #10b981; color: #022c22; }
-        .logout-btn { background: #27272a; color: #ef4444; border:1px solid #3f3f46 !important; }
-        .user-email { padding: 8px 12px; border-radius: 8px; background: #27272a; color: #a1a1aa; font-size: 0.8rem; font-weight: 600; border:1px solid #3f3f46; }
+        
+        /* Auth Buttons (Top Right) */
+        .auth-buttons{
+          position: fixed;
+          top: max(10px, env(safe-area-inset-top));
+          right: max(10px, env(safe-area-inset-right));
+          z-index: 99999;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px;
+          border-radius: 14px;
+          background: rgba(10,10,11,.55);
+          border: 1px solid rgba(255,255,255,.08);
+          backdrop-filter: blur(10px);
+        }
+        .auth-buttons button{
+          padding: 7px 12px;
+          border-radius: 12px;
+          font-weight: 700;
+          cursor: pointer;
+          border: 1px solid transparent;
+          font-size: 0.78rem;
+          line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          transition: transform .12s ease, background .12s ease, border-color .12s ease, opacity .12s ease;
+        }
+        .auth-buttons button:active{
+          transform: scale(.97);
+        }
+        .user-email{
+          max-width: 140px;
+          padding: 7px 10px;
+          border-radius: 12px;
+          background: rgba(39,39,42,.8);
+          color: #d4d4d8;
+          font-size: .78rem;
+          font-weight: 800;
+          border: 1px solid rgba(255,255,255,.10);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        /* Buttons */
+        .login-btn{
+          background: #10b981;
+          color: #022c22;
+        }
+        .logout-btn{
+          background: rgba(39,39,42,.85);
+          color: #f87171;
+          border-color: rgba(255,255,255,.10) !important;
+        }
+        .logout-btn:hover{
+          border-color: rgba(248,113,113,.35) !important;
+        }
+        /* Mobile: shrink & stack if too narrow */
+        @media (max-width: 420px){
+          .auth-buttons{
+            right: 8px;
+            top: max(8px, env(safe-area-inset-top));
+            gap: 6px;
+            padding: 5px;
+          }
+          .user-email{
+            max-width: 95px;
+            font-size: .72rem;
+          }
+          .auth-buttons button{
+            padding: 7px 10px;
+            font-size: .72rem;
+          }
+        }
     </style>
 </head>
 <body>
@@ -468,7 +538,7 @@
         </div>
         <div>
             <div class="text-sm font-bold text-foreground">新星啟動計畫</div>
-            <div class="text-xs text-muted-foreground">管理系統 v9.2</div>
+            <div class="text-xs text-muted-foreground">管理系統 v9.3</div>
         </div>
     </div>
     
@@ -563,10 +633,14 @@
 </div>
 
 <script>
+let _errFlag = false;
 window.onerror = function(msg, url, line, col, error) {
-    alert(`⚠️ 系統錯誤：\n${msg}`);
     console.error(error);
     document.getElementById('loading').style.display = 'none';
+    if (_errFlag) return;
+    _errFlag = true;
+    setTimeout(() => { _errFlag = false; }, 3000);
+    alert(`⚠️ 系統錯誤：\n${msg}`);
 };
 
 // --- IOS & UI ---
@@ -705,10 +779,21 @@ const defaultParams = { rate_0_3_base: 0.03, rate_0_3_rec: 0.04, rate_6_base: 0.
 let appData = { partners: [], initiators: [], records: [], versions: [], productCatalog: {} };
 let firebaseListener = null;
 
-// --- GLOBAL FIXES (Fatal Error 1) ---
 let isDirty = false;
 let tempRec = null;
 function markDirty() { isDirty = true; }
+
+// Helper for Error Messages
+function getFirebaseErrorMsg(err) {
+    const msg = (err.message || err.code || '').toLowerCase();
+    if (msg.includes('permission_denied') || msg.includes('permission denied')) {
+        return '權限不足：請確認已登入且 Email 在白名單，並檢查 Firebase Console 的 Realtime Database Rules 設定。';
+    }
+    if (msg.includes('network') || msg.includes('offline')) {
+        return '網路異常：請檢查連線狀態。';
+    }
+    return '錯誤詳情: ' + (err.message || err);
+}
 
 const store = {
     data: appData,
@@ -728,7 +813,9 @@ const store = {
                       if (r.gpv !== undefined && r.gbv === undefined) r.gbv = Math.round(r.gpv * PV_RATE);
                 });
             } else {
-                this.data.versions.push({id: uuid(), name:'預設版本', params:{...defaultParams}});
+                // 資料庫為空時的初始化
+                this.data = { partners: [], initiators: [], records: [], versions: [], productCatalog: {} };
+                this.data.versions.push({ id: uuid(), name: '預設版本', params: { ...defaultParams }, archived: false });
                 this.save();
             }
             document.getElementById('loading').style.display = 'none';
@@ -739,7 +826,7 @@ const store = {
         db.ref('AmwaySystem/v1').on('value', firebaseListener, err => {
             console.error(err);
             document.getElementById('loading').style.display = 'none';
-            alert('讀取失敗');
+            alert('讀取失敗\n' + getFirebaseErrorMsg(err));
         });
     },
     cleanup() {
@@ -811,14 +898,19 @@ function openModal(title, content) {
   document.getElementById('modal-body').innerHTML = content;
   document.getElementById('modal').style.display = 'block';
 }
+
+// 1. 開啟產品資料庫視窗
 function openCatalogModal(title, content){
- document.getElementById('catalogModalTitle').innerText = title || '產品資料庫';
- document.getElementById('catalogModalBody').innerHTML = content || '';
- document.getElementById('catalogModal').style.display = 'block';
+    document.getElementById('catalogModalTitle').innerText = title || '產品資料庫';
+    document.getElementById('catalogModalBody').innerHTML = content || '';
+    document.getElementById('catalogModal').style.display = 'block';
 }
+
+// 2. 關閉產品資料庫視窗 (不檢查 isDirty，因為這不是主表單)
 function closeCatalogModal(){
- document.getElementById('catalogModal').style.display = 'none';
+    document.getElementById('catalogModal').style.display = 'none';
 }
+
 window.checkLimit = function(el) {
   if(document.querySelectorAll('.coach-chk:checked').length > 3) {
        alert('最多只能選擇 3 位');
@@ -1063,7 +1155,7 @@ function togglePartnerStatus(id, el) {
    } else { if (!p.joinedAt) p.joinedAt = getLocalToday(); }
   const oldStatus = p.status;
   p.status = newStatus;
-  store.save().then(() => renderPartners()).catch(err => { console.error(err); p.status = oldStatus; el.checked = !el.checked; alert('儲存失敗'); });
+  store.save().then(() => renderPartners()).catch(err => { console.error(err); p.status = oldStatus; el.checked = !el.checked; alert('儲存失敗\n' + getFirebaseErrorMsg(err)); });
 }
 function setThisMonthFilter() {
   const now = new Date();
@@ -1136,14 +1228,14 @@ function savePartner(e, id) {
   if(store.data.partners.some(x=>x.code===d.code && x.id!==id)) return alert('編號重複');
   if(id) { const i = store.data.partners.findIndex(x=>x.id===id); store.data.partners[i] = {...store.data.partners[i], ...d}; }
   else { store.data.partners.push({...d, id: uuid()}); }
-  store.save().then(() => { closeModal(); renderPartners(); }).catch(err => { console.error(err); alert('儲存失敗'); });
+  store.save().then(() => { closeModal(); renderPartners(); }).catch(err => { console.error(err); alert('儲存失敗\n' + getFirebaseErrorMsg(err)); });
 }
 function deletePartner(id) {
   if(!confirm('確定刪除？')) return;
   store.data.partners = store.data.partners.filter(x=>x.id!==id);
   store.data.partners.forEach(p => { if(p.sponsorId===id) p.sponsorId=''; }); 
   store.data.records = store.data.records.filter(r=>r.partnerId!==id);
-  store.save().then(() => renderPartners()).catch(err => { console.error(err); alert('儲存失敗'); });
+  store.save().then(() => renderPartners()).catch(err => { console.error(err); alert('儲存失敗\n' + getFirebaseErrorMsg(err)); });
 }
 
 // --- RECORDS ---
@@ -1416,7 +1508,7 @@ function saveRecord(e, id) {
   final.learningDone = fd.get('learningDone')==='on'; final.legs = tempRec.legs; final.newRecruits = tempRec.newRecruits; final.products = tempRec.products;
   if(id) { const i = store.data.records.findIndex(x=>x.id===id); store.data.records[i] = final; }
   else { final.id = uuid(); store.data.records.push(final); }
-  store.save().then(() => { isDirty=false; closeModal(); renderRecords(); }).catch(err => { console.error(err); alert('儲存失敗'); });
+  store.save().then(() => { isDirty=false; closeModal(); renderRecords(); }).catch(err => { console.error(err); alert('儲存失敗\n' + getFirebaseErrorMsg(err)); });
 }
 function deleteRecord(id) { if(confirm('確定刪除？')) { store.data.records = store.data.records.filter(r=>r.id!==id); store.save().then(() => { isDirty=false; closeModal(); renderRecords(); }); } }
 
@@ -1427,7 +1519,6 @@ function renderPayout() {
   if(q) recs = recs.filter(r=>r.partnerName.includes(q) || (store.getInitiator(r.initiatorId)||{}).name?.includes(q));
   const groups = {};
   store.data.initiators.forEach(i => { groups[i.id] = { info: i, list: [], sum:0, unpaid:0 }; });
-  // --- FIX 2: Added id:'none' ---
   groups['none'] = { info:{id:'none', name:'未指定', code:'N/A'}, list:[], sum:0, unpaid:0 };
   
   recs.forEach(r => {
@@ -1476,11 +1567,11 @@ function bulkPay(m) {
   const ids = Array.from(document.querySelectorAll('input[type=checkbox]:checked')).map(c=>c.value).filter(v=>v && v.length>10);
   if(!ids.length) return alert('未勾選'); if(!confirm('確認標記發放？')) return;
   const d = getToday(m); ids.forEach(id => { const r = store.getRecord(id); if(r) { r.payoutStatus='paid'; r.payoutDate=d; } });
-  store.save().then(() => renderPayout()).catch(err => alert('儲存失敗'));
+  store.save().then(() => renderPayout()).catch(err => alert('儲存失敗\n' + getFirebaseErrorMsg(err)));
 }
 function togglePay(id, s, m) {
   const r = store.getRecord(id); if(s==='paid') { if(confirm('取消發放？')) r.payoutStatus='unpaid'; } else { r.payoutStatus='paid'; r.payoutDate=getToday(m); }
-  store.save().then(() => renderPayout()).catch(err => alert('儲存失敗'));
+  store.save().then(() => renderPayout()).catch(err => alert('儲存失敗\n' + getFirebaseErrorMsg(err)));
 }
 function exportCSV(m) {
   const mode = getPvViewMode(); const recs = store.getRecordsByMonth(m).map(calculate).filter(x=>x);
@@ -1541,13 +1632,13 @@ function saveInit(e, id) {
   const coached = Array.from(document.querySelectorAll('.coach-chk:checked')).map(c=>c.value);
   if(id) { const idx = store.data.initiators.findIndex(x=>x.id===id); store.data.initiators[idx] = {...store.data.initiators[idx], ...d, coachedPartnerIds: coached}; }
   else { store.data.initiators.push({...d, id:uuid(), coachedPartnerIds: coached}); }
-  store.save().then(() => { closeModal(); renderInitiators(); }).catch(err => alert('儲存失敗'));
+  store.save().then(() => { closeModal(); renderInitiators(); }).catch(err => alert('儲存失敗\n' + getFirebaseErrorMsg(err)));
 }
 function delInit(id) {
   if(!confirm('刪除？這會將其下夥伴變為未指定。')) return;
   store.data.initiators = store.data.initiators.filter(i=>i.id!==id);
   store.data.partners.forEach(p => { if(p.initiatorId===id) p.initiatorId=''; });
-  store.save().then(() => renderInitiators()).catch(err => alert('儲存失敗'));
+  store.save().then(() => renderInitiators()).catch(err => alert('儲存失敗\n' + getFirebaseErrorMsg(err)));
 }
 
 function openAddCatalogModal(){
@@ -1564,13 +1655,43 @@ function openAddCatalogModal(){
      <div class="col"><label class="text-sm text-muted-foreground">DP</label><input name="dp" type="number" class="form-input"></div></div>
      <button class="w-full mt-4 py-2 bg-primary text-primary-foreground font-bold rounded-lg">儲存到資料庫</button></form>`);
 }
+
+// 3. 儲存產品並即時更新 UI
 function saveCatalogProduct(e){
-  e.preventDefault(); const fd = new FormData(e.target); const pid = (fd.get('pid')||'').trim(); const name = (fd.get('name')||'').trim();
-  if(!pid || !name) return alert('請填寫完整');
-  const catalog = store.data.productCatalog || {};
-  const exist = Object.entries(catalog).find(([k,v]) => (v?.id||k) === pid); if(exist) return alert('編號已存在');
-  catalog[uuid()] = { id: pid, name, pv: Number(fd.get('pv')) || 0, bv: Number(fd.get('bv')) || 0, dp: fd.get('dp')==='' ? null : (Number(fd.get('dp'))||0) };
-  store.data.productCatalog = catalog; store.save().then(()=>{ alert('已加入'); closeCatalogModal(); renderProducts(); }).catch(err=>alert('失敗'));
+    e.preventDefault(); 
+    const fd = new FormData(e.target); 
+    const pid = (fd.get('pid')||'').trim(); 
+    const name = (fd.get('name')||'').trim();
+    
+    if(!pid || !name) return alert('請填寫完整');
+    
+    const catalog = store.data.productCatalog || {};
+    // 檢查 ID 是否重複
+    const exist = Object.entries(catalog).find(([k,v]) => (v?.id||k) === pid); 
+    if(exist) return alert('編號已存在');
+    
+    // 寫入資料
+    catalog[uuid()] = { 
+        id: pid, 
+        name, 
+        pv: Number(fd.get('pv')) || 0, 
+        bv: Number(fd.get('bv')) || 0, 
+        dp: fd.get('dp')==='' ? null : (Number(fd.get('dp'))||0) 
+    };
+    
+    store.data.productCatalog = catalog; 
+    
+    store.save().then(() => { 
+        alert('已加入資料庫'); 
+        closeCatalogModal(); 
+        
+        // UX 優化：如果目前主表單開啟中，重新渲染產品列表以更新下拉選單
+        if(document.getElementById('modal').style.display === 'block') {
+            renderProducts(); 
+        }
+    }).catch(err => {
+        alert('加入失敗\n' + getFirebaseErrorMsg(err));
+    });
 }
 
 // --- ORG CHART ---
@@ -1761,7 +1882,7 @@ function renderSettings() {
             <p class="text-sm text-muted-foreground mb-4">清除所有本地快取，或重置資料庫（請謹慎操作）。</p>
             <button class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg" onclick="if(confirm('確定清除本地快取？不會影響雲端資料。')){localStorage.clear();location.reload();}">清除瀏覽器快取</button>
         </div>
-        <div class="text-center text-xs text-muted-foreground mt-8">系統版本 v9.2 | 開發者: Gemini & Celia</div>
+        <div class="text-center text-xs text-muted-foreground mt-8">系統版本 v9.3 | 開發者: Gemini & Celia</div>
     </div>`;
 }
 function downloadBackup() {
