@@ -531,29 +531,18 @@ function toggleGroup(groupId) {
 let touchStartX = 0;
 let touchStartY = 0;
 
-const sidebarEl = document.getElementById('sidebar');
-
-sidebarEl.addEventListener('touchstart', (e) => {
+// ✅ 不要再宣告一次 const sidebar！前面已經有了
+sidebar.addEventListener('touchstart', (e) => {
   touchStartX = e.changedTouches[0].screenX;
   touchStartY = e.changedTouches[0].screenY;
 }, { passive: true });
 
-sidebarEl.addEventListener('touchend', (e) => {
+sidebar.addEventListener('touchend', (e) => {
   const deltaX = e.changedTouches[0].screenX - touchStartX;
   const deltaY = e.changedTouches[0].screenY - touchStartY;
   if (deltaX < -50 && Math.abs(deltaY) < 50) closeDrawer();
 }, { passive: true });
 
-sidebarEl.addEventListener('touchstart', (e) => {
-  touchStartX = e.changedTouches[0].screenX;
-  touchStartY = e.changedTouches[0].screenY;
-}, { passive: true });
-
-sidebarEl.addEventListener('touchend', (e) => {
-  const deltaX = e.changedTouches[0].screenX - touchStartX;
-  const deltaY = e.changedTouches[0].screenY - touchStartY;
-  if (deltaX < -50 && Math.abs(deltaY) < 50) closeDrawer();
-}, { passive: true }); 
 // --- FIREBASE ---
 const firebaseConfig = {
     apiKey: "AIzaSyCanDeinCJyZFeHUGnYVEmalCYxjwaIw-4",
