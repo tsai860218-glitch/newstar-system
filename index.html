@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v9.13 最終完善版)</title>
+    <title>新星啟動計畫系統 (v10.1 儀表板升級版)</title>
     
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Ctext x='50%25' y='58%25' text-anchor='middle' font-size='120'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
@@ -396,7 +396,7 @@
         </div>
         <div>
             <div class="text-sm font-bold text-foreground">新星啟動計畫</div>
-            <div class="text-xs text-muted-foreground">管理系統 v9.13</div>
+            <div class="text-xs text-muted-foreground">管理系統 v10.1</div>
         </div>
     </div>
     
@@ -411,6 +411,12 @@
         <div class="nav-group" id="group-records">
             <div class="nav-group-title" onclick="toggleGroup('group-records')">業績與紀錄</div>
             <div class="nav-items"><a onclick="router('records')" id="nav-records" class="nav-item">📝 月份業績紀錄</a></div>
+        </div>
+        <div class="nav-group" id="group-products">
+            <div class="nav-group-title" onclick="toggleGroup('group-products')">產品管理</div>
+            <div class="nav-items">
+                <a onclick="router('catalog')" id="nav-catalog" class="nav-item">📦 產品資料庫</a>
+            </div>
         </div>
         <div class="nav-group" id="group-partners">
             <div class="nav-group-title" onclick="toggleGroup('group-partners')">人員管理</div>
@@ -601,7 +607,7 @@
     } catch (e) { console.error(e); alert('Firebase Error'); }
 
     // =========================================
-    // C) Store Logic
+    // C) Store Logic (UUID Key / PID Field)
     // =========================================
     const defaultParams = { rate_0_3_base: 0.03, rate_0_3_rec: 0.04, rate_6_base: 0.01, rate_6_rec: 0.02, rate_recruit_bv: 0.01, rate_learning: 0.03 };
     let appData = { partners: [], initiators: [], records: [], versions: [], productCatalog: {} };
@@ -617,10 +623,31 @@
                 if(val) {
                     this.data = val;
                     ['partners','initiators','records','versions','productCatalog'].forEach(k => { if(!this.data[k]) this.data[k] = (k==='productCatalog'?{}:[]); });
+                    
+                    // --- MIGRATION: Ensure PID exists (UUID Key, PID Field) ---
+                    const catalog = this.data.productCatalog;
+                    let migrated = false;
+                    Object.entries(catalog).forEach(([key, prod]) => {
+                        if (!prod.pid) {
+                            prod.pid = prod.id || key; 
+                            migrated = true;
+                        }
+                    });
+                    if (migrated) console.log("Migrated catalog to have PID field.");
+
+                    // Normalization
                     (this.data.records||[]).forEach(r => {
                           const PV_RATE = 50;
                           if (r.ppv !== undefined && r.pbv === undefined) r.pbv = Math.round(r.ppv * PV_RATE);
                           if (r.gpv !== undefined && r.gbv === undefined) r.gbv = Math.round(r.gpv * PV_RATE);
+                          
+                          // Ensure records have productId (UUID) linkage
+                          (r.products || []).forEach(p => {
+                              if (!p.productId && p.pid) {
+                                  const foundEntry = Object.entries(catalog).find(([k,v]) => v.pid === p.pid);
+                                  if (foundEntry) p.productId = foundEntry[0];
+                              }
+                          });
                     });
                 } else {
                     this.data = { partners: [], initiators: [], records: [], versions: [], productCatalog: {} };
@@ -676,8 +703,6 @@
         if (totalMonths === 0 && days === 0) return '今天加入';
         let result = ''; if (totalMonths > 0) result += `${totalMonths} 個月 `; if (days > 0) result += `${days} 天`; return result.trim();
     }
-    
-    // Category Helper
     function getCategoryOptionsHtml() {
       const preset = ["營養", "美容", "家居", "個人護理", "淨水", "空氣", "其他"];
       const set = new Set(preset);
@@ -722,6 +747,37 @@
         }
         return res;
     }
+    
+    // Rename Product PID Utility
+    function renameProductPid(oldPid, newPid){
+        oldPid = (oldPid||'').trim(); newPid = (newPid||'').trim();
+        const catalog = store.data.productCatalog || {};
+        
+        if(!oldPid || !newPid) return alert('編號不能為空');
+        // Find UUID key by PID
+        const oldEntry = Object.entries(catalog).find(([k, v]) => v.pid === oldPid);
+        if(!oldEntry) return alert('找不到舊編號');
+        
+        const exist = Object.values(catalog).some(v => v.pid === newPid);
+        if(exist) return alert('新編號已存在');
+
+        // 1) Update Catalog
+        catalog[oldEntry[0]].pid = newPid;
+
+        // 2) Update Records (snapshot pid only, uuid link remains)
+        let count = 0;
+        (store.data.records||[]).forEach(r=>{
+            (r.products||[]).forEach(p=>{
+                if(p.pid === oldPid) { p.pid = newPid; count++; }
+            });
+        });
+
+        store.data.productCatalog = catalog;
+        store.save().then(() => {
+            alert(`修改成功！已同步更新 ${count} 筆紀錄顯示。`);
+            renderCatalog();
+        }).catch(err => alert('修改失敗: ' + err.message));
+    }
 
     // =========================================
     // E) Router
@@ -734,7 +790,16 @@
             if(nav) { nav.classList.add('active'); const group = nav.closest('.nav-group'); if(group) group.classList.remove('collapsed'); }
             if(window.innerWidth < 1024) closeDrawer();
             document.getElementById('app').innerHTML = '';
-            if(pg==='dashboard') renderDashboard(); else if(pg==='records') renderRecords(); else if(pg==='payout') renderPayout(); else if(pg==='partners') renderPartners(); else if(pg==='initiators') renderInitiators(); else if(pg==='org') renderOrgChart(); else if(pg==='versions') renderVersions(); else if(pg==='settings') renderSettings();
+            
+            if(pg==='dashboard') renderDashboard(); 
+            else if(pg==='records') renderRecords(); 
+            else if(pg==='payout') renderPayout(); 
+            else if(pg==='partners') renderPartners(); 
+            else if(pg==='initiators') renderInitiators(); 
+            else if(pg==='catalog') renderCatalog(); 
+            else if(pg==='org') renderOrgChart(); 
+            else if(pg==='versions') renderVersions(); 
+            else if(pg==='settings') renderSettings();
         } catch(e) { console.error(e); alert('頁面載入錯誤：' + e.message); }
     }
 
@@ -743,18 +808,118 @@
     // =========================================
     function renderDashboard() {
         const m = getLocalMonth();
-        const recs = store.getRecordsByMonth(m).map(calculate).filter(x=>x);
-        const total = recs.reduce((s,r)=>s+r.starTotal,0);
-        const unpaid = recs.filter(r=>r.payoutStatus!=='paid' && r.totalIncome>0).length;
-        const activePartners = store.data.partners.filter(p => p.status === 'active').length;
+        const today = getLocalToday();
+        const allRecs = store.data.records || [];
+        const recs = store.getRecordsByMonth(m).map(calculate).filter(x => x);
+        const partners = store.data.partners || [];
+        const activePartners = partners.filter(p => p.status === 'active');
+        
+        const totalBonus = recs.reduce((s, r) => s + r.starTotal, 0);
+        const unpaidSum = recs.filter(r => r.payoutStatus !== 'paid').reduce((s, r) => s + r.totalIncome, 0);
+        const unpaidCount = recs.filter(r => r.payoutStatus !== 'paid' && r.totalIncome > 0).length;
+        const bonusCount = recs.filter(r => r.totalIncome > 0).length;
+        const payoutRate = bonusCount > 0 ? Math.round(((bonusCount - unpaidCount) / bonusCount) * 100) : 0;
+
+        const trends = [];
+        for(let i=0; i<3; i++){
+            const d = new Date(); d.setMonth(d.getMonth() - i);
+            const tm = d.toISOString().slice(0,7);
+            const tRecs = allRecs.filter(r => r.month === tm).map(calculate).filter(x=>x);
+            const tBonus = tRecs.reduce((s,r) => s + r.starTotal, 0);
+            const tPeople = tRecs.filter(r => r.gpv > 0).length;
+            trends.push({ month: tm, bonus: tBonus, people: tPeople });
+        }
+
+        const pvDist = { '0-199': 0, '200-599': 0, '600-3999': 0, '4000+': 0 };
+        recs.forEach(r => {
+            if(r.participation === 'inactive') return;
+            if(r.gpv >= 4000) pvDist['4000+']++;
+            else if(r.gpv >= 600) pvDist['600-3999']++;
+            else if(r.gpv >= 200) pvDist['200-599']++;
+            else pvDist['0-199']++;
+        });
+
+        const watchList = { near: [], low: [], inactive: [] };
+        recs.forEach(r => {
+            if(r.isGraduated || r.participation === 'inactive') return;
+            if(r.gpv >= 150 && r.gpv < 200) watchList.near.push({ name: r.partnerName, val: r.gpv, target: 200 });
+            else if(r.gpv >= 550 && r.gpv < 600) watchList.near.push({ name: r.partnerName, val: r.gpv, target: 600 });
+            else if(r.gpv > 0 && r.gpv < 100) watchList.low.push({ name: r.partnerName, val: r.gpv });
+        });
+        const recPartnerIds = new Set(recs.map(r => r.partnerId));
+        activePartners.forEach(p => { if(!recPartnerIds.has(p.id)) watchList.inactive.push({ name: `${p.code} ${p.name}` }); });
+
+        const initStats = {};
+        recs.forEach(r => {
+            const iId = r.initiatorId || 'none';
+            if(!initStats[iId]) initStats[iId] = { name: (store.getInitiator(iId)||{name:'未指定'}).name, bonus:0, people:0, unpaid:0 };
+            initStats[iId].bonus += r.totalIncome;
+            if(r.gpv > 0) initStats[iId].people++;
+            if(r.payoutStatus !== 'paid') initStats[iId].unpaid += r.totalIncome;
+        });
+        const topInits = Object.values(initStats).sort((a,b) => b.bonus - a.bonus).slice(0, 6);
+
+        const prodStats = {};
+        recs.forEach(r => {
+            (r.products || []).forEach(p => {
+                const name = p.name || '未知產品';
+                if(!prodStats[name]) prodStats[name] = { name, count: 0, qty: 0 };
+                prodStats[name].count++;
+                prodStats[name].qty += (Number(p.qty)||1);
+            });
+        });
+        const topProds = Object.values(prodStats).sort((a,b) => b.qty - a.qty).slice(0, 5);
+
         document.getElementById('app').innerHTML = `
-            <header class="flex items-center justify-between mb-6 flex-wrap gap-4">${header(`總覽 - ${m}`)}<div class="flex items-center gap-2 text-sm text-muted-foreground">最後更新: ${getLocalToday()}</div></header>
+            <header class="flex items-center justify-between mb-6 flex-wrap gap-4">${header(`總覽 - ${m}`)}<div class="flex items-center gap-2 text-sm text-muted-foreground">最後更新: ${today}</div></header>
+            
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">💰</div><span class="text-sm text-muted-foreground">本月預估</span></div><div class="text-3xl font-bold text-foreground mb-1">${money(total)}</div><div class="text-xs text-muted-foreground">新星團隊回饋合計</div></div>
-                <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-destructive/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">🚨</div><span class="text-sm text-muted-foreground">待發放</span></div><div class="text-3xl font-bold text-foreground mb-1">${unpaid} <span class="text-lg font-normal text-muted-foreground">人</span></div><div class="text-xs text-muted-foreground">尚有金額未結清</div></div>
-                <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">👥</div><span class="text-sm text-muted-foreground">活躍夥伴</span></div><div class="text-3xl font-bold text-foreground mb-1">${activePartners} <span class="text-lg font-normal text-muted-foreground">人</span></div><div class="text-xs text-muted-foreground">目前參與計畫</div></div>
-                <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-500/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">📝</div><span class="text-sm text-muted-foreground">本月紀錄</span></div><div class="text-3xl font-bold text-foreground mb-1">${recs.length} <span class="text-lg font-normal text-muted-foreground">筆</span></div><div class="text-xs text-muted-foreground">業績紀錄數</div></div>
+                <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">💰</div><span class="text-sm text-muted-foreground">本月預估</span></div><div class="text-3xl font-bold text-foreground">${money(totalBonus)}</div><div class="text-xs text-muted-foreground mt-1">上月: ${money(trends[1]?.bonus||0)}</div></div>
+                <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-destructive/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">🚨</div><span class="text-sm text-muted-foreground">待發放</span></div><div class="text-3xl font-bold text-foreground">${money(unpaidSum)}</div><div class="text-xs text-muted-foreground mt-1 cursor-pointer hover:text-primary" onclick="payoutAction('${m}')">查看 ${unpaidCount} 筆未結清 &rarr;</div></div>
+                <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">👥</div><span class="text-sm text-muted-foreground">活躍/總數</span></div><div class="text-3xl font-bold text-foreground">${recs.length} <span class="text-base text-muted-foreground">/ ${activePartners.length}</span></div><div class="text-xs text-muted-foreground mt-1">參與率: ${activePartners.length ? Math.round(recs.length/activePartners.length*100) : 0}%</div></div>
+                <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-500/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">📈</div><span class="text-sm text-muted-foreground">近3月趨勢</span></div><div class="space-y-1 mt-2">${trends.map(t => `<div class="flex justify-between text-xs"><span class="text-muted-foreground">${t.month}</span><span>${money(t.bonus)} (${t.people}人)</span></div>`).join('')}</div></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div class="bg-card rounded-xl border border-border p-5 lg:col-span-2"><h3 class="font-bold text-lg mb-4 flex items-center gap-2">🎯 本月達標分佈 <span class="text-xs font-normal text-muted-foreground bg-secondary px-2 py-0.5 rounded">有效: ${recs.length}</span></h3><div class="space-y-4">${Object.entries(pvDist).map(([label, count]) => { const pct = recs.length ? Math.round(count/recs.length*100) : 0; let color = 'bg-secondary'; if(label==='4000+') color = 'bg-primary'; else if(label==='600-3999') color = 'bg-blue-500'; else if(label==='200-599') color = 'bg-amber-500'; return `<div><div class="flex justify-between text-sm mb-1"><span class="text-muted-foreground">${label} PV</span><span class="font-bold">${count} 人 <span class="text-xs text-muted-foreground">(${pct}%)</span></span></div><div class="h-2 w-full bg-secondary rounded-full overflow-hidden"><div class="h-full ${color}" style="width: ${pct}%"></div></div></div>`; }).join('')}</div></div>
+                <div class="bg-card rounded-xl border border-border p-5"><h3 class="font-bold text-lg mb-4">🚨 需關注名單</h3><div class="space-y-4 max-h-[300px] overflow-y-auto pr-1">${watchList.near.length > 0 ? `<div><div class="text-xs font-bold text-warning mb-2 uppercase tracking-wide">差一點達標</div>${watchList.near.slice(0,5).map(i => `<div class="flex justify-between text-sm py-1 border-b border-border/50"><span>${i.name}</span><span class="text-warning">${i.val} / ${i.target}</span></div>`).join('')}</div>` : ''}${watchList.inactive.length > 0 ? `<div><div class="text-xs font-bold text-destructive mb-2 uppercase tracking-wide mt-2">未交作業</div>${watchList.inactive.slice(0,5).map(i => `<div class="flex justify-between text-sm py-1 border-b border-border/50"><span class="text-muted-foreground">${i.name}</span></div>`).join('')}</div>` : ''}${!watchList.near.length && !watchList.inactive.length ? '<div class="text-center text-muted-foreground text-sm py-4">目前無特別需關注項目</div>' : ''}</div></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-card rounded-xl border border-border p-5"><h3 class="font-bold text-lg mb-4">🏆 發起人戰報</h3><div class="space-y-3">${topInits.map((i, idx) => `<div class="flex items-center justify-between p-2 rounded bg-secondary/10 border border-border/50"><div class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-xs font-bold">${idx+1}</div><span class="text-sm font-medium">${i.name}</span></div><div class="text-right"><div class="text-sm font-bold text-primary">${money(i.bonus)}</div><div class="text-[10px] text-muted-foreground">${i.people}人 / 未發:${money(i.unpaid)}</div></div></div>`).join('') || '<div class="text-center text-muted-foreground text-sm">尚無數據</div>'}</div></div>
+                <div class="bg-card rounded-xl border border-border p-5"><h3 class="font-bold text-lg mb-4">💰 發放概況</h3><div class="flex items-center justify-center py-6"><div class="relative w-32 h-32 rounded-full border-8 border-secondary flex items-center justify-center" style="background: conic-gradient(rgb(var(--primary)) ${payoutRate}%, transparent 0)"><div class="absolute inset-2 bg-card rounded-full flex flex-col items-center justify-center"><span class="text-2xl font-bold">${payoutRate}%</span><span class="text-[10px] text-muted-foreground">已發放</span></div></div></div><div class="text-center"><button class="w-full mt-2 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded transition-colors" onclick="payoutAction('${m}')">前往發放管理</button></div></div>
+                <div class="bg-card rounded-xl border border-border p-5"><h3 class="font-bold text-lg mb-4">🛒 熱門產品</h3><div class="space-y-0">${topProds.map((p, idx) => `<div class="flex justify-between items-center py-2 border-b border-border/50 last:border-0"><div class="flex items-center gap-2 overflow-hidden"><span class="text-xs font-mono text-muted-foreground min-w-[1.2em]">${idx+1}.</span><span class="text-sm truncate" title="${p.name}">${p.name}</span></div><div class="text-xs font-bold bg-secondary px-2 py-1 rounded whitespace-nowrap">x${p.qty}</div></div>`).join('') || '<div class="text-center text-muted-foreground text-sm py-8">本月尚無產品紀錄</div>'}</div></div>
             </div>`;
+    }
+
+    // --- NEW: Product Catalog Management ---
+    function renderCatalog() {
+        const term = localStorage.getItem('c_search') || '';
+        const catalog = store.data.productCatalog || {};
+        // Convert to array
+        let list = Object.entries(catalog).map(([key, p]) => ({ key, ...p }));
+        
+        // Search
+        list = list.filter(p => (p.name || '').includes(term) || (p.pid || '').includes(term) || (p.category || '').includes(term));
+        // Sort by PID
+        list.sort((a,b) => (a.pid||'').localeCompare(b.pid||''));
+
+        document.getElementById('app').innerHTML = `
+            <header class="flex items-center justify-between mb-6 flex-wrap gap-4">${header('產品資料庫')}<div class="flex gap-2"><button class="inline-flex items-center gap-2 px-4 py-2.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium text-sm transition-colors" onclick="openMergeModal()">合併重複</button><button class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium text-sm transition-colors" onclick="editCatalogItem(null)">+ 新增產品</button></div></header>
+            
+            <div class="bg-card rounded-xl border border-border p-4 mb-4"><div class="flex flex-wrap items-center gap-3"><input class="form-input w-64" placeholder="搜尋編號 / 名稱 / 分類" value="${term}" oninput="localStorage.setItem('c_search',this.value);renderCatalog()"></div></div>
+
+            <div class="bg-card rounded-xl border border-border overflow-hidden"><div class="overflow-x-auto"><table><thead><tr><th>編號 (PID)</th><th>分類</th><th>名稱</th><th>PV / BV / DP</th><th>操作</th></tr></thead><tbody>${list.map(p => `<tr>
+                            <td><span class="font-mono text-sm text-primary font-bold">${p.pid}</span></td>
+                            <td><span class="text-xs bg-secondary px-2 py-1 rounded text-muted-foreground">${p.category || '未分類'}</span></td>
+                            <td><span class="font-medium text-foreground">${p.name}</span></td>
+                            <td class="text-sm text-muted-foreground">PV:${p.pv} / BV:${p.bv} / $${p.dp}</td>
+                            <td>
+                                <button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-2" onclick="editCatalogItem('${p.key}')">編輯</button>
+                                <button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-2" onclick="promptRename('${p.pid}')">改編號</button>
+                                <button class="px-3 py-1.5 text-xs font-medium bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors" onclick="deleteCatalogItem('${p.key}')">刪除</button>
+                            </td>
+                        </tr>`).join('')}</tbody></table>${list.length === 0 ? '<div class="p-8 text-center text-muted-foreground">沒有符合的產品</div>' : ''}</div></div>`;
     }
 
     function renderPartners() {
@@ -816,16 +981,14 @@
         const roots = partners.filter(p => !p.sponsorId || !partners.find(u => u.id === p.sponsorId));
         function buildTree(p) {
             const children = partners.filter(c => c.sponsorId === p.id);
-            // const totalTeam = 1 + children.reduce((acc, c) => acc + countTeam(c), 0); // Unused currently
             return `<li><div class="node ${children.length ? '' : 'node-leaf'}">${children.length ? `<div class="node-toggle" onclick="toggleNode(this)"><div class="caret">▼</div><div class="count">${children.length}</div></div>` : ''}<div class="node-content" onclick="editPartner('${p.id}')"><div class="node-status ${p.memberType==='member'?'badge-member':'badge-direct'}">${p.memberType==='member'?'M':'D'}</div><span class="name">${p.code} ${p.name}</span><span class="type">${store.getInitiator(p.initiatorId)?.name || '未指定'}</span><div class="detail">加入: ${getDuration(p.joinedAt)}</div></div></div>${children.length ? `<ul>${children.map(c => buildTree(c)).join('')}</ul>` : ''}</li>`;
         }
         document.getElementById('app').innerHTML = `<header class="flex items-center justify-between mb-6">${header('組織關聯圖')}<div class="text-sm text-muted-foreground"><span class="inline-block w-3 h-3 rounded-full mr-1" style="background: rgb(var(--org-badge-direct-bg))"></span>直銷商<span class="inline-block w-3 h-3 rounded-full ml-3 mr-1" style="background: rgb(var(--org-badge-member-bg))"></span>會員</div></header><div class="org-container" id="orgContainer"><div class="tree"><ul>${roots.length > 0 ? roots.map(r => buildTree(r)).join('') : '<li class="text-muted-foreground p-10">尚無組織資料，請先新增夥伴並設定推薦人。</li>'}</ul></div></div>`;
         
-        // Mobile & Desktop Drag Logic (Pointer Events)
+        // Mobile & Desktop Drag Logic
         const slider = document.getElementById('orgContainer');
         if(!slider) return;
-        if(slider.dataset.bound) return; // Prevent duplicate listeners
-        slider.dataset.bound = 'true';
+        if(slider.dataset.bound) return; slider.dataset.bound = 'true';
         slider.style.touchAction = 'none';
         
         let isDown = false, startX, startY, scrollLeft, scrollTop, isDragging = false; 
@@ -843,7 +1006,7 @@
     }
 
     function renderSettings() {
-        document.getElementById('app').innerHTML = `<header class="flex items-center justify-between mb-6">${header('系統設定')}</header><div class="max-w-2xl mx-auto space-y-6"><div class="bg-card border border-border p-6 rounded-xl"><h3 class="text-lg font-bold mb-4 flex items-center gap-2">📦 資料備份與還原</h3><p class="text-sm text-muted-foreground mb-4">將完整的系統資料匯出為 JSON 檔案，以供備份使用。</p><div class="flex gap-4"><button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg" onclick="downloadBackup()">⬇️ 下載備份 (JSON)</button><label class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg cursor-pointer hover:bg-secondary/80">⬆️ 還原備份<input type="file" accept=".json" class="hidden" onchange="restoreBackup(this)"></label></div></div><div class="bg-card border border-destructive/50 p-6 rounded-xl"><h3 class="text-lg font-bold text-destructive mb-4 flex items-center gap-2">⚠️ 危險區域</h3><p class="text-sm text-muted-foreground mb-4">清除所有本地快取，或重置資料庫（請謹慎操作）。</p><button class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg" onclick="if(confirm('確定清除本地快取？不會影響雲端資料。')){localStorage.clear();location.reload();}">清除瀏覽器快取</button></div><div class="text-center text-xs text-muted-foreground mt-8">系統版本 v9.13 | 開發者: Gemini & Celia</div></div>`;
+        document.getElementById('app').innerHTML = `<header class="flex items-center justify-between mb-6">${header('系統設定')}</header><div class="max-w-2xl mx-auto space-y-6"><div class="bg-card border border-border p-6 rounded-xl"><h3 class="text-lg font-bold mb-4 flex items-center gap-2">📦 資料備份與還原</h3><p class="text-sm text-muted-foreground mb-4">將完整的系統資料匯出為 JSON 檔案，以供備份使用。</p><div class="flex gap-4"><button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg" onclick="downloadBackup()">⬇️ 下載備份 (JSON)</button><label class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg cursor-pointer hover:bg-secondary/80">⬆️ 還原備份<input type="file" accept=".json" class="hidden" onchange="restoreBackup(this)"></label></div></div><div class="bg-card border border-destructive/50 p-6 rounded-xl"><h3 class="text-lg font-bold text-destructive mb-4 flex items-center gap-2">⚠️ 危險區域</h3><p class="text-sm text-muted-foreground mb-4">清除所有本地快取，或重置資料庫（請謹慎操作）。</p><button class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg" onclick="if(confirm('確定清除本地快取？不會影響雲端資料。')){localStorage.clear();location.reload();}">清除瀏覽器快取</button></div><div class="text-center text-xs text-muted-foreground mt-8">系統版本 v10.0 | 開發者: Gemini & Celia</div></div>`;
     }
 
     // =========================================
@@ -905,44 +1068,44 @@
                 if(type === 'gpv') return `this.form.gbv.value=Math.round(this.value*${PV_RATE}); tempRec.gpv=Number(this.value); tempRec.gbv=Number(this.form.gbv.value); renderPreview(); markDirty();`;
                 if(type === 'gbv') return `this.form.gpv.value=parseFloat((this.value/${PV_RATE}).toFixed(2)); tempRec.gbv=Number(this.value); tempRec.gpv=Number(this.form.gpv.value); renderPreview(); markDirty();`;
             };
-            openModal(id?'編輯紀錄':'新增紀錄', `<form id="recForm" onsubmit="saveRecord(event, '${id||''}')"><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-2 space-y-4"><div class="bg-card border border-border p-4 rounded-lg"><div class="row"><div class="col"><label class="text-sm text-muted-foreground">夥伴</label><select name="partnerId" class="form-input" onchange="tempRec.partnerId=this.value;renderPreview();markDirty()" required>${pOpts}</select></div><div class="col"><label class="text-sm text-muted-foreground">版本</label><select name="planVersionId" class="form-input" onchange="tempRec.planVersionId=this.value;renderPreview();markDirty()">${vOpts}</select></div></div><div class="row"><div class="col"><label class="text-sm text-muted-foreground">輸入日期</label><input type="date" name="createdAt" value="${base.createdAt}" class="form-input" oninput="markDirty()"></div></div></div><div class="bg-card border border-border p-4 rounded-lg"><div class="row"><div class="col"><label class="text-sm text-muted-foreground">個人 PV</label><input type="number" step="0.01" name="ppv" value="${base.ppv}" class="form-input" oninput="${syncScript('ppv')}"></div><div class="col"><label class="text-sm text-muted-foreground">個人 BV</label><input type="number" name="pbv" value="${base.pbv}" class="form-input" oninput="${syncScript('pbv')}"></div></div><div class="row"><div class="col"><label class="text-sm text-muted-foreground">小組 PV *</label><input type="number" step="0.01" name="gpv" value="${base.gpv}" class="form-input" required oninput="${syncScript('gpv')}"></div><div class="col"><label class="text-sm text-muted-foreground">小組 BV *</label><input type="number" name="gbv" value="${base.gbv}" class="form-input" required oninput="${syncScript('gbv')}"></div></div></div><div class="bg-card border border-border p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><label class="text-sm">產品分享</label><button type="button" class="text-xs text-primary border border-primary px-2 py-1 rounded" onclick="openAddCatalogModal()">+ 資料庫</button></div><div id="productsArea" class="space-y-2 mb-2"></div><button type="button" class="w-full py-2 bg-secondary text-secondary-foreground rounded border border-border" onclick="addProd()">+ 產品</button></div><div class="bg-card border border-border p-4 rounded-lg"><label class="text-sm mb-2 block">腿 (扣除獨立業績)</label><div id="legsArea" class="space-y-2 mb-2"></div><button type="button" class="w-full py-2 bg-secondary text-secondary-foreground rounded border border-border" onclick="addLeg()">+ 腿</button></div><div class="bg-card border border-border p-4 rounded-lg"><label class="text-sm mb-2 block">新推薦</label><div id="recruitArea" class="space-y-2 mb-2"></div><button type="button" class="w-full py-2 bg-secondary text-secondary-foreground rounded border border-border" onclick="addRec()">+ 新人</button></div><div class="bg-card border border-border p-4 rounded-lg"><div class="row"><div class="col"><label class="text-sm text-muted-foreground">狀態</label><select name="participation" class="form-input" onchange="tempRec.participation=this.value;renderPreview();markDirty()"><option value="active" ${base.participation==='active'?'selected':''}>參與</option><option value="inactive" ${base.participation==='inactive'?'selected':''}>本月不計</option></select></div><div class="col pt-8"><label class="flex items-center gap-2"><input type="checkbox" name="learningDone" ${base.learningDone?'checked':''} onchange="tempRec.learningDone=this.checked;renderPreview();markDirty()"> 完成學習任務</label></div></div><div class="mb-2"><label class="text-sm text-muted-foreground">備註</label><textarea name="note" class="form-input" oninput="markDirty()">${base.note}</textarea></div><div class="row"><div class="col"><label class="text-sm text-muted-foreground">發放狀態</label><select name="payoutStatus" class="form-input" onchange="markDirty()"><option value="unpaid" ${base.payoutStatus==='unpaid'?'selected':''}>未發放</option><option value="paid" ${base.payoutStatus==='paid'?'selected':''}>已發放</option></select></div><div class="col"><label class="text-sm text-muted-foreground">發放日期</label><input type="date" name="payoutDate" value="${base.payoutDate}" class="form-input" oninput="markDirty()"></div></div></div></div><div class="lg:col-span-1"><div class="sticky top-4 space-y-4"><div id="previewBox" class="bg-card border border-accent p-6 rounded-lg shadow-lg min-h-[150px]"></div><div class="flex gap-2"><button type="button" class="flex-1 py-3 bg-secondary text-secondary-foreground rounded-lg" onclick="closeModalSafe()">取消</button>${id?`<button type="button" class="flex-1 py-3 bg-destructive/10 text-destructive rounded-lg" onclick="deleteRecord('${id}')">刪除</button>`:''}<button class="flex-[2] py-3 bg-primary text-primary-foreground font-bold rounded-lg">儲存</button></div></div></div></div></form>`);
+            openModal(id?'編輯紀錄':'新增紀錄', `<form id="recForm" onsubmit="saveRecord(event, '${id||''}')"><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-2 space-y-4"><div class="bg-card border border-border p-4 rounded-lg"><div class="row"><div class="col"><label class="text-sm text-muted-foreground">夥伴</label><select name="partnerId" class="form-input" onchange="tempRec.partnerId=this.value;renderPreview();markDirty()" required>${pOpts}</select></div><div class="col"><label class="text-sm text-muted-foreground">版本</label><select name="planVersionId" class="form-input" onchange="tempRec.planVersionId=this.value;renderPreview();markDirty()">${vOpts}</select></div></div><div class="row"><div class="col"><label class="text-sm text-muted-foreground">輸入日期</label><input type="date" name="createdAt" value="${base.createdAt}" class="form-input" oninput="markDirty()"></div></div></div><div class="bg-card border border-border p-4 rounded-lg"><div class="row"><div class="col"><label class="text-sm text-muted-foreground">個人 PV</label><input type="number" step="0.01" name="ppv" value="${base.ppv}" class="form-input" oninput="${syncScript('ppv')}"></div><div class="col"><label class="text-sm text-muted-foreground">個人 BV</label><input type="number" name="pbv" value="${base.pbv}" class="form-input" oninput="${syncScript('pbv')}"></div></div><div class="row"><div class="col"><label class="text-sm text-muted-foreground">小組 PV *</label><input type="number" step="0.01" name="gpv" value="${base.gpv}" class="form-input" required oninput="${syncScript('gpv')}"></div><div class="col"><label class="text-sm text-muted-foreground">小組 BV *</label><input type="number" name="gbv" value="${base.gbv}" class="form-input" required oninput="${syncScript('gbv')}"></div></div></div><div class="bg-card border border-border p-4 rounded-lg"><div class="flex justify-between items-center mb-2"><label class="text-sm">產品分享</label><button type="button" class="text-xs text-primary border border-primary px-2 py-1 rounded" onclick="openAddCatalogModal(false)">+ 資料庫</button></div><div id="productsArea" class="space-y-2 mb-2"></div><button type="button" class="w-full py-2 bg-secondary text-secondary-foreground rounded border border-border" onclick="addProd()">+ 產品</button></div><div class="bg-card border border-border p-4 rounded-lg"><label class="text-sm mb-2 block">腿 (扣除獨立業績)</label><div id="legsArea" class="space-y-2 mb-2"></div><button type="button" class="w-full py-2 bg-secondary text-secondary-foreground rounded border border-border" onclick="addLeg()">+ 腿</button></div><div class="bg-card border border-border p-4 rounded-lg"><label class="text-sm mb-2 block">新推薦</label><div id="recruitArea" class="space-y-2 mb-2"></div><button type="button" class="w-full py-2 bg-secondary text-secondary-foreground rounded border border-border" onclick="addRec()">+ 新人</button></div><div class="bg-card border border-border p-4 rounded-lg"><div class="row"><div class="col"><label class="text-sm text-muted-foreground">狀態</label><select name="participation" class="form-input" onchange="tempRec.participation=this.value;renderPreview();markDirty()"><option value="active" ${base.participation==='active'?'selected':''}>參與</option><option value="inactive" ${base.participation==='inactive'?'selected':''}>本月不計</option></select></div><div class="col pt-8"><label class="flex items-center gap-2"><input type="checkbox" name="learningDone" ${base.learningDone?'checked':''} onchange="tempRec.learningDone=this.checked;renderPreview();markDirty()"> 完成學習任務</label></div></div><div class="mb-2"><label class="text-sm text-muted-foreground">備註</label><textarea name="note" class="form-input" oninput="markDirty()">${base.note}</textarea></div><div class="row"><div class="col"><label class="text-sm text-muted-foreground">發放狀態</label><select name="payoutStatus" class="form-input" onchange="markDirty()"><option value="unpaid" ${base.payoutStatus==='unpaid'?'selected':''}>未發放</option><option value="paid" ${base.payoutStatus==='paid'?'selected':''}>已發放</option></select></div><div class="col"><label class="text-sm text-muted-foreground">發放日期</label><input type="date" name="payoutDate" value="${base.payoutDate}" class="form-input" oninput="markDirty()"></div></div></div></div><div class="lg:col-span-1"><div class="sticky top-4 space-y-4"><div id="previewBox" class="bg-card border border-accent p-6 rounded-lg shadow-lg min-h-[150px]"></div><div class="flex gap-2"><button type="button" class="flex-1 py-3 bg-secondary text-secondary-foreground rounded-lg" onclick="closeModalSafe()">取消</button>${id?`<button type="button" class="flex-1 py-3 bg-destructive/10 text-destructive rounded-lg" onclick="deleteRecord('${id}')">刪除</button>`:''}<button class="flex-[2] py-3 bg-primary text-primary-foreground font-bold rounded-lg">儲存</button></div></div></div></div></form>`);
             requestAnimationFrame(() => { renderPreview(); renderProducts(); renderLegs(); renderRecs(); });
         } catch(e) { alert(e.message); }
     }
     
-    // Auto-fill Logic for Typing (Updated)
+    // Auto-fill Logic for Typing (Updated for PID)
     function autoFillByName(input, idx) {
         const val = input.value || '';
         const item = tempRec.products[idx] || (tempRec.products[idx] = { qty: 1 });
         item.name = val;
         
-        // Logic Fix: Only unbind if currently bound
-        if (item.productId) {
-            item.productId = ''; item.pv = null; item.bv = null; item.dp = null;
+        if (item.pid) { // reset if bound
+            item.pid = ''; item.productId = ''; item.pv = null; item.bv = null; item.dp = null;
         }
 
         const norm = s => String(s || '').toLowerCase().replace(/[\s\(\)（）、,，\-\._]/g, '');
         const target = norm(val);
-        
         if (!target) { renderPreview(); return; }
 
         const catalog = store.data.productCatalog || {};
-        const entries = Object.entries(catalog);
-        let hit = entries.find(([k, p]) => norm(p.name) === target);
+        const entries = Object.values(catalog); // catalog is now pid -> obj
+        
+        let hit = entries.find(p => norm(p.name) === target);
         if (!hit) {
-            hit = entries.find(([k, p]) => {
+            hit = entries.find(p => {
                 const dbName = norm(p.name);
                 return dbName.includes(target) || target.includes(dbName);
             });
         }
 
         if (hit) {
-            const [key, match] = hit;
-            item.productId = key; item.pv = match.pv; item.bv = match.bv; item.dp = match.dp;
+            item.pid = hit.pid;
+            item.productId = hit.pid; // Compat
+            item.pv = hit.pv; item.bv = hit.bv; item.dp = hit.dp;
+            
             const caretPos = input.selectionStart ?? val.length;
             renderProducts(); renderPreview();
             
-            // Selector Fix
             const inputs = document.querySelectorAll('input[list="global_prod_list"]');
             if (inputs[idx]) {
                 inputs[idx].focus();
@@ -957,12 +1120,14 @@
         const area = document.getElementById('productsArea'); if(!area) return;
         const catalog = store.data.productCatalog || {};
         const groups = { "未分類": [] };
-        Object.entries(catalog).forEach(([key, val]) => {
-            const cat = val.category || "未分類"; if (!groups[cat]) groups[cat] = []; groups[cat].push({ key, ...val });
+        Object.values(catalog).forEach(val => {
+            const cat = val.category || "未分類"; if (!groups[cat]) groups[cat] = []; groups[cat].push(val);
         });
 
-        // Global Datalist
-        const datalistOpts = Object.values(catalog).map(p => `<option value="${p.name}" label="${p.category || '未分類'}"></option>`).join('');
+        // Global Datalist Options
+        const datalistOpts = Object.values(catalog)
+            .map(p => `<option value="${p.name}" label="${p.category || '未分類'}"></option>`)
+            .join('');
 
         const totals = (tempRec.products || []).reduce((acc, p) => { const qty = Number(p.qty) || 1; acc.pv += (Number(p.pv)||0)*qty; acc.bv += (Number(p.bv)||0)*qty; return acc; }, { pv: 0, bv: 0 });
         
@@ -974,7 +1139,7 @@
             let opts = `<option value="">-- 選產品 --</option>`;
             for(const [catName, items] of Object.entries(groups)){
                 opts += `<optgroup label="${catName}">`;
-                items.forEach(x => { opts += `<option value="${x.key}" ${p.productId===x.key?'selected':''}>${x.id} ${x.name}</option>`; });
+                items.forEach(x => { opts += `<option value="${x.pid}" ${p.pid===x.pid?'selected':''}>${x.pid} ${x.name}</option>`; });
                 opts += `</optgroup>`;
             }
 
@@ -994,11 +1159,28 @@
 
     function pickCatalogProduct(i, pid){
         const catalog = store.data.productCatalog || {}; const prod = catalog[pid]; if(!prod) return;
-        const existIndex = (tempRec.products || []).findIndex((x, idx) => idx !== i && x.productId === pid);
-        if (existIndex !== -1) { tempRec.products[existIndex].qty += 1; tempRec.products.splice(i, 1); }
-        else { if(!tempRec.products[i]) tempRec.products[i] = { qty: 1 }; tempRec.products[i] = { productId:pid, name:prod.name, pv:prod.pv, bv:prod.bv, dp:prod.dp, qty:tempRec.products[i].qty||1, note:'' }; }
+        
+        const existIndex = (tempRec.products || []).findIndex((x, idx) => idx !== i && x.pid === pid);
+        if (existIndex !== -1) { 
+            tempRec.products[existIndex].qty += 1; 
+            tempRec.products.splice(i, 1); 
+        } else { 
+            if(!tempRec.products[i]) tempRec.products[i] = { qty: 1 }; 
+            tempRec.products[i] = { 
+                pid: prod.pid, 
+                productId: prod.pid, // Compat
+                name: prod.name, 
+                pv: prod.pv, 
+                bv: prod.bv, 
+                dp: prod.dp, 
+                qty: tempRec.products[i].qty||1, 
+                note:'' 
+            }; 
+        }
         markDirty(); renderProducts(); renderPreview();
     }
+    
+    // ... (Legs, Recs, AddProd Logic kept same)
     function renderLegs() { document.getElementById('legsArea').innerHTML = tempRec.legs.map((l,i)=>`<div class="flex gap-2"><input placeholder="腿名" value="${l.name}" class="form-input" oninput="tempRec.legs[${i}].name=this.value;markDirty()"><input type="number" placeholder="BV" value="${l.bv}" class="form-input" oninput="tempRec.legs[${i}].bv=Number(this.value);renderPreview();markDirty()"><label class="flex items-center whitespace-nowrap"><input type="checkbox" ${l.isIndependent?'checked':''} onchange="tempRec.legs[${i}].isIndependent=this.checked;renderPreview();markDirty()"> 獨立</label><button type="button" class="bg-destructive/10 text-destructive px-3 rounded" onclick="tempRec.legs.splice(${i},1);renderLegs();renderPreview();markDirty()">×</button></div>`).join(''); }
     function addLeg() { tempRec.legs.push({name:'',bv:0,isIndependent:false}); renderLegs(); renderPreview(); markDirty(); }
     function renderRecs() { document.getElementById('recruitArea').innerHTML = tempRec.newRecruits.map((r,i)=>`<div class="flex gap-2"><input placeholder="編號" value="${r.code||''}" class="form-input w-24" oninput="tempRec.newRecruits[${i}].code=this.value;markDirty()"><input placeholder="姓名" value="${r.name}" class="form-input flex-1" oninput="tempRec.newRecruits[${i}].name=this.value;markDirty()"><input type="number" placeholder="BV" value="${r.bv}" class="form-input w-24" oninput="tempRec.newRecruits[${i}].bv=Number(this.value);renderPreview();markDirty()"><button type="button" class="bg-destructive/10 text-destructive px-3 rounded" onclick="tempRec.newRecruits.splice(${i},1);renderRecs();renderPreview();markDirty()">×</button></div>`).join(''); }
@@ -1057,13 +1239,220 @@
         if (checked.length > 3) { alert('最多只能選擇 3 位'); el.checked = false; }
     }
     
-    function openAddCatalogModal() {
+    // --- Catalog Management Modals ---
+    // 1. Edit Item Modal (Supports both edit and create if pid passed/null)
+    // For quick add, use openAddCatalogModal. This is for full management
+    function editCatalogItem(pid) {
+        const catalog = store.data.productCatalog || {};
+        const p = pid ? catalog[pid] : { pid:'', name:'', category:'', pv:0, bv:0, dp:0 };
+        // If create new, suggest PID
+        if(!pid) {
+             let max = 0;
+             Object.values(catalog).forEach(prod => { const n = parseInt((prod.pid||'').replace(/\D/g, '')); if (!isNaN(n) && n > max) max = n; });
+             p.pid = 'P' + String(max + 1).padStart(4, '0');
+        }
+
+        openCatalogModal(pid ? '編輯產品' : '新增產品', `
+            <form onsubmit="saveCatalogItemFull(event, '${pid||''}')">
+                <div class="row">
+                    <div class="col"><label class="text-sm text-muted-foreground">編號 (PID)</label><input name="pid" value="${p.pid||''}" class="form-input" required ${pid?'readonly':''}></div>
+                    <div class="col"><label class="text-sm text-muted-foreground">名稱</label><input name="name" value="${p.name||''}" class="form-input" required></div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                      <label class="text-sm text-muted-foreground">分類</label>
+                      <input list="cat-list" name="category" value="${p.category||''}" class="form-input" placeholder="選擇或輸入分類">
+                      <datalist id="cat-list">${getCategoryOptionsHtml()}</datalist>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col"><label class="text-sm text-muted-foreground">PV</label><input name="pv" type="number" step="0.01" value="${p.pv||0}" class="form-input" required></div>
+                    <div class="col"><label class="text-sm text-muted-foreground">BV</label><input name="bv" type="number" value="${p.bv||0}" class="form-input" required></div>
+                    <div class="col"><label class="text-sm text-muted-foreground">DP</label><input name="dp" type="number" value="${p.dp||0}" class="form-input"></div>
+                </div>
+                <button class="w-full py-2 bg-primary text-primary-foreground font-bold rounded-lg mt-4">儲存</button>
+            </form>
+        `);
+    }
+
+    function saveCatalogItemFull(e, originalPid) {
+        e.preventDefault(); const fd = new FormData(e.target); 
+        const newPid = (fd.get('pid')||'').trim();
+        const name = (fd.get('name')||'').trim();
+        if(!newPid || !name) return alert('編號與名稱必填');
+
+        const catalog = store.data.productCatalog || {};
+
+        // If creating new or renaming (though input is readonly for edit, just safe check)
+        if (!originalPid && catalog[newPid]) return alert('編號已存在');
+
+        const item = {
+            pid: newPid,
+            id: newPid, // legacy compat
+            name: name,
+            category: (fd.get('category')||'未分類').trim(),
+            pv: Number(fd.get('pv'))||0,
+            bv: Number(fd.get('bv'))||0,
+            dp: fd.get('dp')==='' ? null : (Number(fd.get('dp'))||0),
+            updatedAt: getLocalToday()
+        };
+
+        catalog[newPid] = item;
+        store.data.productCatalog = catalog;
+
+        store.save().then(() => { 
+            alert('儲存成功'); 
+            closeCatalogModal(); 
+            renderCatalog(); 
+        }).catch(err => alert('儲存失敗'));
+    }
+
+    function promptRename(oldPid) {
+        const newPid = prompt(`請輸入新的產品編號 (原: ${oldPid})`, oldPid);
+        if(newPid && newPid !== oldPid) renameProductPid(oldPid, newPid);
+    }
+    
+    // Rename Product PID Utility
+    function renameProductPid(oldPid, newPid){
+        oldPid = (oldPid||'').trim(); newPid = (newPid||'').trim();
+        const catalog = store.data.productCatalog || {};
+        
+        if(!oldPid || !newPid) return alert('編號不能為空');
+        if(!catalog[oldPid]) return alert('找不到舊編號');
+        if(catalog[newPid]) return alert('新編號已存在');
+
+        // 1) Update Catalog
+        const obj = catalog[oldPid];
+        delete catalog[oldPid];
+        obj.pid = newPid;
+        obj.id = newPid; // keep legacy id sync
+        catalog[newPid] = obj;
+
+        // 2) Update Records
+        let count = 0;
+        (store.data.records||[]).forEach(r=>{
+            (r.products||[]).forEach(p=>{
+                if(p.pid === oldPid || p.productId === oldPid) {
+                    p.pid = newPid;
+                    p.productId = newPid; // keep legacy sync
+                    count++;
+                }
+            });
+        });
+
+        store.data.productCatalog = catalog;
+        store.save().then(() => {
+            alert(`修改成功！已同步更新 ${count} 筆紀錄。`);
+            router('catalog');
+        }).catch(err => alert('修改失敗: ' + err.message));
+    }
+
+    function deleteCatalogItem(pid) {
+        if(!confirm(`確定刪除產品 ${pid}？\n注意：歷史紀錄中的此產品將無法顯示詳細資訊(除非名稱有快照)。`)) return;
+        const catalog = store.data.productCatalog || {};
+        delete catalog[pid];
+        store.data.productCatalog = catalog;
+        store.save().then(() => { alert('已刪除'); renderCatalog(); }).catch(err => alert('刪除失敗'));
+    }
+    
+    // 2. Merge Duplicates
+    function openMergeModal() {
+        const catalog = store.data.productCatalog || {};
+        const opts = Object.values(catalog).sort((a,b) => a.pid.localeCompare(b.pid))
+            .map(p => `<option value="${p.pid}">${p.pid} ${p.name}</option>`).join('');
+
+        openModal('合併重複產品', `
+            <div class="space-y-4">
+                <div class="bg-yellow-500/10 border border-yellow-500/50 p-3 rounded text-sm text-yellow-500">
+                    注意：此操作將把「來源產品」的所有歷史紀錄轉移給「目標產品」，並刪除來源產品。此動作無法復原。
+                </div>
+                <div>
+                    <label class="text-sm text-muted-foreground block mb-1">來源產品 (將被刪除)</label>
+                    <select id="mergeSource" class="form-input">${opts}</select>
+                </div>
+                <div class="flex justify-center text-muted-foreground">⬇️ 合併至 ⬇️</div>
+                <div>
+                    <label class="text-sm text-muted-foreground block mb-1">目標產品 (保留)</label>
+                    <select id="mergeTarget" class="form-input">${opts}</select>
+                </div>
+                <button class="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg mt-2" onclick="performMerge()">執行合併</button>
+            </div>
+        `);
+    }
+
+    function performMerge() {
+        const sourcePid = document.getElementById('mergeSource').value;
+        const targetPid = document.getElementById('mergeTarget').value;
+        
+        if (!sourcePid || !targetPid) return alert('請選擇產品');
+        if (sourcePid === targetPid) return alert('來源與目標不能相同');
+        
+        if (!confirm(`確定要將 ${sourcePid} 合併至 ${targetPid} 嗎？\n${sourcePid} 將會被永久刪除。`)) return;
+
+        const catalog = store.data.productCatalog || {};
+        const targetProd = catalog[targetPid];
+        
+        let count = 0;
+        (store.data.records||[]).forEach(r => {
+            let recordModified = false;
+            
+            // 1. Rename references
+            (r.products || []).forEach(p => {
+                if (p.pid === sourcePid || p.productId === sourcePid) {
+                    p.pid = targetPid;
+                    p.productId = targetPid;
+                    // Update snapshot values to match target
+                    p.name = targetProd.name;
+                    p.pv = targetProd.pv;
+                    p.bv = targetProd.bv;
+                    p.dp = targetProd.dp;
+                    recordModified = true;
+                    count++;
+                }
+            });
+
+            // 2. Consolidate duplicates within the same record
+            if (recordModified) {
+                const mergedProducts = [];
+                const map = new Map();
+                
+                r.products.forEach(p => {
+                    const key = p.pid || p.productId; // use pid as key
+                    if (!map.has(key)) {
+                        map.set(key, p);
+                        mergedProducts.push(p);
+                    } else {
+                        // Duplicate found, merge quantity
+                        const existing = map.get(key);
+                        existing.qty = (Number(existing.qty) || 1) + (Number(p.qty) || 1);
+                    }
+                });
+                r.products = mergedProducts;
+            }
+        });
+
+        // Delete source
+        delete catalog[sourcePid];
+        store.data.productCatalog = catalog;
+
+        store.save().then(() => {
+            alert(`合併成功！共更新 ${count} 筆紀錄引用。`);
+            closeModal();
+            renderCatalog();
+        }).catch(err => alert('合併失敗: ' + err.message));
+    }
+
+    // Quick Add Modal (from Records) - Updated for PID
+    function openAddCatalogModal(isFromCatalogPage = false) {
+        if(isFromCatalogPage) { editCatalogItem(null); return; } // Redirect if from catalog page
+
         const catalog = store.data.productCatalog || {};
         let max = 0;
-        Object.values(catalog).forEach(p => { const n = parseInt(p.id.replace(/\D/g, '')); if (!isNaN(n) && n > max) max = n; });
+        Object.values(catalog).forEach(p => { const n = parseInt((p.pid||'').replace(/\D/g, '')); if (!isNaN(n) && n > max) max = n; });
         const nextId = 'P' + String(max + 1).padStart(4, '0');
+        
         openCatalogModal('新增產品', `
-            <form onsubmit="saveCatalogProduct(event)">
+            <form onsubmit="saveCatalogProductQuick(event)">
                 <div class="row">
                     <div class="col"><label class="text-sm text-muted-foreground">產品編號</label><input name="pid" value="${nextId}" class="form-input" required></div>
                     <div class="col"><label class="text-sm text-muted-foreground">產品名稱</label><input name="name" class="form-input" required></div>
@@ -1085,21 +1474,29 @@
         `);
     }
     
-    function saveCatalogProduct(e){
-        e.preventDefault(); const fd = new FormData(e.target); const pid = (fd.get('pid')||'').trim(); const name = (fd.get('name')||'').trim();
+    function saveCatalogProductQuick(e){
+        e.preventDefault(); const fd = new FormData(e.target); 
+        const pid = (fd.get('pid')||'').trim(); 
+        const name = (fd.get('name')||'').trim();
         if(!pid || !name) return alert('請填寫完整');
-        const catalog = store.data.productCatalog || {};
-        const exist = Object.values(catalog).some(v => (v?.id || '').trim() === pid);
-        if(exist) return alert('編號已存在');
         
-        catalog[uuid()] = { 
-            id: pid, name, 
+        const catalog = store.data.productCatalog || {};
+        if(catalog[pid]) return alert('編號已存在');
+        
+        catalog[pid] = { 
+            pid: pid, id: pid, // dual keys
+            name, 
             category: fd.get('category') || '未分類', 
             pv: Number(fd.get('pv')) || 0, bv: Number(fd.get('bv')) || 0, dp: fd.get('dp')==='' ? null : (Number(fd.get('dp'))||0) 
         };
         store.data.productCatalog = catalog; 
-        store.save().then(() => { alert('已加入資料庫'); closeCatalogModal(); if(document.getElementById('modal').style.display === 'block') { renderProducts(); } }).catch(err => { alert('加入失敗\n' + getFirebaseErrorMsg(err)); });
+        store.save().then(() => { 
+            alert('已加入資料庫'); 
+            closeCatalogModal(); 
+            if(document.getElementById('modal').style.display === 'block' && typeof renderProducts === 'function') { renderProducts(); } 
+        }).catch(err => { alert('加入失敗\n' + getFirebaseErrorMsg(err)); });
     }
+
     function exportCSV(m) {
         const mode = getPvViewMode();
         const list = store.getRecordsByMonth(m).map(calculate).filter(x => x);
