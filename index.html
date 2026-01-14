@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v9.9 Final)</title>
+    <title>新星啟動計畫系統 (v9.13 最終完善版)</title>
     
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Ctext x='50%25' y='58%25' text-anchor='middle' font-size='120'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
@@ -396,7 +396,7 @@
         </div>
         <div>
             <div class="text-sm font-bold text-foreground">新星啟動計畫</div>
-            <div class="text-xs text-muted-foreground">管理系統 v9.9</div>
+            <div class="text-xs text-muted-foreground">管理系統 v9.13</div>
         </div>
     </div>
     
@@ -676,6 +676,15 @@
         if (totalMonths === 0 && days === 0) return '今天加入';
         let result = ''; if (totalMonths > 0) result += `${totalMonths} 個月 `; if (days > 0) result += `${days} 天`; return result.trim();
     }
+    
+    // Category Helper
+    function getCategoryOptionsHtml() {
+      const preset = ["營養", "美容", "家居", "個人護理", "淨水", "空氣", "其他"];
+      const set = new Set(preset);
+      const catalog = store.data.productCatalog || {};
+      Object.values(catalog).forEach(p => { const c = (p.category || "").trim(); if (c) set.add(c); });
+      return Array.from(set).sort((a,b)=>a.localeCompare(b,'zh-Hant')).map(c => `<option value="${c}"></option>`).join('');
+    }
 
     const PV_RATE = 50; 
     function getPvViewMode() { return localStorage.getItem('pv_view_mode') || 'both'; }
@@ -733,7 +742,7 @@
     // F) Pages Render
     // =========================================
     function renderDashboard() {
-        const m = getLocalMonth(); // Fixed: Use local month directly
+        const m = getLocalMonth();
         const recs = store.getRecordsByMonth(m).map(calculate).filter(x=>x);
         const total = recs.reduce((s,r)=>s+r.starTotal,0);
         const unpaid = recs.filter(r=>r.payoutStatus!=='paid' && r.totalIncome>0).length;
@@ -834,7 +843,7 @@
     }
 
     function renderSettings() {
-        document.getElementById('app').innerHTML = `<header class="flex items-center justify-between mb-6">${header('系統設定')}</header><div class="max-w-2xl mx-auto space-y-6"><div class="bg-card border border-border p-6 rounded-xl"><h3 class="text-lg font-bold mb-4 flex items-center gap-2">📦 資料備份與還原</h3><p class="text-sm text-muted-foreground mb-4">將完整的系統資料匯出為 JSON 檔案，以供備份使用。</p><div class="flex gap-4"><button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg" onclick="downloadBackup()">⬇️ 下載備份 (JSON)</button><label class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg cursor-pointer hover:bg-secondary/80">⬆️ 還原備份<input type="file" accept=".json" class="hidden" onchange="restoreBackup(this)"></label></div></div><div class="bg-card border border-destructive/50 p-6 rounded-xl"><h3 class="text-lg font-bold text-destructive mb-4 flex items-center gap-2">⚠️ 危險區域</h3><p class="text-sm text-muted-foreground mb-4">清除所有本地快取，或重置資料庫（請謹慎操作）。</p><button class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg" onclick="if(confirm('確定清除本地快取？不會影響雲端資料。')){localStorage.clear();location.reload();}">清除瀏覽器快取</button></div><div class="text-center text-xs text-muted-foreground mt-8">系統版本 v9.9 | 開發者: Gemini & Celia</div></div>`;
+        document.getElementById('app').innerHTML = `<header class="flex items-center justify-between mb-6">${header('系統設定')}</header><div class="max-w-2xl mx-auto space-y-6"><div class="bg-card border border-border p-6 rounded-xl"><h3 class="text-lg font-bold mb-4 flex items-center gap-2">📦 資料備份與還原</h3><p class="text-sm text-muted-foreground mb-4">將完整的系統資料匯出為 JSON 檔案，以供備份使用。</p><div class="flex gap-4"><button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg" onclick="downloadBackup()">⬇️ 下載備份 (JSON)</button><label class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg cursor-pointer hover:bg-secondary/80">⬆️ 還原備份<input type="file" accept=".json" class="hidden" onchange="restoreBackup(this)"></label></div></div><div class="bg-card border border-destructive/50 p-6 rounded-xl"><h3 class="text-lg font-bold text-destructive mb-4 flex items-center gap-2">⚠️ 危險區域</h3><p class="text-sm text-muted-foreground mb-4">清除所有本地快取，或重置資料庫（請謹慎操作）。</p><button class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg" onclick="if(confirm('確定清除本地快取？不會影響雲端資料。')){localStorage.clear();location.reload();}">清除瀏覽器快取</button></div><div class="text-center text-xs text-muted-foreground mt-8">系統版本 v9.13 | 開發者: Gemini & Celia</div></div>`;
     }
 
     // =========================================
@@ -887,6 +896,7 @@
             if(base.pbv === undefined) base.pbv = pvToBv(base.ppv); if(base.gbv === undefined) base.gbv = pvToBv(base.gpv);
             tempRec = JSON.parse(JSON.stringify(base));
             if (!Array.isArray(tempRec.legs)) tempRec.legs = []; if (!Array.isArray(tempRec.newRecruits)) tempRec.newRecruits = []; if (!Array.isArray(tempRec.products)) tempRec.products = [];
+
             const pOpts = store.data.partners.map(p => `<option value="${p.id}" ${p.id===base.partnerId?'selected':''} style="${p.status==='inactive'?'color:gray':''}">${p.code} ${p.name} ${p.status==='inactive'?'(未參與)':''}</option>`).join('');
             const vOpts = store.data.versions.map(v => `<option value="${v.id}" ${v.id===base.planVersionId?'selected':''} ${v.archived?'disabled':''}>${v.name}</option>`).join('');
             const syncScript = (type) => {
@@ -899,19 +909,89 @@
             requestAnimationFrame(() => { renderPreview(); renderProducts(); renderLegs(); renderRecs(); });
         } catch(e) { alert(e.message); }
     }
+    
+    // Auto-fill Logic for Typing (Updated)
+    function autoFillByName(input, idx) {
+        const val = input.value || '';
+        const item = tempRec.products[idx] || (tempRec.products[idx] = { qty: 1 });
+        item.name = val;
+        
+        // Logic Fix: Only unbind if currently bound
+        if (item.productId) {
+            item.productId = ''; item.pv = null; item.bv = null; item.dp = null;
+        }
+
+        const norm = s => String(s || '').toLowerCase().replace(/[\s\(\)（）、,，\-\._]/g, '');
+        const target = norm(val);
+        
+        if (!target) { renderPreview(); return; }
+
+        const catalog = store.data.productCatalog || {};
+        const entries = Object.entries(catalog);
+        let hit = entries.find(([k, p]) => norm(p.name) === target);
+        if (!hit) {
+            hit = entries.find(([k, p]) => {
+                const dbName = norm(p.name);
+                return dbName.includes(target) || target.includes(dbName);
+            });
+        }
+
+        if (hit) {
+            const [key, match] = hit;
+            item.productId = key; item.pv = match.pv; item.bv = match.bv; item.dp = match.dp;
+            const caretPos = input.selectionStart ?? val.length;
+            renderProducts(); renderPreview();
+            
+            // Selector Fix
+            const inputs = document.querySelectorAll('input[list="global_prod_list"]');
+            if (inputs[idx]) {
+                inputs[idx].focus();
+                try { inputs[idx].setSelectionRange(caretPos, caretPos); } catch(e) {}
+            }
+        } else {
+            renderPreview();
+        }
+    }
+
     function renderProducts() {
         const area = document.getElementById('productsArea'); if(!area) return;
         const catalog = store.data.productCatalog || {};
-        const catalogList = Object.entries(catalog).map(([key, val]) => ({ key, ...val }));
+        const groups = { "未分類": [] };
+        Object.entries(catalog).forEach(([key, val]) => {
+            const cat = val.category || "未分類"; if (!groups[cat]) groups[cat] = []; groups[cat].push({ key, ...val });
+        });
+
+        // Global Datalist
+        const datalistOpts = Object.values(catalog).map(p => `<option value="${p.name}" label="${p.category || '未分類'}"></option>`).join('');
+
         const totals = (tempRec.products || []).reduce((acc, p) => { const qty = Number(p.qty) || 1; acc.pv += (Number(p.pv)||0)*qty; acc.bv += (Number(p.bv)||0)*qty; return acc; }, { pv: 0, bv: 0 });
+        
         const listHtml = (tempRec.products||[]).map((p,i)=>{
             const uPv = Number(p.pv)||0; const qty = Number(p.qty)||1;
             const hasPV = p.pv !== null && p.pv !== undefined && p.pv !== '';
             const subPv = hasPV ? (uPv * qty).toFixed(2) : '-';
-            return `<div class="bg-secondary/20 p-3 rounded-lg border border-border"><div class="flex gap-2 mb-2"><select class="form-input flex-[2]" onchange="pickCatalogProduct(${i}, this.value)"><option value="">-- 選產品 --</option>${catalogList.map(x=>`<option value="${x.key}" ${p.productId===x.key?'selected':''}>${x.id} ${x.name}</option>`).join('')}</select><input placeholder="品項" value="${p.name||''}" class="form-input flex-[2]" ${p.productId ? 'disabled' : ''} oninput="tempRec.products[${i}].name=this.value;markDirty()"><input type="number" placeholder="數量" value="${p.qty||1}" class="form-input w-20" oninput="tempRec.products[${i}].qty=Number(this.value)||1;markDirty();renderProducts();renderPreview()"><button type="button" class="bg-destructive/10 text-destructive px-3 rounded" onclick="tempRec.products.splice(${i},1);renderProducts();markDirty();renderPreview()">×</button></div><div class="flex justify-between text-xs text-muted-foreground"><span>PV:${(p.pv ?? '-') } BV:${(p.bv ?? '-')}</span><span>小計 PV:${subPv}</span></div></div>`;
+            
+            let opts = `<option value="">-- 選產品 --</option>`;
+            for(const [catName, items] of Object.entries(groups)){
+                opts += `<optgroup label="${catName}">`;
+                items.forEach(x => { opts += `<option value="${x.key}" ${p.productId===x.key?'selected':''}>${x.id} ${x.name}</option>`; });
+                opts += `</optgroup>`;
+            }
+
+            return `<div class="bg-secondary/20 p-3 rounded-lg border border-border">
+                <div class="flex gap-2 mb-2">
+                    <select class="form-input flex-[2]" onchange="pickCatalogProduct(${i}, this.value)">${opts}</select>
+                    <input list="global_prod_list" placeholder="輸入或選擇品項" value="${p.name||''}" class="form-input flex-[2]" oninput="autoFillByName(this, ${i}); markDirty()">
+                    <input type="number" placeholder="數量" value="${p.qty||1}" class="form-input w-20" oninput="tempRec.products[${i}].qty=Number(this.value)||1;markDirty();renderProducts();renderPreview()">
+                    <button type="button" class="bg-destructive/10 text-destructive px-3 rounded" onclick="tempRec.products.splice(${i},1);renderProducts();markDirty();renderPreview()">×</button>
+                </div>
+                <div class="flex justify-between text-xs text-muted-foreground"><span>PV:${(p.pv ?? '-') } BV:${(p.bv ?? '-')}</span><span>小計 PV:${subPv}</span></div>
+            </div>`;
         }).join('');
-        area.innerHTML = listHtml + ( (tempRec.products||[]).length ? `<div class="mt-2 p-3 bg-card border border-dashed border-border rounded text-sm flex gap-4"><b>小計</b> <span>PV: ${totals.pv.toFixed(2)}</span> <span>BV: ${totals.bv.toFixed(0)}</span></div>` : '' );
+        
+        area.innerHTML = listHtml + ( (tempRec.products||[]).length ? `<div class="mt-2 p-3 bg-card border border-dashed border-border rounded text-sm flex gap-4"><b>小計</b> <span>PV: ${totals.pv.toFixed(2)}</span> <span>BV: ${totals.bv.toFixed(0)}</span></div>` : '' ) + `<datalist id="global_prod_list">${datalistOpts}</datalist>`;
     }
+
     function pickCatalogProduct(i, pid){
         const catalog = store.data.productCatalog || {}; const prod = catalog[pid]; if(!prod) return;
         const existIndex = (tempRec.products || []).findIndex((x, idx) => idx !== i && x.productId === pid);
@@ -976,20 +1056,47 @@
         const checked = document.querySelectorAll('.coach-chk:checked');
         if (checked.length > 3) { alert('最多只能選擇 3 位'); el.checked = false; }
     }
+    
     function openAddCatalogModal() {
         const catalog = store.data.productCatalog || {};
         let max = 0;
         Object.values(catalog).forEach(p => { const n = parseInt(p.id.replace(/\D/g, '')); if (!isNaN(n) && n > max) max = n; });
         const nextId = 'P' + String(max + 1).padStart(4, '0');
-        openCatalogModal('新增產品', `<form onsubmit="saveCatalogProduct(event)"><div class="row"><div class="col"><label class="text-sm text-muted-foreground">產品編號</label><input name="pid" value="${nextId}" class="form-input" required></div><div class="col"><label class="text-sm text-muted-foreground">產品名稱</label><input name="name" class="form-input" required></div></div><div class="row"><div class="col"><label class="text-sm text-muted-foreground">PV</label><input name="pv" type="number" step="0.01" class="form-input" required></div><div class="col"><label class="text-sm text-muted-foreground">BV</label><input name="bv" type="number" class="form-input" required></div><div class="col"><label class="text-sm text-muted-foreground">DP</label><input name="dp" type="number" class="form-input"></div></div><button class="w-full py-2 bg-primary text-primary-foreground font-bold rounded-lg mt-4">儲存</button></form>`);
+        openCatalogModal('新增產品', `
+            <form onsubmit="saveCatalogProduct(event)">
+                <div class="row">
+                    <div class="col"><label class="text-sm text-muted-foreground">產品編號</label><input name="pid" value="${nextId}" class="form-input" required></div>
+                    <div class="col"><label class="text-sm text-muted-foreground">產品名稱</label><input name="name" class="form-input" required></div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                      <label class="text-sm text-muted-foreground">分類</label>
+                      <input list="cat-list" name="category" class="form-input" placeholder="選擇或輸入分類">
+                      <datalist id="cat-list">${getCategoryOptionsHtml()}</datalist>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col"><label class="text-sm text-muted-foreground">PV</label><input name="pv" type="number" step="0.01" class="form-input" required></div>
+                    <div class="col"><label class="text-sm text-muted-foreground">BV</label><input name="bv" type="number" class="form-input" required></div>
+                    <div class="col"><label class="text-sm text-muted-foreground">DP</label><input name="dp" type="number" class="form-input"></div>
+                </div>
+                <button class="w-full py-2 bg-primary text-primary-foreground font-bold rounded-lg mt-4">儲存</button>
+            </form>
+        `);
     }
+    
     function saveCatalogProduct(e){
         e.preventDefault(); const fd = new FormData(e.target); const pid = (fd.get('pid')||'').trim(); const name = (fd.get('name')||'').trim();
         if(!pid || !name) return alert('請填寫完整');
         const catalog = store.data.productCatalog || {};
         const exist = Object.values(catalog).some(v => (v?.id || '').trim() === pid);
         if(exist) return alert('編號已存在');
-        catalog[uuid()] = { id: pid, name, pv: Number(fd.get('pv')) || 0, bv: Number(fd.get('bv')) || 0, dp: fd.get('dp')==='' ? null : (Number(fd.get('dp'))||0) };
+        
+        catalog[uuid()] = { 
+            id: pid, name, 
+            category: fd.get('category') || '未分類', 
+            pv: Number(fd.get('pv')) || 0, bv: Number(fd.get('bv')) || 0, dp: fd.get('dp')==='' ? null : (Number(fd.get('dp'))||0) 
+        };
         store.data.productCatalog = catalog; 
         store.save().then(() => { alert('已加入資料庫'); closeCatalogModal(); if(document.getElementById('modal').style.display === 'block') { renderProducts(); } }).catch(err => { alert('加入失敗\n' + getFirebaseErrorMsg(err)); });
     }
