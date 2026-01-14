@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>新星啟動計畫系統 (v10.1 儀表板升級版)</title>
+    <title>新星啟動計畫系統 (v10.3 最終修復版)</title>
     
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Ctext x='50%25' y='58%25' text-anchor='middle' font-size='120'%3E%F0%9F%9A%80%3C/text%3E%3C/svg%3E">
@@ -85,6 +85,7 @@
             --org-badge-direct-bg: 16 185 129;
             --org-badge-member-bg: 59 130 246;
             --org-badge-fg: 2 44 34;
+            --org-highlight: 234 179 8; /* yellow-500 */
         }
 
         :root[data-theme="light"] {
@@ -124,6 +125,7 @@
             --org-badge-direct-bg: 16 185 129;
             --org-badge-member-bg: 37 99 235;
             --org-badge-fg: 255 255 255;
+            --org-highlight: 234 179 8;
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -354,7 +356,9 @@
         .node:hover { transform: translateY(-2px); z-index: 10; border-color: rgb(var(--org-node-hover-border)); box-shadow: var(--org-node-shadow-hover); }
         .node.node-active { border-color: rgb(var(--primary)); background: linear-gradient(135deg, rgb(var(--org-node-bg)) 0%, rgb(var(--primary) / 0.10) 100%); }
         .node.node-inactive { border-color: rgb(var(--border)); opacity: 0.65; }
-        
+        .node.node-highlight { border-color: rgb(var(--org-highlight)) !important; box-shadow: 0 0 20px rgb(var(--org-highlight) / 0.4) !important; animation: pulse-glow 1.5s infinite; }
+        @keyframes pulse-glow { 0% { box-shadow: 0 0 0 0 rgb(var(--org-highlight) / 0.4); } 70% { box-shadow: 0 0 0 10px rgb(var(--org-highlight) / 0); } 100% { box-shadow: 0 0 0 0 rgb(var(--org-highlight) / 0); } }
+
         .node-toggle {
           width: 38px; background: rgb(var(--org-toggle-bg) / 0.06); border-right: 1px solid rgb(var(--border) / 1);
           display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -396,7 +400,7 @@
         </div>
         <div>
             <div class="text-sm font-bold text-foreground">新星啟動計畫</div>
-            <div class="text-xs text-muted-foreground">管理系統 v10.1</div>
+            <div class="text-xs text-muted-foreground">管理系統 v10.3</div>
         </div>
     </div>
     
@@ -474,140 +478,72 @@
     // =========================================
     // A) Theme & UI Utilities
     // =========================================
+    const STORAGE_KEYS = { THEME: 'theme', PV_MODE: 'pv_view_mode', SEARCH_P: 'p_search', STATUS_P: 'p_statusFilter', DATE_P_FROM: 'p_joinedFrom', DATE_P_TO: 'p_joinedTo', SORT_P: 'p_sort', MONTH_REC: 'r_m', SEARCH_REC: 'r_q', UNPAID_REC: 'r_unpaid', MONTH_PAY: 'pay_m', SEARCH_PAY: 'pay_q', SEARCH_CAT: 'c_search' };
+
     function applyTheme(theme){
-      document.documentElement.setAttribute('data-theme', theme);
-      localStorage.setItem('theme', theme);
-      const btn = document.getElementById('themeBtn');
-      if(btn){
-        btn.textContent = (theme === 'light') ? '🌙' : '☀️';
-        btn.title = (theme === 'light') ? '切換深色模式' : '切換淺色模式';
-      }
+      document.documentElement.setAttribute('data-theme', theme); localStorage.setItem(STORAGE_KEYS.THEME, theme);
+      const btn = document.getElementById('themeBtn'); if(btn){ btn.textContent = (theme === 'light') ? '🌙' : '☀️'; btn.title = (theme === 'light') ? '切換深色模式' : '切換淺色模式'; }
     }
-    function toggleTheme(){
-      const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-      applyTheme(cur === 'dark' ? 'light' : 'dark');
-    }
+    function toggleTheme(){ const cur = document.documentElement.getAttribute('data-theme') || 'dark'; applyTheme(cur === 'dark' ? 'light' : 'dark'); }
     (function initTheme(){
-      const saved = localStorage.getItem('theme');
-      if(saved){ applyTheme(saved); return; }
-      const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-      applyTheme(prefersLight ? 'light' : 'dark');
+      const saved = localStorage.getItem(STORAGE_KEYS.THEME); if(saved){ applyTheme(saved); return; }
+      const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches; applyTheme(prefersLight ? 'light' : 'dark');
     })();
 
     let _errFlag = false;
     window.onerror = function(msg, url, line, col, error) {
-        console.error(error);
-        document.getElementById('loading').style.display = 'none';
-        if (_errFlag) return;
-        _errFlag = true; setTimeout(() => { _errFlag = false; }, 3000);
-        alert(`⚠️ 系統錯誤：\n${msg}`);
+        console.error(error); document.getElementById('loading').style.display = 'none';
+        if (_errFlag) return; _errFlag = true; setTimeout(() => { _errFlag = false; }, 3000); alert(`⚠️ 系統錯誤：\n${msg}`);
     };
+    function setVh() { let vh = window.innerHeight * 0.01; document.documentElement.style.setProperty('--vh', `${vh}px`); }
+    window.addEventListener('resize', setVh); window.addEventListener('orientationchange', setVh); setVh();
 
-    function setVh() {
-        let vh = window.innerHeight * 0.01;
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
-    }
-    window.addEventListener('resize', setVh);
-    window.addEventListener('orientationchange', setVh);
-    setVh();
-
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('drawer-overlay');
-    let bodyScrollY = 0;
-    function openDrawer() {
-        sidebar.classList.add('open'); overlay.classList.add('visible');
-        bodyScrollY = window.scrollY; document.body.style.position = 'fixed'; document.body.style.top = `-${bodyScrollY}px`; document.body.style.width = '100%';
-    }
-    function closeDrawer() {
-        sidebar.classList.remove('open'); overlay.classList.remove('visible');
-        document.body.style.position = ''; document.body.style.top = ''; window.scrollTo(0, bodyScrollY);
-    }
+    const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('drawer-overlay'); let bodyScrollY = 0;
+    function openDrawer() { sidebar.classList.add('open'); overlay.classList.add('visible'); }
+    function closeDrawer() { sidebar.classList.remove('open'); overlay.classList.remove('visible'); }
     function toggleGroup(groupId) { document.getElementById(groupId).classList.toggle('collapsed'); }
 
-    function openModal(title, content) {
-        document.getElementById('modal-title').innerText = title;
-        document.getElementById('modal-body').innerHTML = content;
-        document.getElementById('modal').style.display = 'block';
-    }
-    function closeModalSafe() { 
-        if(isDirty && !confirm('有未儲存變更，確定離開？')) return; 
-        document.getElementById('modal').style.display = 'none'; 
-    }
+    function openModal(title, content) { document.getElementById('modal-title').innerText = title; document.getElementById('modal-body').innerHTML = content; document.getElementById('modal').style.display = 'block'; }
+    function closeModalSafe() { if(isDirty && !confirm('有未儲存變更，確定離開？')) return; document.getElementById('modal').style.display = 'none'; }
     function closeModal() { document.getElementById('modal').style.display = 'none'; }
-
-    function openCatalogModal(title, content){
-        document.getElementById('catalogModalTitle').innerText = title || '產品資料庫';
-        document.getElementById('catalogModalBody').innerHTML = content || '';
-        document.getElementById('catalogModal').style.display = 'block';
-    }
+    function openCatalogModal(title, content){ document.getElementById('catalogModalTitle').innerText = title || '產品資料庫'; document.getElementById('catalogModalBody').innerHTML = content || ''; document.getElementById('catalogModal').style.display = 'block'; }
     function closeCatalogModal(){ document.getElementById('catalogModal').style.display = 'none'; }
 
     // =========================================
     // B) Firebase Init & Auth
     // =========================================
-    const firebaseConfig = {
-        apiKey: "AIzaSyCanDeinCJyZFeHUGnYVEmalCYxjwaIw-4",
-        authDomain: "newstar-system.firebaseapp.com",
-        projectId: "newstar-system",
-        storageBucket: "newstar-system.firebasestorage.app",
-        messagingSenderId: "889699172174",
-        appId: "1:889699172174:web:0ff42757035a879cb3281f",
-        databaseURL: "https://newstar-system-default-rtdb.asia-southeast1.firebasedatabase.app"
-    };
-
-    let isReady = false;
-    let db = null;
-    const ALLOWED_EMAILS = ["tsai860218@gmail.com", "xc23026849@gmail.com"].map(e => e.toLowerCase().trim());
-    let isDirty = false;
-    let tempRec = null;
+    const firebaseConfig = { apiKey: "AIzaSyCanDeinCJyZFeHUGnYVEmalCYxjwaIw-4", authDomain: "newstar-system.firebaseapp.com", projectId: "newstar-system", storageBucket: "newstar-system.firebasestorage.app", messagingSenderId: "889699172174", appId: "1:889699172174:web:0ff42757035a879cb3281f", databaseURL: "https://newstar-system-default-rtdb.asia-southeast1.firebasedatabase.app" };
+    let isReady = false; let db = null; const ALLOWED_EMAILS = ["tsai860218@gmail.com", "xc23026849@gmail.com"].map(e => e.toLowerCase().trim());
+    let isDirty = false; let tempRec = null; let _didCatalogMigration = false;
     function markDirty() { isDirty = true; }
 
     function setOverlay(show){ document.getElementById("loginOverlay").style.display = show ? "flex" : "none"; }
     function setAuthButtons(isLoggedIn){
-        const loginBtn  = document.querySelector(".auth-buttons .login-btn");
-        const logoutBtn = document.getElementById("logoutBtn");
-        const themeBtn  = document.getElementById("themeBtn");
-        if(loginBtn)  loginBtn.style.display  = isLoggedIn ? "none" : "inline-flex";
-        if(logoutBtn) logoutBtn.style.display = isLoggedIn ? "inline-flex" : "none";
-        if(themeBtn)  themeBtn.style.display  = "inline-flex";
+        const loginBtn = document.querySelector(".auth-buttons .login-btn"); const logoutBtn = document.getElementById("logoutBtn"); const themeBtn = document.getElementById("themeBtn");
+        if(loginBtn) loginBtn.style.display = isLoggedIn ? "none" : "inline-flex"; if(logoutBtn) logoutBtn.style.display = isLoggedIn ? "inline-flex" : "none"; if(themeBtn) themeBtn.style.display = "inline-flex";
     }
     function setUserBadge(user){
-        const badge = document.getElementById("userEmailBadge");
-        if(!badge) return;
+        const badge = document.getElementById("userEmailBadge"); if(!badge) return;
         if(!user){ badge.style.display = "none"; badge.textContent = ""; return; }
-        const email = (user.email || "").toLowerCase().trim();
-        const displayName = (user.displayName || "").trim();
-        const name = displayName || email.split("@")[0] || "你";
-        badge.style.display = "inline-flex"; badge.textContent = `Hi, ${name}`;
+        const email = (user.email || "").toLowerCase().trim(); const displayName = (user.displayName || "").trim(); const name = displayName || email.split("@")[0] || "你"; badge.style.display = "inline-flex"; badge.textContent = `Hi, ${name}`;
     }
-
-    let _didInitAfterLogin = false;
-    function initAfterLogin(){ if (_didInitAfterLogin) return; _didInitAfterLogin = true; console.log("✅ Auth Success..."); store.init(); }
+    let _didInitAfterLogin = false; function initAfterLogin(){ if (_didInitAfterLogin) return; _didInitAfterLogin = true; console.log("✅ Auth Success..."); store.init(); }
 
     try {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.database();
-        const auth = firebase.auth();
-        const provider = new firebase.auth.GoogleAuthProvider();
+        firebase.initializeApp(firebaseConfig); db = firebase.database(); const auth = firebase.auth(); const provider = new firebase.auth.GoogleAuthProvider();
         auth.getRedirectResult().catch(console.error);
         window.login = function(){ auth.signInWithPopup(provider).catch(() => auth.signInWithRedirect(provider)); }
         window.logout = function(){ store.cleanup(); auth.signOut(); location.reload(); }
         auth.onAuthStateChanged(async (user) => {
-            if (!user) {
-                store.cleanup(); setOverlay(true); setAuthButtons(false); setUserBadge(null);
-                isReady = false; _didInitAfterLogin = false;
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById("themeBtn").style.display = "inline-flex"; 
-                return;
-            }
+            if (!user) { store.cleanup(); setOverlay(true); setAuthButtons(false); setUserBadge(null); isReady = false; _didInitAfterLogin = false; document.getElementById('loading').style.display = 'none'; document.getElementById("themeBtn").style.display = "inline-flex"; return; }
             const email = (user.email || "").toLowerCase().trim();
-            if (!ALLOWED_EMAILS.includes(email)) { alert("❌ 無權限帳號：" + email); await auth.signOut(); return; }
+            if (!ALLOWED_EMAILS.includes(email)) { alert(`❌ 帳號無權限：${email}\n請使用授權帳號登入或聯絡管理員。`); await auth.signOut(); return; }
             setOverlay(false); setAuthButtons(true); setUserBadge(user); isReady = true; initAfterLogin();
         });
     } catch (e) { console.error(e); alert('Firebase Error'); }
 
     // =========================================
-    // C) Store Logic (UUID Key / PID Field)
+    // C) Store Logic (PID Key Enforced)
     // =========================================
     const defaultParams = { rate_0_3_base: 0.03, rate_0_3_rec: 0.04, rate_6_base: 0.01, rate_6_rec: 0.02, rate_recruit_bv: 0.01, rate_learning: 0.03 };
     let appData = { partners: [], initiators: [], records: [], versions: [], productCatalog: {} };
@@ -624,29 +560,18 @@
                     this.data = val;
                     ['partners','initiators','records','versions','productCatalog'].forEach(k => { if(!this.data[k]) this.data[k] = (k==='productCatalog'?{}:[]); });
                     
-                    // --- MIGRATION: Ensure PID exists (UUID Key, PID Field) ---
-                    const catalog = this.data.productCatalog;
-                    let migrated = false;
+                    const catalog = this.data.productCatalog; const newCatalog = {}; let migrated = false;
                     Object.entries(catalog).forEach(([key, prod]) => {
-                        if (!prod.pid) {
-                            prod.pid = prod.id || key; 
-                            migrated = true;
-                        }
+                        let pid = prod.pid || prod.id || key; pid = pid.trim(); prod.pid = pid;
+                        if (key !== pid) migrated = true; newCatalog[pid] = prod;
                     });
-                    if (migrated) console.log("Migrated catalog to have PID field.");
+                    if (migrated) { this.data.productCatalog = newCatalog; if (!_didCatalogMigration) { _didCatalogMigration = true; console.log("Migrating catalog keys to PID..."); this.save().catch(console.error); } }
 
-                    // Normalization
                     (this.data.records||[]).forEach(r => {
-                          const PV_RATE = 50;
-                          if (r.ppv !== undefined && r.pbv === undefined) r.pbv = Math.round(r.ppv * PV_RATE);
-                          if (r.gpv !== undefined && r.gbv === undefined) r.gbv = Math.round(r.gpv * PV_RATE);
-                          
-                          // Ensure records have productId (UUID) linkage
+                          const PV_RATE = 50; if (r.ppv !== undefined && r.pbv === undefined) r.pbv = Math.round(r.ppv * PV_RATE); if (r.gpv !== undefined && r.gbv === undefined) r.gbv = Math.round(r.gpv * PV_RATE);
                           (r.products || []).forEach(p => {
-                              if (!p.productId && p.pid) {
-                                  const foundEntry = Object.entries(catalog).find(([k,v]) => v.pid === p.pid);
-                                  if (foundEntry) p.productId = foundEntry[0];
-                              }
+                              if (!p.pid && p.productId) { if (p.productId.length < 20) p.pid = p.productId; }
+                              if (p.pid) p.productId = p.pid;
                           });
                     });
                 } else {
@@ -658,18 +583,10 @@
                 const active = document.querySelector('.nav-item.active');
                 if(active) router(active.id.replace('nav-','')); else router('dashboard');
             };
-            db.ref('AmwaySystem/v1').on('value', firebaseListener, err => {
-                console.error(err); document.getElementById('loading').style.display = 'none'; alert('讀取失敗\n' + getFirebaseErrorMsg(err));
-            });
+            db.ref('AmwaySystem/v1').on('value', firebaseListener, err => { console.error(err); document.getElementById('loading').style.display = 'none'; alert('讀取失敗\n' + getFirebaseErrorMsg(err)); });
         },
-        cleanup() {
-            if(firebaseListener) { db.ref('AmwaySystem/v1').off('value', firebaseListener); firebaseListener = null; }
-            this.data = { partners: [], initiators: [], records: [], versions: [], productCatalog: {} };
-        },
-        save() {
-            if(!isReady) return Promise.reject('Not Logged In');
-            return db.ref('AmwaySystem/v1').set(this.data);
-        },
+        cleanup() { if(firebaseListener) { db.ref('AmwaySystem/v1').off('value', firebaseListener); firebaseListener = null; } this.data = { partners: [], initiators: [], records: [], versions: [], productCatalog: {} }; },
+        save() { if(!isReady) return Promise.reject('Not Logged In'); return db.ref('AmwaySystem/v1').set(this.data); },
         getPartner(id) { return (this.data.partners||[]).find(p=>p.id===id); },
         getInitiator(id) { return (this.data.initiators||[]).find(i=>i.id===id); },
         getRecord(id) { return (this.data.records||[]).find(r=>r.id===id); },
@@ -694,8 +611,7 @@
     }
     function getDuration(joinedAt) {
         if (!joinedAt) return '—';
-        const start = new Date(joinedAt); const now = new Date();
-        if (isNaN(start)) return '—';
+        const start = new Date(joinedAt); const now = new Date(); if (isNaN(start)) return '—';
         let years = now.getFullYear() - start.getFullYear(); let months = now.getMonth() - start.getMonth(); let days = now.getDate() - start.getDate();
         if (days < 0) { months--; const prevMonth = new Date(now.getFullYear(), now.getMonth(), 0); days += prevMonth.getDate(); }
         if (months < 0) { years--; months += 12; }
@@ -712,7 +628,7 @@
     }
 
     const PV_RATE = 50; 
-    function getPvViewMode() { return localStorage.getItem('pv_view_mode') || 'both'; }
+    function getPvViewMode() { return localStorage.getItem(STORAGE_KEYS.PV_MODE) || 'both'; }
     function pvToBv(pv) { return Math.round((Number(pv)||0) * PV_RATE); }
     function bvToPv(bv) { return parseFloat(((Number(bv)||0) / PV_RATE).toFixed(2)); }
     function formatPvBv(pv, bv) {
@@ -721,7 +637,7 @@
     }
     function getPvViewSelect(onchangeFnName) {
         const m = getPvViewMode();
-        return `<select class="form-input" style="width:auto" onchange="localStorage.setItem('pv_view_mode',this.value);${onchangeFnName}()">
+        return `<select class="form-input" style="width:auto" onchange="localStorage.setItem('${STORAGE_KEYS.PV_MODE}',this.value);${onchangeFnName}()">
             <option value="both" ${m==='both'?'selected':''}>PV + BV</option><option value="pv" ${m==='pv'?'selected':''}>只看 PV</option><option value="bv" ${m==='bv'?'selected':''}>只看 BV</option></select>`;
     }
 
@@ -748,35 +664,35 @@
         return res;
     }
     
-    // Rename Product PID Utility
-    function renameProductPid(oldPid, newPid){
-        oldPid = (oldPid||'').trim(); newPid = (newPid||'').trim();
-        const catalog = store.data.productCatalog || {};
+    // v10.2 Recommendation Engine (Greedy Combo)
+    function getRecommendations(gapPV) {
+        const catalog = Object.values(store.data.productCatalog || {});
+        if (catalog.length === 0) return { items: [], totalPV: 0 };
+        const candidates = catalog.filter(p => p.pv > 0).sort((a,b) => b.pv - a.pv); // Descending
         
-        if(!oldPid || !newPid) return alert('編號不能為空');
-        // Find UUID key by PID
-        const oldEntry = Object.entries(catalog).find(([k, v]) => v.pid === oldPid);
-        if(!oldEntry) return alert('找不到舊編號');
+        let bestCombo = [];
+        let minDiff = Infinity;
         
-        const exist = Object.values(catalog).some(v => v.pid === newPid);
-        if(exist) return alert('新編號已存在');
+        // 1. Single
+        for (let i = 0; i < candidates.length; i++) {
+            let diff = candidates[i].pv - gapPV;
+            if (diff >= 0 && diff < minDiff) { minDiff = diff; bestCombo = [candidates[i]]; }
+        }
+        
+        // 2. Combo (up to 3)
+        // Simplified approach to avoid heavy recursion in browser
+        for (let i = 0; i < Math.min(candidates.length, 50); i++) { // Check top 50
+             for (let j = i; j < Math.min(candidates.length, 50); j++) {
+                 let sum2 = candidates[i].pv + candidates[j].pv;
+                 let diff2 = sum2 - gapPV;
+                 if (diff2 >= 0 && diff2 < minDiff) { minDiff = diff2; bestCombo = [candidates[i], candidates[j]]; }
+             }
+        }
 
-        // 1) Update Catalog
-        catalog[oldEntry[0]].pid = newPid;
-
-        // 2) Update Records (snapshot pid only, uuid link remains)
-        let count = 0;
-        (store.data.records||[]).forEach(r=>{
-            (r.products||[]).forEach(p=>{
-                if(p.pid === oldPid) { p.pid = newPid; count++; }
-            });
-        });
-
-        store.data.productCatalog = catalog;
-        store.save().then(() => {
-            alert(`修改成功！已同步更新 ${count} 筆紀錄顯示。`);
-            renderCatalog();
-        }).catch(err => alert('修改失敗: ' + err.message));
+        if (bestCombo.length === 0 && candidates.length > 0) bestCombo = [candidates[0]]; // Fallback
+        
+        const totalPV = bestCombo.reduce((s,i) => s + i.pv, 0);
+        return { items: bestCombo, totalPV: parseFloat(totalPV.toFixed(2)) };
     }
 
     // =========================================
@@ -822,69 +738,72 @@
 
         const trends = [];
         for(let i=0; i<3; i++){
-            const d = new Date(); d.setMonth(d.getMonth() - i);
-            const tm = d.toISOString().slice(0,7);
+            const d = new Date(); d.setMonth(d.getMonth() - i); const tm = d.toISOString().slice(0,7);
             const tRecs = allRecs.filter(r => r.month === tm).map(calculate).filter(x=>x);
             const tBonus = tRecs.reduce((s,r) => s + r.starTotal, 0);
             const tPeople = tRecs.filter(r => r.gpv > 0).length;
             trends.push({ month: tm, bonus: tBonus, people: tPeople });
         }
 
-        const pvDist = { '0-199': 0, '200-599': 0, '600-3999': 0, '4000+': 0 };
-        recs.forEach(r => {
-            if(r.participation === 'inactive') return;
-            if(r.gpv >= 4000) pvDist['4000+']++;
-            else if(r.gpv >= 600) pvDist['600-3999']++;
-            else if(r.gpv >= 200) pvDist['200-599']++;
-            else pvDist['0-199']++;
-        });
+        // Tasks
+        const tasks = [];
+        const recPartnerIds = new Set(recs.map(r => r.partnerId));
+        const missingRecs = activePartners.filter(p => !recPartnerIds.has(p.id));
+        if(missingRecs.length > 0) tasks.push({ type: 'missing', title: `未交作業 (${missingRecs.length}人)`, desc: '本月尚未有業績紀錄', action: `goToMissingRecords()` });
+        if(unpaidCount > 0) tasks.push({ type: 'unpaid', title: `待發放 (${unpaidCount}筆)`, desc: `總金額 ${money(unpaidSum)}`, action: `payoutAction('${m}')` });
+        const badData = recs.filter(r => r.gpv > 0 && (!r.gbv || r.gbv === 0)).length;
+        if(badData > 0) tasks.push({ type: 'quality', title: `資料異常 (${badData}筆)`, desc: '有 PV 但無 BV', action: `router('records')` });
 
-        const watchList = { near: [], low: [], inactive: [] };
+        // Countdown
+        const thresholds = [200, 600, 1000, 2000, 4000, 7000, 10000];
+        const gapList = [];
+        recs.forEach(r => {
+            if(r.isGraduated || r.participation === 'inactive') return;
+            const nextT = thresholds.find(t => t > r.gpv);
+            if(nextT) { const gap = nextT - r.gpv; if(gap > 0) gapList.push({ name: r.partnerName, current: r.gpv, gap: gap, next: nextT }); }
+        });
+        gapList.sort((a,b) => a.gap - b.gap); const topGaps = gapList.slice(0, 6);
+
+        const pvDist = { '0-199': 0, '200-599': 0, '600-3999': 0, '4000+': 0 };
+        recs.forEach(r => { if(r.participation === 'inactive') return; if(r.gpv >= 4000) pvDist['4000+']++; else if(r.gpv >= 600) pvDist['600-3999']++; else if(r.gpv >= 200) pvDist['200-599']++; else pvDist['0-199']++; });
+
+        const watchList = { near: [], low: [], missing: [] };
         recs.forEach(r => {
             if(r.isGraduated || r.participation === 'inactive') return;
             if(r.gpv >= 150 && r.gpv < 200) watchList.near.push({ name: r.partnerName, val: r.gpv, target: 200 });
             else if(r.gpv >= 550 && r.gpv < 600) watchList.near.push({ name: r.partnerName, val: r.gpv, target: 600 });
             else if(r.gpv > 0 && r.gpv < 100) watchList.low.push({ name: r.partnerName, val: r.gpv });
         });
-        const recPartnerIds = new Set(recs.map(r => r.partnerId));
-        activePartners.forEach(p => { if(!recPartnerIds.has(p.id)) watchList.inactive.push({ name: `${p.code} ${p.name}` }); });
+        missingRecs.slice(0,5).forEach(p => watchList.missing.push({ name: `${p.code} ${p.name}` }));
 
         const initStats = {};
         recs.forEach(r => {
             const iId = r.initiatorId || 'none';
             if(!initStats[iId]) initStats[iId] = { name: (store.getInitiator(iId)||{name:'未指定'}).name, bonus:0, people:0, unpaid:0 };
-            initStats[iId].bonus += r.totalIncome;
-            if(r.gpv > 0) initStats[iId].people++;
-            if(r.payoutStatus !== 'paid') initStats[iId].unpaid += r.totalIncome;
+            initStats[iId].bonus += r.totalIncome; if(r.gpv > 0) initStats[iId].people++; if(r.payoutStatus !== 'paid') initStats[iId].unpaid += r.totalIncome;
         });
         const topInits = Object.values(initStats).sort((a,b) => b.bonus - a.bonus).slice(0, 6);
 
         const prodStats = {};
-        recs.forEach(r => {
-            (r.products || []).forEach(p => {
-                const name = p.name || '未知產品';
-                if(!prodStats[name]) prodStats[name] = { name, count: 0, qty: 0 };
-                prodStats[name].count++;
-                prodStats[name].qty += (Number(p.qty)||1);
-            });
-        });
+        recs.forEach(r => { (r.products || []).forEach(p => { const name = p.name || '未知產品'; if(!prodStats[name]) prodStats[name] = { name, count: 0, qty: 0 }; prodStats[name].count++; prodStats[name].qty += (Number(p.qty)||1); }); });
         const topProds = Object.values(prodStats).sort((a,b) => b.qty - a.qty).slice(0, 5);
 
         document.getElementById('app').innerHTML = `
             <header class="flex items-center justify-between mb-6 flex-wrap gap-4">${header(`總覽 - ${m}`)}<div class="flex items-center gap-2 text-sm text-muted-foreground">最後更新: ${today}</div></header>
-            
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">💰</div><span class="text-sm text-muted-foreground">本月預估</span></div><div class="text-3xl font-bold text-foreground">${money(totalBonus)}</div><div class="text-xs text-muted-foreground mt-1">上月: ${money(trends[1]?.bonus||0)}</div></div>
+                <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-primary/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">💰</div><span class="text-sm text-muted-foreground">本月預估</span></div><div class="text-3xl font-bold text-foreground mb-1">${money(totalBonus)}</div><div class="text-xs text-muted-foreground">上月: ${money(trends[1]?.bonus||0)}</div></div>
                 <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-destructive/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">🚨</div><span class="text-sm text-muted-foreground">待發放</span></div><div class="text-3xl font-bold text-foreground">${money(unpaidSum)}</div><div class="text-xs text-muted-foreground mt-1 cursor-pointer hover:text-primary" onclick="payoutAction('${m}')">查看 ${unpaidCount} 筆未結清 &rarr;</div></div>
                 <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">👥</div><span class="text-sm text-muted-foreground">活躍/總數</span></div><div class="text-3xl font-bold text-foreground">${recs.length} <span class="text-base text-muted-foreground">/ ${activePartners.length}</span></div><div class="text-xs text-muted-foreground mt-1">參與率: ${activePartners.length ? Math.round(recs.length/activePartners.length*100) : 0}%</div></div>
                 <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden"><div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-500/20 to-transparent rounded-bl-full"></div><div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">📈</div><span class="text-sm text-muted-foreground">近3月趨勢</span></div><div class="space-y-1 mt-2">${trends.map(t => `<div class="flex justify-between text-xs"><span class="text-muted-foreground">${t.month}</span><span>${money(t.bonus)} (${t.people}人)</span></div>`).join('')}</div></div>
             </div>
-
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div class="bg-card rounded-xl border border-border p-5"><h3 class="font-bold text-lg mb-4 flex items-center gap-2">📌 今日任務 <span class="text-xs bg-primary/20 text-primary px-2 rounded-full">${tasks.length}</span></h3><div class="space-y-3">${tasks.map(t => `<div class="flex items-center justify-between p-3 rounded bg-secondary/10 border border-border/50 cursor-pointer hover:bg-secondary/30 transition" onclick="${t.action}"><div><div class="font-bold text-sm ${t.type==='unpaid'?'text-destructive':'text-foreground'}">${t.title}</div><div class="text-xs text-muted-foreground">${t.desc}</div></div><span class="text-muted-foreground">→</span></div>`).join('') || '<div class="text-center text-muted-foreground text-sm py-4">目前無待辦事項</div>'}</div></div>
+                <div class="bg-card rounded-xl border border-border p-5 lg:col-span-2"><h3 class="font-bold text-lg mb-4 flex items-center gap-2">🧾 倒數補單建議 <span class="text-xs text-muted-foreground font-normal">Top 6</span></h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4">${topGaps.map(g => { const recInfo = getRecommendations(g.gap); const recText = recInfo.items.map(i=>i.name).join('+') || '建議新增產品至資料庫'; return `<div class="p-3 rounded bg-secondary/10 border border-border/50 flex justify-between items-center cursor-pointer hover:border-primary/50 transition" onclick="showGapDetail('${g.name}', ${g.current}, ${g.next}, ${g.gap})"><div><div class="font-bold text-sm">${g.name}</div><div class="text-xs text-muted-foreground">現 ${g.current} / 差 <span class="text-destructive font-bold">${parseFloat(g.gap.toFixed(2))}</span> 達 ${g.next}</div></div><div class="text-right"><div class="text-xs bg-primary/10 text-primary px-2 py-1 rounded mb-1">推: ${recText}</div></div></div>`; }).join('') || '<div class="col-span-2 text-center text-muted-foreground text-sm py-4">全員皆已達標或無接近門檻者</div>'}</div></div>
+            </div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 <div class="bg-card rounded-xl border border-border p-5 lg:col-span-2"><h3 class="font-bold text-lg mb-4 flex items-center gap-2">🎯 本月達標分佈 <span class="text-xs font-normal text-muted-foreground bg-secondary px-2 py-0.5 rounded">有效: ${recs.length}</span></h3><div class="space-y-4">${Object.entries(pvDist).map(([label, count]) => { const pct = recs.length ? Math.round(count/recs.length*100) : 0; let color = 'bg-secondary'; if(label==='4000+') color = 'bg-primary'; else if(label==='600-3999') color = 'bg-blue-500'; else if(label==='200-599') color = 'bg-amber-500'; return `<div><div class="flex justify-between text-sm mb-1"><span class="text-muted-foreground">${label} PV</span><span class="font-bold">${count} 人 <span class="text-xs text-muted-foreground">(${pct}%)</span></span></div><div class="h-2 w-full bg-secondary rounded-full overflow-hidden"><div class="h-full ${color}" style="width: ${pct}%"></div></div></div>`; }).join('')}</div></div>
-                <div class="bg-card rounded-xl border border-border p-5"><h3 class="font-bold text-lg mb-4">🚨 需關注名單</h3><div class="space-y-4 max-h-[300px] overflow-y-auto pr-1">${watchList.near.length > 0 ? `<div><div class="text-xs font-bold text-warning mb-2 uppercase tracking-wide">差一點達標</div>${watchList.near.slice(0,5).map(i => `<div class="flex justify-between text-sm py-1 border-b border-border/50"><span>${i.name}</span><span class="text-warning">${i.val} / ${i.target}</span></div>`).join('')}</div>` : ''}${watchList.inactive.length > 0 ? `<div><div class="text-xs font-bold text-destructive mb-2 uppercase tracking-wide mt-2">未交作業</div>${watchList.inactive.slice(0,5).map(i => `<div class="flex justify-between text-sm py-1 border-b border-border/50"><span class="text-muted-foreground">${i.name}</span></div>`).join('')}</div>` : ''}${!watchList.near.length && !watchList.inactive.length ? '<div class="text-center text-muted-foreground text-sm py-4">目前無特別需關注項目</div>' : ''}</div></div>
+                <div class="bg-card rounded-xl border border-border p-5"><h3 class="font-bold text-lg mb-4">🚨 需關注名單</h3><div class="space-y-4 max-h-[300px] overflow-y-auto pr-1">${watchList.near.length > 0 ? `<div><div class="text-xs font-bold text-warning mb-2 uppercase tracking-wide">差一點達標</div>${watchList.near.slice(0,5).map(i => `<div class="flex justify-between text-sm py-1 border-b border-border/50"><span>${i.name}</span><span class="text-warning">${i.val} / ${i.target}</span></div>`).join('')}</div>` : ''}${watchList.missing.length > 0 ? `<div><div class="text-xs font-bold text-destructive mb-2 uppercase tracking-wide mt-2">未交作業</div>${watchList.missing.slice(0,5).map(i => `<div class="flex justify-between text-sm py-1 border-b border-border/50"><span class="text-muted-foreground">${i.name}</span></div>`).join('')}</div>` : ''}${!watchList.near.length && !watchList.missing.length ? '<div class="text-center text-muted-foreground text-sm py-4">目前無特別需關注項目</div>' : ''}</div></div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div class="bg-card rounded-xl border border-border p-5"><h3 class="font-bold text-lg mb-4">🏆 發起人戰報</h3><div class="space-y-3">${topInits.map((i, idx) => `<div class="flex items-center justify-between p-2 rounded bg-secondary/10 border border-border/50"><div class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-secondary flex items-center justify-center text-xs font-bold">${idx+1}</div><span class="text-sm font-medium">${i.name}</span></div><div class="text-right"><div class="text-sm font-bold text-primary">${money(i.bonus)}</div><div class="text-[10px] text-muted-foreground">${i.people}人 / 未發:${money(i.unpaid)}</div></div></div>`).join('') || '<div class="text-center text-muted-foreground text-sm">尚無數據</div>'}</div></div>
                 <div class="bg-card rounded-xl border border-border p-5"><h3 class="font-bold text-lg mb-4">💰 發放概況</h3><div class="flex items-center justify-center py-6"><div class="relative w-32 h-32 rounded-full border-8 border-secondary flex items-center justify-center" style="background: conic-gradient(rgb(var(--primary)) ${payoutRate}%, transparent 0)"><div class="absolute inset-2 bg-card rounded-full flex flex-col items-center justify-center"><span class="text-2xl font-bold">${payoutRate}%</span><span class="text-[10px] text-muted-foreground">已發放</span></div></div></div><div class="text-center"><button class="w-full mt-2 py-2 text-sm bg-secondary hover:bg-secondary/80 rounded transition-colors" onclick="payoutAction('${m}')">前往發放管理</button></div></div>
@@ -892,36 +811,29 @@
             </div>`;
     }
 
-    // --- NEW: Product Catalog Management ---
+    // [v10.2] Show Gap Detail Modal
+    window.showGapDetail = function(name, current, next, gap) {
+        const recInfo = getRecommendations(gap);
+        const prodHtml = recInfo.items.length ? recInfo.items.map(p => `<li>${p.name} (PV: ${p.pv})</li>`).join('') : '<li class="text-muted-foreground">建議新增產品至資料庫以獲得推薦</li>';
+        openModal('補單建議', `<div class="space-y-4"><div class="text-center"><div class="text-2xl font-bold text-foreground">${name}</div><div class="text-muted-foreground">目前 PV: ${current}</div></div><div class="bg-card border border-border p-4 rounded-xl text-center"><div class="text-sm text-muted-foreground">距離下一階 <span class="text-primary font-bold">${next}</span> 還差</div><div class="text-4xl font-bold text-destructive my-2">${parseFloat(gap.toFixed(2))}</div><div class="text-sm text-muted-foreground">PV</div></div><div><h4 class="font-bold mb-2">💡 建議補單組合：</h4><ul class="list-disc pl-5 space-y-1 text-sm">${prodHtml}</ul><div class="mt-2 text-xs text-muted-foreground">總計 PV: ${recInfo.totalPV}</div></div><button class="w-full py-3 bg-secondary text-secondary-foreground rounded-lg" onclick="closeModal()">關閉</button></div>`);
+    };
+    window.goToMissingRecords = function() { localStorage.setItem('p_statusFilter', 'active'); router('partners'); alert('已篩選出本月需提交紀錄的夥伴'); }
+    function payoutAction(month) { localStorage.setItem('pay_m', month); localStorage.setItem('pay_q', ''); router('payout'); }
+
+    // --- Product Catalog Management ---
     function renderCatalog() {
         const term = localStorage.getItem('c_search') || '';
         const catalog = store.data.productCatalog || {};
-        // Convert to array
         let list = Object.entries(catalog).map(([key, p]) => ({ key, ...p }));
-        
-        // Search
         list = list.filter(p => (p.name || '').includes(term) || (p.pid || '').includes(term) || (p.category || '').includes(term));
-        // Sort by PID
         list.sort((a,b) => (a.pid||'').localeCompare(b.pid||''));
-
         document.getElementById('app').innerHTML = `
             <header class="flex items-center justify-between mb-6 flex-wrap gap-4">${header('產品資料庫')}<div class="flex gap-2"><button class="inline-flex items-center gap-2 px-4 py-2.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium text-sm transition-colors" onclick="openMergeModal()">合併重複</button><button class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium text-sm transition-colors" onclick="editCatalogItem(null)">+ 新增產品</button></div></header>
-            
             <div class="bg-card rounded-xl border border-border p-4 mb-4"><div class="flex flex-wrap items-center gap-3"><input class="form-input w-64" placeholder="搜尋編號 / 名稱 / 分類" value="${term}" oninput="localStorage.setItem('c_search',this.value);renderCatalog()"></div></div>
-
-            <div class="bg-card rounded-xl border border-border overflow-hidden"><div class="overflow-x-auto"><table><thead><tr><th>編號 (PID)</th><th>分類</th><th>名稱</th><th>PV / BV / DP</th><th>操作</th></tr></thead><tbody>${list.map(p => `<tr>
-                            <td><span class="font-mono text-sm text-primary font-bold">${p.pid}</span></td>
-                            <td><span class="text-xs bg-secondary px-2 py-1 rounded text-muted-foreground">${p.category || '未分類'}</span></td>
-                            <td><span class="font-medium text-foreground">${p.name}</span></td>
-                            <td class="text-sm text-muted-foreground">PV:${p.pv} / BV:${p.bv} / $${p.dp}</td>
-                            <td>
-                                <button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-2" onclick="editCatalogItem('${p.key}')">編輯</button>
-                                <button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-2" onclick="promptRename('${p.pid}')">改編號</button>
-                                <button class="px-3 py-1.5 text-xs font-medium bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors" onclick="deleteCatalogItem('${p.key}')">刪除</button>
-                            </td>
-                        </tr>`).join('')}</tbody></table>${list.length === 0 ? '<div class="p-8 text-center text-muted-foreground">沒有符合的產品</div>' : ''}</div></div>`;
+            <div class="bg-card rounded-xl border border-border overflow-hidden"><div class="overflow-x-auto"><table><thead><tr><th>編號 (PID)</th><th>分類</th><th>名稱</th><th>PV / BV / DP</th><th>操作</th></tr></thead><tbody>${list.map(p => `<tr><td><span class="font-mono text-sm text-primary font-bold">${p.pid}</span></td><td><span class="text-xs bg-secondary px-2 py-1 rounded text-muted-foreground">${p.category || '未分類'}</span></td><td><span class="font-medium text-foreground">${p.name}</span></td><td class="text-sm text-muted-foreground">PV:${p.pv} / BV:${p.bv} / $${p.dp}</td><td><button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-2" onclick="editCatalogItem('${p.key}')">編輯</button><button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-2" onclick="promptRename('${p.pid}')">改編號</button><button class="px-3 py-1.5 text-xs font-medium bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors" onclick="deleteCatalogItem('${p.key}')">刪除</button></td></tr>`).join('')}</tbody></table>${list.length === 0 ? '<div class="p-8 text-center text-muted-foreground">沒有符合的產品</div>' : ''}</div></div>`;
     }
 
+    // --- Partners ---
     function renderPartners() {
         const term = localStorage.getItem('p_search') || '';
         let list = store.data.partners.filter(p => p.code.includes(term)||p.name.includes(term));
@@ -937,8 +849,21 @@
             <div class="bg-card rounded-xl border border-border p-4 mb-4"><div class="flex flex-wrap items-center gap-3"><input class="form-input w-48" placeholder="搜尋編號/姓名" value="${term}" oninput="localStorage.setItem('p_search',this.value);renderPartners()"><select class="form-input w-auto" onchange="localStorage.setItem('p_statusFilter',this.value);renderPartners()"><option value="all" ${statusFilter==='all'?'selected':''}>全部狀態</option><option value="active" ${statusFilter==='active'?'selected':''}>只看參與</option><option value="inactive" ${statusFilter==='inactive'?'selected':''}>只看未參與</option></select><button class="px-3 py-2 text-xs font-medium border border-primary text-primary hover:bg-primary/10 rounded-lg transition-colors" onclick="setThisMonthFilter()">本月加入</button><button class="px-3 py-2 text-xs font-medium bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-lg transition-colors" onclick="clearPartnerFilter()">重置</button></div></div>
             <div class="bg-card rounded-xl border border-border overflow-hidden"><div class="overflow-x-auto"><table><thead><tr><th>編號</th><th>姓名</th><th>性質</th><th class="cursor-pointer hover:text-primary transition-colors" onclick="togglePartnerSort()">加入日 ${sortMode==='desc'?'↓':sortMode==='asc'?'↑':''}</th><th>加入時長</th><th>推薦人</th><th>發起人</th><th>狀態</th><th>操作</th></tr></thead><tbody>${list.map(p => {
                 const isActive = (p.status || 'active') === 'active';
-                return `<tr><td><span class="font-mono text-sm text-foreground">${p.code}</span></td><td><span class="font-medium text-foreground">${p.name}</span></td><td><span class="inline-flex px-2 py-0.5 rounded text-xs font-medium ${p.memberType === 'member' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'}">${p.memberType === 'member' ? '生活會員' : '直銷商'}</span></td><td class="text-sm text-foreground">${isActive ? (p.joinedAt || '<span class="text-warning">未填</span>') : '<span class="text-muted-foreground">—</span>'}</td><td class="text-sm text-muted-foreground">${isActive ? getDuration(p.joinedAt) : '<span class="text-muted-foreground">—</span>'}</td><td class="text-sm text-muted-foreground">${store.getPartner(p.sponsorId)?.name||'-'}</td><td class="text-sm">${store.getInitiator(p.initiatorId)?.name||'<span class="text-destructive">未設定</span>'}</td><td><div class="flex items-center gap-2"><label class="switch-sm"><input type="checkbox" ${isActive?'checked':''} onchange="togglePartnerStatus('${p.id}', this)"><span class="slider-sm"></span></label><span class="text-xs font-medium ${isActive?'text-primary':'text-muted-foreground'}">${isActive?'參與':'未參與'}</span></div></td><td><button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors" onclick="editPartner('${p.id}')">編輯</button><button class="px-3 py-1.5 text-xs font-medium bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors" onclick="deletePartner('${p.id}')">刪除</button></td></tr>`; }).join('')}</tbody></table></div></div>`;
+                return `<tr><td><span class="font-mono text-sm text-foreground">${p.code}</span></td><td><span class="font-medium text-foreground">${p.name}</span></td><td><span class="inline-flex px-2 py-0.5 rounded text-xs font-medium ${p.memberType === 'member' ? 'bg-blue-500/10 text-blue-400' : 'bg-amber-500/10 text-amber-400'}">${p.memberType === 'member' ? '生活會員' : '直銷商'}</span></td><td class="text-sm text-foreground">${isActive ? (p.joinedAt || '<span class="text-warning">未填</span>') : '<span class="text-muted-foreground">—</span>'}</td><td class="text-sm text-muted-foreground">${isActive ? getDuration(p.joinedAt) : '<span class="text-muted-foreground">—</span>'}</td><td class="text-sm text-muted-foreground">${store.getPartner(p.sponsorId)?.name||'-'}</td><td class="text-sm">${store.getInitiator(p.initiatorId)?.name||'<span class="text-destructive">未設定</span>'}</td><td><div class="flex items-center gap-2"><label class="switch-sm"><input type="checkbox" ${isActive?'checked':''} onchange="togglePartnerStatus('${p.id}', this)"><span class="slider-sm"></span></label><span class="text-xs font-medium ${isActive?'text-primary':'text-muted-foreground'}">${isActive?'參與':'未參與'}</span></div></td><td><button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-1" onclick="editPartner('${p.id}')">編輯</button><button class="px-3 py-1.5 text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors mr-1" onclick="showPartnerStats('${p.id}')">戰績</button><button class="px-3 py-1.5 text-xs font-medium bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors" onclick="deletePartner('${p.id}')">刪除</button></td></tr>`; }).join('')}</tbody></table></div></div>`;
     }
+    
+    // [v10.2] Partner Stats
+    window.showPartnerStats = function(id) {
+        const p = store.getPartner(id); if(!p) return;
+        const stats = []; let totalBonus = 0; const prodCount = {}; let isGraduated = false;
+        for(let i=0; i<6; i++){
+            const d = new Date(); d.setMonth(d.getMonth() - i); const m = d.toISOString().slice(0,7);
+            const rec = store.data.records.find(r => r.partnerId === id && r.month === m);
+            if(rec) { const cal = calculate(rec); stats.push({ m, pv: rec.gpv || 0, bv: rec.gbv || 0, bonus: cal.starTotal }); totalBonus += cal.starTotal; if(cal.isGraduated) isGraduated = true; (rec.products||[]).forEach(prod => { prodCount[prod.name] = (prodCount[prod.name] || 0) + (Number(prod.qty)||0); }); } else { stats.push({ m, pv: 0, bv: 0, bonus: 0 }); }
+        }
+        const topProds = Object.entries(prodCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        openModal(`戰績卡：${p.name}`, `<div class="space-y-6"><div class="grid grid-cols-2 gap-4"><div class="bg-card border border-border p-4 rounded-lg text-center"><div class="text-sm text-muted-foreground">近6月總獎金</div><div class="text-2xl font-bold text-primary">${money(totalBonus)}</div></div><div class="bg-card border border-border p-4 rounded-lg text-center"><div class="text-sm text-muted-foreground">狀態</div><div class="text-xl font-bold ${isGraduated ? 'text-success' : 'text-foreground'}">${isGraduated ? '🎓 已畢業' : '🌱 成長中'}</div></div></div><div><h4 class="font-bold mb-2">📉 近6個月趨勢</h4><div class="overflow-x-auto"><table class="w-full text-sm text-center"><thead><tr><th>月份</th><th>PV</th><th>BV</th><th>獎金</th></tr></thead><tbody>${stats.map(s => `<tr><td>${s.m}</td><td>${s.pv}</td><td>${s.bv}</td><td>${money(s.bonus)}</td></tr>`).join('')}</tbody></table></div></div><div><h4 class="font-bold mb-2">🛒 愛用產品 Top 5</h4><ul class="list-disc pl-5 text-sm space-y-1">${topProds.map(([name, qty]) => `<li>${name} <span class="text-muted-foreground">x${qty}</span></li>`).join('') || '<li class="text-muted-foreground">尚無資料</li>'}</ul></div><button class="w-full py-3 bg-secondary hover:bg-secondary/80 rounded-lg text-foreground font-bold" onclick="closeModal(); editRecord(null, getLocalMonth()); setTimeout(()=>{ document.querySelector('select[name=partnerId]').value='${p.id}'; }, 100);">+ 快速新增本月紀錄</button></div>`);
+    };
 
     function renderRecords() {
         const m = localStorage.getItem('r_m') || getLocalMonth();
@@ -965,9 +890,20 @@
         recs.forEach(r => { const gid = groups[r.initiatorId] ? r.initiatorId : 'none'; groups[gid].list.push(r); groups[gid].sum += r.totalIncome; if(r.payoutStatus!=='paid') groups[gid].unpaid += r.totalIncome; });
         
         document.getElementById('app').innerHTML = `
-            <header class="flex items-center justify-between mb-6 flex-wrap gap-4">${header('本月發放')}<div class="flex gap-2"><button class="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-sm" onclick="bulkPay('${m}')">批次發放</button><button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-medium text-sm" onclick="exportCSV('${m}')">匯出 CSV</button></div></header>
+            <header class="flex items-center justify-between mb-6 flex-wrap gap-4">${header('本月發放')}<div class="flex gap-2"><button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-medium text-sm" onclick="copyUnpaidList('${m}')">📋 複製未發放</button><button class="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium text-sm" onclick="bulkPay('${m}')">批次發放</button><button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-medium text-sm" onclick="exportCSV('${m}')">匯出 CSV</button></div></header>
             <div class="bg-card rounded-xl border border-border p-4 mb-4"><div class="flex flex-wrap items-center gap-3"><input type="month" value="${m}" class="form-input w-auto" onchange="localStorage.setItem('pay_m',this.value);renderPayout()"><input placeholder="搜尋" value="${q}" class="form-input w-48" oninput="localStorage.setItem('pay_q',this.value);renderPayout()"></div></div>
             <div class="grid gap-4">${Object.values(groups).filter(g=>g.list.length>0).map(g => `<div class="bg-card rounded-xl border border-border overflow-hidden"><div class="p-4 border-b border-border flex justify-between items-center bg-secondary/10"><h3 class="font-bold text-lg text-foreground">${g.info.name}</h3><div class="text-sm">應付：<span class="text-destructive font-bold">${money(g.unpaid)}</span> / 總計：${money(g.sum)}</div></div><div class="overflow-x-auto"><table><thead><tr><th width="30"><input type="checkbox" onchange="toggleGrp(this,'${g.info.id}')"></th><th>夥伴</th><th>金額</th><th>狀態</th></tr></thead><tbody>${g.list.map(r => `<tr><td><input type="checkbox" class="chk-${g.info.id}" value="${r.id}" ${r.payoutStatus==='paid'?'disabled':''}></td><td><span class="font-medium text-foreground">${r.partnerName}</span></td><td class="font-bold text-foreground">${money(r.totalIncome)}</td><td><button class="px-2 py-1 rounded text-xs font-medium ${r.payoutStatus==='paid'?'bg-primary/20 text-primary':'bg-secondary text-muted-foreground border border-border'}" onclick="togglePay('${r.id}','${r.payoutStatus}','${m}')">${r.payoutStatus==='paid'?'已發放':'未發放'}</button></td></tr>`).join('')}</tbody></table></div></div>`).join('')}</div>`;
+    }
+
+    // [v10.2] Copy Unpaid List
+    function copyUnpaidList(m) {
+        const recs = store.getRecordsByMonth(m).map(calculate).filter(x => x);
+        const unpaid = recs.filter(r => r.payoutStatus !== 'paid' && r.totalIncome > 0);
+        if(unpaid.length === 0) return alert("本月無未發放項目");
+        const groups = {}; unpaid.forEach(r => { const initName = (store.getInitiator(r.initiatorId) || {name:'未指定'}).name; if(!groups[initName]) groups[initName] = []; groups[initName].push(r); });
+        let text = `【${m} 未發放清單】\n`;
+        Object.entries(groups).forEach(([initName, list]) => { text += `\n👤 ${initName}\n`; list.forEach(r => { text += `${r.partnerName} ${money(r.totalIncome)}\n`; }); });
+        navigator.clipboard.writeText(text).then(() => { alert("✅ 已複製未發放清單到剪貼簿"); }).catch(err => { alert("複製失敗"); });
     }
 
     function renderInitiators() {
@@ -981,11 +917,12 @@
         const roots = partners.filter(p => !p.sponsorId || !partners.find(u => u.id === p.sponsorId));
         function buildTree(p) {
             const children = partners.filter(c => c.sponsorId === p.id);
-            return `<li><div class="node ${children.length ? '' : 'node-leaf'}">${children.length ? `<div class="node-toggle" onclick="toggleNode(this)"><div class="caret">▼</div><div class="count">${children.length}</div></div>` : ''}<div class="node-content" onclick="editPartner('${p.id}')"><div class="node-status ${p.memberType==='member'?'badge-member':'badge-direct'}">${p.memberType==='member'?'M':'D'}</div><span class="name">${p.code} ${p.name}</span><span class="type">${store.getInitiator(p.initiatorId)?.name || '未指定'}</span><div class="detail">加入: ${getDuration(p.joinedAt)}</div></div></div>${children.length ? `<ul>${children.map(c => buildTree(c)).join('')}</ul>` : ''}</li>`;
+            return `<li id="node-${p.code}"><div class="node ${children.length ? '' : 'node-leaf'}">${children.length ? `<div class="node-toggle" onclick="toggleNode(this)"><div class="caret">▼</div><div class="count">${children.length}</div></div>` : ''}<div class="node-content" onclick="editPartner('${p.id}')"><div class="node-status ${p.memberType==='member'?'badge-member':'badge-direct'}">${p.memberType==='member'?'M':'D'}</div><span class="name">${p.code} ${p.name}</span><span class="type">${store.getInitiator(p.initiatorId)?.name || '未指定'}</span><div class="detail">加入: ${getDuration(p.joinedAt)}</div></div></div>${children.length ? `<ul>${children.map(c => buildTree(c)).join('')}</ul>` : ''}</li>`;
         }
-        document.getElementById('app').innerHTML = `<header class="flex items-center justify-between mb-6">${header('組織關聯圖')}<div class="text-sm text-muted-foreground"><span class="inline-block w-3 h-3 rounded-full mr-1" style="background: rgb(var(--org-badge-direct-bg))"></span>直銷商<span class="inline-block w-3 h-3 rounded-full ml-3 mr-1" style="background: rgb(var(--org-badge-member-bg))"></span>會員</div></header><div class="org-container" id="orgContainer"><div class="tree"><ul>${roots.length > 0 ? roots.map(r => buildTree(r)).join('') : '<li class="text-muted-foreground p-10">尚無組織資料，請先新增夥伴並設定推薦人。</li>'}</ul></div></div>`;
+        document.getElementById('app').innerHTML = `
+            <header class="flex items-center justify-between mb-6 flex-wrap gap-4">${header('組織關聯圖')}<div class="flex items-center gap-2"><input id="orgSearch" class="form-input text-sm w-48" placeholder="搜尋姓名或編號" onkeydown="if(event.key==='Enter') searchOrgNode(this.value)"></div></header>
+            <div class="org-container" id="orgContainer"><div class="tree"><ul>${roots.length > 0 ? roots.map(r => buildTree(r)).join('') : '<li class="text-muted-foreground p-10">尚無組織資料，請先新增夥伴並設定推薦人。</li>'}</ul></div></div>`;
         
-        // Mobile & Desktop Drag Logic
         const slider = document.getElementById('orgContainer');
         if(!slider) return;
         if(slider.dataset.bound) return; slider.dataset.bound = 'true';
@@ -998,6 +935,24 @@
         slider.addEventListener('pointerup', stopDrag); slider.addEventListener('pointercancel', stopDrag);
         slider.addEventListener('click', (e) => { if (isDragging) { e.preventDefault(); e.stopPropagation(); } }, true);
     }
+    
+    // [v10.2] Org Search
+    window.searchOrgNode = function(term) {
+        if(!term) return; term = term.toLowerCase().trim();
+        const p = store.data.partners.find(p => p.code.toLowerCase().includes(term) || p.name.toLowerCase().includes(term));
+        if(!p) return alert("找不到該夥伴");
+        const nodeLi = document.getElementById(`node-${p.code}`);
+        if(nodeLi) {
+            let parent = nodeLi.parentElement;
+            while(parent && parent.classList.contains('tree') === false) {
+                if(parent.tagName === 'UL') { const li = parent.parentElement; if(li.classList.contains('collapsed')) li.classList.remove('collapsed'); }
+                parent = parent.parentElement;
+            }
+            nodeLi.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+            const nodeDiv = nodeLi.querySelector('.node'); nodeDiv.classList.add('node-highlight');
+            setTimeout(() => nodeDiv.classList.remove('node-highlight'), 2000);
+        } else { alert("該夥伴不在組織圖顯示範圍內"); }
+    };
     function toggleNode(el) { const li = el.closest('li'); li.classList.toggle('collapsed'); }
 
     function renderVersions() {
@@ -1006,7 +961,7 @@
     }
 
     function renderSettings() {
-        document.getElementById('app').innerHTML = `<header class="flex items-center justify-between mb-6">${header('系統設定')}</header><div class="max-w-2xl mx-auto space-y-6"><div class="bg-card border border-border p-6 rounded-xl"><h3 class="text-lg font-bold mb-4 flex items-center gap-2">📦 資料備份與還原</h3><p class="text-sm text-muted-foreground mb-4">將完整的系統資料匯出為 JSON 檔案，以供備份使用。</p><div class="flex gap-4"><button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg" onclick="downloadBackup()">⬇️ 下載備份 (JSON)</button><label class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg cursor-pointer hover:bg-secondary/80">⬆️ 還原備份<input type="file" accept=".json" class="hidden" onchange="restoreBackup(this)"></label></div></div><div class="bg-card border border-destructive/50 p-6 rounded-xl"><h3 class="text-lg font-bold text-destructive mb-4 flex items-center gap-2">⚠️ 危險區域</h3><p class="text-sm text-muted-foreground mb-4">清除所有本地快取，或重置資料庫（請謹慎操作）。</p><button class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg" onclick="if(confirm('確定清除本地快取？不會影響雲端資料。')){localStorage.clear();location.reload();}">清除瀏覽器快取</button></div><div class="text-center text-xs text-muted-foreground mt-8">系統版本 v10.0 | 開發者: Gemini & Celia</div></div>`;
+        document.getElementById('app').innerHTML = `<header class="flex items-center justify-between mb-6">${header('系統設定')}</header><div class="max-w-2xl mx-auto space-y-6"><div class="bg-card border border-border p-6 rounded-xl"><h3 class="text-lg font-bold mb-4 flex items-center gap-2">📦 資料備份與還原</h3><p class="text-sm text-muted-foreground mb-4">將完整的系統資料匯出為 JSON 檔案，以供備份使用。</p><div class="flex gap-4"><button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg" onclick="downloadBackup()">⬇️ 下載備份 (JSON)</button><label class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg cursor-pointer hover:bg-secondary/80">⬆️ 還原備份<input type="file" accept=".json" class="hidden" onchange="restoreBackup(this)"></label></div></div><div class="bg-card border border-destructive/50 p-6 rounded-xl"><h3 class="text-lg font-bold text-destructive mb-4 flex items-center gap-2">⚠️ 危險區域</h3><p class="text-sm text-muted-foreground mb-4">清除所有本地快取，或重置資料庫（請謹慎操作）。</p><button class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg" onclick="if(confirm('確定清除本地快取？不會影響雲端資料。')){localStorage.clear();location.reload();}">清除瀏覽器快取</button></div><div class="text-center text-xs text-muted-foreground mt-8">系統版本 v10.3 | 開發者: Gemini & Celia</div></div>`;
     }
 
     // =========================================
@@ -1073,13 +1028,13 @@
         } catch(e) { alert(e.message); }
     }
     
-    // Auto-fill Logic for Typing (Updated for PID)
+    // Auto-fill Logic (Updated for PID)
     function autoFillByName(input, idx) {
         const val = input.value || '';
         const item = tempRec.products[idx] || (tempRec.products[idx] = { qty: 1 });
         item.name = val;
         
-        if (item.pid) { // reset if bound
+        if (item.pid) { 
             item.pid = ''; item.productId = ''; item.pv = null; item.bv = null; item.dp = null;
         }
 
@@ -1088,7 +1043,7 @@
         if (!target) { renderPreview(); return; }
 
         const catalog = store.data.productCatalog || {};
-        const entries = Object.values(catalog); // catalog is now pid -> obj
+        const entries = Object.values(catalog); 
         
         let hit = entries.find(p => norm(p.name) === target);
         if (!hit) {
@@ -1100,7 +1055,7 @@
 
         if (hit) {
             item.pid = hit.pid;
-            item.productId = hit.pid; // Compat
+            item.productId = hit.pid;
             item.pv = hit.pv; item.bv = hit.bv; item.dp = hit.dp;
             
             const caretPos = input.selectionStart ?? val.length;
@@ -1124,7 +1079,6 @@
             const cat = val.category || "未分類"; if (!groups[cat]) groups[cat] = []; groups[cat].push(val);
         });
 
-        // Global Datalist Options
         const datalistOpts = Object.values(catalog)
             .map(p => `<option value="${p.name}" label="${p.category || '未分類'}"></option>`)
             .join('');
@@ -1241,7 +1195,6 @@
     
     // --- Catalog Management Modals ---
     // 1. Edit Item Modal (Supports both edit and create if pid passed/null)
-    // For quick add, use openAddCatalogModal. This is for full management
     function editCatalogItem(pid) {
         const catalog = store.data.productCatalog || {};
         const p = pid ? catalog[pid] : { pid:'', name:'', category:'', pv:0, bv:0, dp:0 };
@@ -1355,7 +1308,7 @@
         store.save().then(() => { alert('已刪除'); renderCatalog(); }).catch(err => alert('刪除失敗'));
     }
     
-    // 2. Merge Duplicates
+    // 2. Merge Duplicates (Full Logic v10.3)
     function openMergeModal() {
         const catalog = store.data.productCatalog || {};
         const opts = Object.values(catalog).sort((a,b) => a.pid.localeCompare(b.pid))
@@ -1396,7 +1349,7 @@
         (store.data.records||[]).forEach(r => {
             let recordModified = false;
             
-            // 1. Rename references
+            // 1. Rename references & Update Snapshot
             (r.products || []).forEach(p => {
                 if (p.pid === sourcePid || p.productId === sourcePid) {
                     p.pid = targetPid;
