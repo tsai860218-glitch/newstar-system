@@ -821,17 +821,86 @@
     function payoutAction(month) { localStorage.setItem('pay_m', month); localStorage.setItem('pay_q', ''); router('payout'); }
 
     // --- Product Catalog Management ---
-    function renderCatalog() {
-        const term = localStorage.getItem('c_search') || '';
-        const catalog = store.data.productCatalog || {};
-        let list = Object.entries(catalog).map(([key, p]) => ({ key, ...p }));
-        list = list.filter(p => (p.name || '').includes(term) || (p.pid || '').includes(term) || (p.category || '').includes(term));
-        list.sort((a,b) => (a.pid||'').localeCompare(b.pid||''));
-        document.getElementById('app').innerHTML = `
-            <header class="flex items-center justify-between mb-6 flex-wrap gap-4">${header('產品資料庫')}<div class="flex gap-2"><button class="inline-flex items-center gap-2 px-4 py-2.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium text-sm transition-colors" onclick="openMergeModal()">合併重複</button><button class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium text-sm transition-colors" onclick="editCatalogItem(null)">+ 新增產品</button></div></header>
-            <div class="bg-card rounded-xl border border-border p-4 mb-4"><div class="flex flex-wrap items-center gap-3"><input class="form-input w-64" placeholder="搜尋編號 / 名稱 / 分類" value="${term}" oninput="localStorage.setItem('c_search',this.value);renderCatalog()"></div></div>
-            <div class="bg-card rounded-xl border border-border overflow-hidden"><div class="overflow-x-auto"><table><thead><tr><th>編號 (PID)</th><th>分類</th><th>名稱</th><th>PV / BV / DP</th><th>操作</th></tr></thead><tbody>${list.map(p => `<tr><td><span class="font-mono text-sm text-primary font-bold">${p.pid}</span></td><td><span class="text-xs bg-secondary px-2 py-1 rounded text-muted-foreground">${p.category || '未分類'}</span></td><td><span class="font-medium text-foreground">${p.name}</span></td><td class="text-sm text-muted-foreground">PV:${p.pv} / BV:${p.bv} / $${p.dp}</td><td><button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-2" onclick="editCatalogItem('${p.key}')">編輯</button><button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-2" onclick="promptRename('${p.pid}')">改編號</button><button class="px-3 py-1.5 text-xs font-medium bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors" onclick="deleteCatalogItem('${p.key}')">刪除</button></td></tr>`).join('')}</tbody></table>${list.length === 0 ? '<div class="p-8 text-center text-muted-foreground">沒有符合的產品</div>' : ''}</div></div>`;
+    // --- [修改後] 產品資料庫頁面 (含搜尋修復 + 批量修改按鈕) ---
+function renderCatalog(isUpdate = false) {
+    const term = localStorage.getItem('c_search') || '';
+    const catalog = store.data.productCatalog || {};
+    
+    // 1. 準備資料
+    let list = Object.entries(catalog).map(([key, p]) => ({ key, ...p }));
+    list = list.filter(p => (p.name || '').includes(term) || (p.pid || '').includes(term) || (p.category || '').includes(term));
+    list.sort((a,b) => (a.pid||'').localeCompare(b.pid||''));
+
+    // 2. 產生表格內容 HTML
+    const tbodyHtml = list.map(p => `
+        <tr>
+            <td><span class="font-mono text-sm text-primary font-bold">${p.pid}</span></td>
+            <td><span class="text-xs bg-secondary px-2 py-1 rounded text-muted-foreground">${p.category || '未分類'}</span></td>
+            <td><span class="font-medium text-foreground">${p.name}</span></td>
+            <td class="text-sm text-muted-foreground">PV:${p.pv} / BV:${p.bv} / $${p.dp}</td>
+            <td>
+                <button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-2" onclick="editCatalogItem('${p.key}')">編輯</button>
+                <button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-2" onclick="promptRename('${p.pid}')">改編號</button>
+                <button class="px-3 py-1.5 text-xs font-medium bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors" onclick="deleteCatalogItem('${p.key}')">刪除</button>
+            </td>
+        </tr>
+    `).join('') || '<tr><td colspan="5" class="p-8 text-center text-muted-foreground">沒有符合的產品</td></tr>';
+
+    // 3. 如果只是打字更新資料，只換 tbody，不動搜尋框
+    if (isUpdate && document.getElementById('catalog-tbody')) {
+        document.getElementById('catalog-tbody').innerHTML = tbodyHtml;
+        return;
     }
+
+    // 4. 完整重繪頁面
+    document.getElementById('app').innerHTML = `
+        <header class="flex items-center justify-between mb-6 flex-wrap gap-4">
+            ${header('產品資料庫')}
+            <div class="flex gap-2">
+                <button class="inline-flex items-center gap-2 px-4 py-2.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium text-sm transition-colors" onclick="openBatchRenameModal()">⚡️ 批量修改</button>
+                <button class="inline-flex items-center gap-2 px-4 py-2.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium text-sm transition-colors" onclick="openMergeModal()">合併重複</button>
+                <button class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium text-sm transition-colors" onclick="editCatalogItem(null)">+ 新增產品</button>
+            </div>
+        </header>
+        
+        <div class="bg-card rounded-xl border border-border p-4 mb-4">
+            <div class="flex flex-wrap items-center gap-3">
+                <input class="form-input w-64" placeholder="搜尋編號 / 名稱 / 分類" 
+                    value="${term}" 
+                    oninput="localStorage.setItem('c_search',this.value); renderCatalog(true)" 
+                    autofocus>
+            </div>
+        </div>
+
+        <div class="bg-card rounded-xl border border-border overflow-hidden">
+            <div class="overflow-x-auto">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>編號 (PID)</th>
+                            <th>分類</th>
+                            <th>名稱</th>
+                            <th>PV / BV / DP</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="catalog-tbody">
+                        ${tbodyHtml}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    // 重新聚焦邏輯
+    const input = document.querySelector('input[placeholder*="搜尋"]');
+    if(input && !isUpdate) {
+        input.focus();
+        const val = input.value;
+        input.value = '';
+        input.value = val;
+    }
+}
 
     // --- Partners ---
     function renderPartners() {
@@ -1463,6 +1532,135 @@
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Payout_${m}_${mode}.csv`; link.click();
     }
+// =========================================
+// [v10.4 新增] 批量修改功能邏輯
+// =========================================
+let _batchList = []; 
+
+function openBatchRenameModal() {
+    const catalog = store.data.productCatalog || {};
+    const categories = new Set();
+    Object.values(catalog).forEach(p => { if(p.category) categories.add(p.category); });
+    const catOpts = Array.from(categories).sort().map(c => `<option value="${c}">${c}</option>`).join('');
+
+    openModal('批量修改產品編號', `
+        <div class="space-y-4">
+            <div class="bg-primary/10 border border-primary/20 p-3 rounded text-sm text-primary mb-4">
+                💡 <b>使用說明：</b><br>
+                1. 選擇分類 (如: 營養)。<br>
+                2. 設定前綴 (如: N)。<br>
+                3. 點擊「自動產生」預覽編號。<br>
+                4. 確認後執行。
+            </div>
+            <div class="grid grid-cols-3 gap-4 bg-card border border-border p-4 rounded-xl items-end">
+                <div>
+                    <label class="text-sm text-muted-foreground block mb-1">1. 篩選分類</label>
+                    <select id="batchCatFilter" class="form-input" onchange="renderBatchRows()">
+                        <option value="">-- 全部 --</option>${catOpts}
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm text-muted-foreground block mb-1">2. 前綴</label>
+                    <input id="batchPrefix" class="form-input" placeholder="例: N">
+                </div>
+                <div>
+                     <button class="w-full py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium text-sm transition-colors" onclick="applyBatchAutoFill()">⚡️ 自動產生</button>
+                </div>
+            </div>
+            <div class="bg-card rounded-xl border border-border overflow-hidden" style="max-height: 50vh; overflow-y: auto;">
+                <table class="w-full text-sm text-left">
+                    <thead class="sticky top-0 bg-card z-10 shadow-sm">
+                        <tr><th class="p-3 border-b border-border">產品名稱</th><th class="p-3 border-b border-border">目前編號</th><th class="p-3 border-b border-border text-primary font-bold">新編號 (預覽)</th></tr>
+                    </thead>
+                    <tbody id="batchRenameBody"></tbody>
+                </table>
+            </div>
+            <button class="w-full py-3 bg-primary text-primary-foreground font-bold rounded-lg mt-2" onclick="saveBatchRename()">🚀 執行批量修改</button>
+        </div>
+    `);
+    renderBatchRows();
+}
+
+function renderBatchRows() {
+    const filterCat = document.getElementById('batchCatFilter').value;
+    const catalog = store.data.productCatalog || {};
+    _batchList = Object.values(catalog)
+        .filter(p => !filterCat || p.category === filterCat)
+        .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+
+    const html = _batchList.map((p, idx) => `
+        <tr class="hover:bg-secondary/10 border-b border-border/50">
+            <td class="p-2 align-middle">
+                <div class="font-medium">${p.name}</div>
+                <div class="text-xs text-muted-foreground">${p.category || '未分類'}</div>
+            </td>
+            <td class="p-2 align-middle text-muted-foreground font-mono text-xs">${p.pid}</td>
+            <td class="p-2 align-middle">
+                <input type="text" id="new_pid_${idx}" data-old-pid="${p.pid}" class="form-input text-primary font-bold font-mono h-8 text-sm w-32" placeholder="不修改">
+            </td>
+        </tr>
+    `).join('');
+    const container = document.getElementById('batchRenameBody');
+    if(container) container.innerHTML = html || '<tr><td colspan="3" class="p-4 text-center text-muted-foreground">此分類無產品</td></tr>';
+}
+
+function applyBatchAutoFill() {
+    const prefix = document.getElementById('batchPrefix').value.trim().toUpperCase();
+    if (!prefix) return alert('請先輸入前綴，例如 "N"');
+    const inputs = document.querySelectorAll('#batchRenameBody input');
+    let counter = 1;
+    inputs.forEach(input => {
+        input.value = `${prefix}${String(counter).padStart(3, '0')}`;
+        counter++;
+    });
+}
+
+function saveBatchRename() {
+    if (!confirm('⚠️ 確定要執行批量修改嗎？\n系統將會同步更新所有歷史紀錄。')) return;
+    const inputs = document.querySelectorAll('#batchRenameBody input');
+    const changes = [];
+    const catalog = store.data.productCatalog || {};
+    
+    inputs.forEach(input => {
+        const oldPid = input.getAttribute('data-old-pid');
+        const newPid = input.value.trim();
+        if (newPid && newPid !== oldPid) changes.push({ oldPid, newPid });
+    });
+
+    if (changes.length === 0) return alert('沒有任何變更');
+    for (let c of changes) {
+        if (catalog[c.newPid] && !changes.find(x => x.oldPid === c.newPid)) return alert(`錯誤：編號 ${c.newPid} 已存在`);
+    }
+
+    let updateCount = 0;
+    const toDelete = [];
+    changes.forEach(c => {
+        const prod = catalog[c.oldPid];
+        if (prod) {
+            catalog[c.newPid] = { ...prod, pid: c.newPid, id: c.newPid };
+            toDelete.push(c.oldPid);
+        }
+    });
+    toDelete.forEach(pid => delete catalog[pid]);
+
+    (store.data.records || []).forEach(r => {
+        (r.products || []).forEach(p => {
+            const change = changes.find(c => c.oldPid === p.pid || c.oldPid === p.productId);
+            if (change) {
+                p.pid = change.newPid;
+                p.productId = change.newPid;
+                updateCount++;
+            }
+        });
+    });
+
+    store.data.productCatalog = catalog;
+    store.save().then(() => {
+        alert(`✅ 修改完成！更新了 ${updateCount} 筆歷史紀錄。`);
+        closeModal();
+        renderCatalog();
+    }).catch(err => alert('儲存失敗: ' + err.message));
+}
 </script>
 </body>
 </html>
