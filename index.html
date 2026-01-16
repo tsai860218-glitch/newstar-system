@@ -821,74 +821,161 @@
     function payoutAction(month) { localStorage.setItem('pay_m', month); localStorage.setItem('pay_q', ''); router('payout'); }
 
     // --- Product Catalog Management ---
-    // --- [修改後] 產品資料庫頁面 (含搜尋修復 + 批量修改按鈕) ---
+// =========================================
+// [修改後] 產品資料庫 (含分類篩選 + 分頁功能)
+// =========================================
 function renderCatalog(isUpdate = false) {
+    // 1. 讀取狀態與設定
+    const ITEMS_PER_PAGE = 20; // 設定每頁顯示幾筆
     const term = localStorage.getItem('c_search') || '';
+    const catFilter = localStorage.getItem('c_cat_filter') || ''; // 讀取分類篩選
+    let currentPage = parseInt(localStorage.getItem('c_page') || '1'); // 讀取當前頁碼
+
     const catalog = store.data.productCatalog || {};
-    
-    // 1. 準備資料
     let list = Object.entries(catalog).map(([key, p]) => ({ key, ...p }));
-    list = list.filter(p => (p.name || '').includes(term) || (p.pid || '').includes(term) || (p.category || '').includes(term));
+
+    // 2. 提取所有現有的分類 (用於製作下拉選單)
+    const allCategories = new Set();
+    list.forEach(p => { if(p.category) allCategories.add(p.category); });
+    const sortedCats = Array.from(allCategories).sort((a,b) => a.localeCompare(b, 'zh-Hant'));
+    const catOptions = sortedCats.map(c => 
+        `<option value="${c}" ${catFilter === c ? 'selected' : ''}>${c}</option>`
+    ).join('');
+
+    // 3. 執行篩選 (先分類，再搜尋)
+    // 篩選分類
+    if (catFilter) {
+        list = list.filter(p => p.category === catFilter);
+    }
+    // 篩選關鍵字
+    if (term) {
+        list = list.filter(p => 
+            (p.name || '').toLowerCase().includes(term.toLowerCase()) || 
+            (p.pid || '').toLowerCase().includes(term.toLowerCase())
+        );
+    }
+
+    // 排序 (依 PID)
     list.sort((a,b) => (a.pid||'').localeCompare(b.pid||''));
 
-    // 2. 產生表格內容 HTML
-    const tbodyHtml = list.map(p => `
-        <tr>
-            <td><span class="font-mono text-sm text-primary font-bold">${p.pid}</span></td>
-            <td><span class="text-xs bg-secondary px-2 py-1 rounded text-muted-foreground">${p.category || '未分類'}</span></td>
-            <td><span class="font-medium text-foreground">${p.name}</span></td>
-            <td class="text-sm text-muted-foreground">PV:${p.pv} / BV:${p.bv} / $${p.dp}</td>
-            <td>
-                <button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-2" onclick="editCatalogItem('${p.key}')">編輯</button>
-                <button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors mr-2" onclick="promptRename('${p.pid}')">改編號</button>
-                <button class="px-3 py-1.5 text-xs font-medium bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors" onclick="deleteCatalogItem('${p.key}')">刪除</button>
+    // 4. 計算分頁
+    const totalItems = list.length;
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE) || 1;
+    
+    // 防止頁碼超出範圍 (例如篩選後變少，原本在第5頁要跳回第1頁)
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+    // 儲存修正後的頁碼，以免下次進來錯亂
+    if(!isUpdate) localStorage.setItem('c_page', currentPage);
+
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const paginatedList = list.slice(startIndex, endIndex);
+
+    // 5. 產生表格內容 HTML
+    const tbodyHtml = paginatedList.map(p => `
+        <tr class="hover:bg-secondary/10 transition-colors border-b border-border/50">
+            <td class="px-4 py-3"><span class="font-mono text-sm text-primary font-bold">${p.pid}</span></td>
+            <td class="px-4 py-3"><span class="text-xs bg-secondary px-2 py-1 rounded text-muted-foreground border border-border">${p.category || '未分類'}</span></td>
+            <td class="px-4 py-3"><span class="font-medium text-foreground">${p.name}</span></td>
+            <td class="px-4 py-3 text-sm text-muted-foreground">
+                <div class="flex gap-3">
+                    <span>PV: <b class="text-foreground">${p.pv}</b></span>
+                    <span>BV: ${p.bv}</span>
+                    <span>$${p.dp}</span>
+                </div>
+            </td>
+            <td class="px-4 py-3">
+                <div class="flex gap-2">
+                    <button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors" onclick="editCatalogItem('${p.key}')">編輯</button>
+                    <button class="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition-colors" onclick="promptRename('${p.pid}')">改編號</button>
+                    <button class="px-3 py-1.5 text-xs font-medium bg-destructive/10 hover:bg-destructive/20 text-destructive rounded-lg transition-colors" onclick="deleteCatalogItem('${p.key}')">刪除</button>
+                </div>
             </td>
         </tr>
     `).join('') || '<tr><td colspan="5" class="p-8 text-center text-muted-foreground">沒有符合的產品</td></tr>';
 
-    // 3. 如果只是打字更新資料，只換 tbody，不動搜尋框
+    // 6. 產生分頁控制項 HTML
+    const paginationHtml = `
+        <div class="flex items-center justify-between px-4 py-3 border-t border-border bg-card/50">
+            <div class="text-xs text-muted-foreground">
+                顯示 ${totalItems > 0 ? startIndex + 1 : 0} - ${Math.min(endIndex, totalItems)} 筆，共 ${totalItems} 筆
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="px-3 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" 
+                    onclick="changeCatalogPage(-1)" ${currentPage === 1 ? 'disabled' : ''}>
+                    ◀ 上一頁
+                </button>
+                <span class="text-xs font-mono px-2">Page ${currentPage} / ${totalPages}</span>
+                <button class="px-3 py-1 text-xs rounded bg-secondary hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" 
+                    onclick="changeCatalogPage(1)" ${currentPage === totalPages ? 'disabled' : ''}>
+                    下一頁 ▶
+                </button>
+            </div>
+        </div>
+    `;
+
+    // 7. 如果只是打字搜尋，只更新表格區塊 (優化效能)
     if (isUpdate && document.getElementById('catalog-tbody')) {
         document.getElementById('catalog-tbody').innerHTML = tbodyHtml;
+        document.getElementById('catalog-pagination').innerHTML = paginationHtml;
         return;
     }
 
-    // 4. 完整重繪頁面
+    // 8. 完整渲染
     document.getElementById('app').innerHTML = `
         <header class="flex items-center justify-between mb-6 flex-wrap gap-4">
             ${header('產品資料庫')}
             <div class="flex gap-2">
-                <button class="inline-flex items-center gap-2 px-4 py-2.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium text-sm transition-colors" onclick="openBatchRenameModal()">⚡️ 批量修改</button>
-                <button class="inline-flex items-center gap-2 px-4 py-2.5 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium text-sm transition-colors" onclick="openMergeModal()">合併重複</button>
-                <button class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium text-sm transition-colors" onclick="editCatalogItem(null)">+ 新增產品</button>
+                <button class="hidden md:inline-flex items-center gap-2 px-3 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium text-xs transition-colors" onclick="openBatchRenameModal()">⚡️ 批量修改</button>
+                <button class="hidden md:inline-flex items-center gap-2 px-3 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg font-medium text-xs transition-colors" onclick="openMergeModal()">合併重複</button>
+                <button class="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium text-sm transition-colors shadow-lg shadow-primary/20" onclick="editCatalogItem(null)">+ 新增產品</button>
             </div>
         </header>
         
-        <div class="bg-card rounded-xl border border-border p-4 mb-4">
+        <div class="bg-card rounded-xl border border-border p-4 mb-4 shadow-sm">
             <div class="flex flex-wrap items-center gap-3">
-                <input class="form-input w-64" placeholder="搜尋編號 / 名稱 / 分類" 
-                    value="${term}" 
-                    oninput="localStorage.setItem('c_search',this.value); renderCatalog(true)" 
-                    autofocus>
+                <div class="relative flex-1 min-w-[200px]">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">🔍</span>
+                    <input class="form-input pl-9" placeholder="搜尋編號 / 名稱" 
+                        value="${term}" 
+                        oninput="localStorage.setItem('c_search',this.value); localStorage.setItem('c_page', 1); renderCatalog(true)" 
+                        autofocus>
+                </div>
+                <div class="w-auto">
+                    <select class="form-input cursor-pointer" onchange="localStorage.setItem('c_cat_filter', this.value); localStorage.setItem('c_page', 1); renderCatalog()">
+                        <option value="">📂 所有分類</option>
+                        ${catOptions}
+                    </select>
+                </div>
             </div>
         </div>
 
-        <div class="bg-card rounded-xl border border-border overflow-hidden">
+        <div class="bg-card rounded-xl border border-border overflow-hidden shadow-sm flex flex-col">
             <div class="overflow-x-auto">
-                <table>
+                <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr>
-                            <th>編號 (PID)</th>
-                            <th>分類</th>
-                            <th>名稱</th>
-                            <th>PV / BV / DP</th>
-                            <th>操作</th>
+                        <tr class="bg-secondary/30 text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
+                            <th class="px-4 py-3 font-semibold">編號</th>
+                            <th class="px-4 py-3 font-semibold">分類</th>
+                            <th class="px-4 py-3 font-semibold">名稱</th>
+                            <th class="px-4 py-3 font-semibold">數值</th>
+                            <th class="px-4 py-3 font-semibold">操作</th>
                         </tr>
                     </thead>
-                    <tbody id="catalog-tbody">
+                    <tbody id="catalog-tbody" class="divide-y divide-border/30">
                         ${tbodyHtml}
                     </tbody>
                 </table>
             </div>
+            <div id="catalog-pagination">
+                ${paginationHtml}
+            </div>
+        </div>
+        
+        <div class="md:hidden flex gap-2 mt-4 justify-end">
+             <button class="px-3 py-2 bg-secondary text-secondary-foreground rounded text-xs" onclick="openBatchRenameModal()">批量修改</button>
+             <button class="px-3 py-2 bg-secondary text-secondary-foreground rounded text-xs" onclick="openMergeModal()">合併重複</button>
         </div>
     `;
     
@@ -902,6 +989,12 @@ function renderCatalog(isUpdate = false) {
     }
 }
 
+// 新增：換頁輔助函數
+window.changeCatalogPage = function(delta) {
+    let currentPage = parseInt(localStorage.getItem('c_page') || '1');
+    localStorage.setItem('c_page', currentPage + delta);
+    renderCatalog();
+}
     // --- Partners ---
     function renderPartners() {
         const term = localStorage.getItem('p_search') || '';
