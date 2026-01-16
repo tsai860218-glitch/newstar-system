@@ -473,14 +473,7 @@
         <div class="modal-body" id="catalogModalBody"></div>
     </div>
 </div>
-<button onclick="editRecord(null, getLocalMonth())" 
-    class="fixed bottom-6 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-2xl flex items-center justify-center z-50 md:hidden active:scale-95 transition-transform hover:bg-primary/90">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="12" y1="5" x2="12" y2="19"></line>
-        <line x1="5" y1="12" x2="19" y2="12"></line>
-    </svg>
-</button>
-    
+
 <script>
     // =========================================
     // A) Theme & UI Utilities
@@ -729,175 +722,28 @@
     // =========================================
     // F) Pages Render
     // =========================================
-    // =========================================
-// [修改後] 戰情室儀表板 (含排行榜與目標)
-// =========================================
-function renderDashboard() {
-    const m = getLocalMonth();
-    const today = getLocalToday();
-    const allRecs = store.data.records || [];
-    const recs = store.getRecordsByMonth(m).map(calculate).filter(x => x);
-    const partners = store.data.partners || [];
-    const activePartners = partners.filter(p => p.status === 'active');
+    function renderDashboard() {
+        const m = getLocalMonth();
+        const today = getLocalToday();
+        const allRecs = store.data.records || [];
+        const recs = store.getRecordsByMonth(m).map(calculate).filter(x => x);
+        const partners = store.data.partners || [];
+        const activePartners = partners.filter(p => p.status === 'active');
+        
+        const totalBonus = recs.reduce((s, r) => s + r.starTotal, 0);
+        const unpaidSum = recs.filter(r => r.payoutStatus !== 'paid').reduce((s, r) => s + r.totalIncome, 0);
+        const unpaidCount = recs.filter(r => r.payoutStatus !== 'paid' && r.totalIncome > 0).length;
+        const bonusCount = recs.filter(r => r.totalIncome > 0).length;
+        const payoutRate = bonusCount > 0 ? Math.round(((bonusCount - unpaidCount) / bonusCount) * 100) : 0;
 
-    // 1. 計算總數
-    const totalBonus = recs.reduce((s, r) => s + r.starTotal, 0);
-    const unpaidSum = recs.filter(r => r.payoutStatus !== 'paid').reduce((s, r) => s + r.totalIncome, 0);
-    
-    // 計算歷史趨勢 (近3個月)
-    const trends = [];
-    for(let i=0; i<3; i++){
-        const d = new Date(); d.setMonth(d.getMonth() - i); const tm = d.toISOString().slice(0,7);
-        const tRecs = allRecs.filter(r => r.month === tm).map(calculate).filter(x=>x);
-        const tBonus = tRecs.reduce((s,r) => s + r.starTotal, 0);
-        const tPeople = tRecs.filter(r => r.gpv > 0).length;
-        trends.push({ month: tm, bonus: tBonus, people: tPeople });
-    }
-
-    // 2. 排行榜邏輯 (Leaderboard)
-    // 連結夥伴資料以取得目標 PV
-    const rankingData = recs.map(r => {
-        const p = store.getPartner(r.partnerId) || {};
-        const target = Number(p.targetPV) || 0;
-        const progress = target > 0 ? Math.min(100, Math.round((r.gpv / target) * 100)) : 0;
-        return { ...r, target, progress };
-    });
-    
-    // 依 GPV 排序取前 5
-    const topPV = [...rankingData].sort((a,b) => b.gpv - a.gpv).slice(0, 5);
-    
-    // 3. 倒數名單 (Gap Analysis)
-    const thresholds = [200, 600, 1000, 2000, 4000, 7000, 10000];
-    const gapList = [];
-    rankingData.forEach(r => {
-        if(r.isGraduated || r.participation === 'inactive') return;
-        const nextT = thresholds.find(t => t > r.gpv);
-        if(nextT) { gapList.push({ name: r.partnerName, current: r.gpv, gap: nextT - r.gpv, next: nextT }); }
-    });
-    const topGaps = gapList.sort((a,b) => a.gap - b.gap).slice(0, 4);
-
-    document.getElementById('app').innerHTML = `
-        <header class="flex items-center justify-between mb-6 flex-wrap gap-4">
-            ${header(`戰情中心 - ${m}`)}
-            <div class="text-xs font-mono text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full">
-                📅 最後更新: ${today}
-            </div>
-        </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden group">
-                <div class="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-bl-full transition-transform group-hover:scale-110"></div>
-                <div class="text-sm text-muted-foreground mb-1">本月團隊總獎金</div>
-                <div class="text-3xl font-bold text-foreground tracking-tight">${money(totalBonus)}</div>
-                <div class="text-xs text-primary mt-2 font-medium">上月: ${money(trends[1]?.bonus||0)}</div>
-            </div>
-            <div class="bg-card rounded-xl border border-border p-5 relative overflow-hidden group">
-                <div class="absolute top-0 right-0 w-24 h-24 bg-destructive/10 rounded-bl-full transition-transform group-hover:scale-110"></div>
-                <div class="text-sm text-muted-foreground mb-1">待發放金額</div>
-                <div class="text-3xl font-bold text-foreground tracking-tight">${money(unpaidSum)}</div>
-                <div class="text-xs text-destructive mt-2 cursor-pointer hover:underline" onclick="payoutAction('${m}')">前往發放 &rarr;</div>
-            </div>
-            <div class="bg-card rounded-xl border border-border p-5 flex items-center justify-between">
-                <div>
-                    <div class="text-sm text-muted-foreground mb-1">本月最高 PV</div>
-                    <div class="text-2xl font-bold text-foreground">${topPV.length > 0 ? topPV[0].partnerName : '—'}</div>
-                    <div class="text-xs text-amber-500 font-bold mt-1">${topPV.length > 0 ? topPV[0].gpv + ' PV' : ''}</div>
-                </div>
-                <div class="text-4xl">👑</div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <div class="lg:col-span-2 space-y-6">
-                <div class="bg-card rounded-xl border border-border overflow-hidden">
-                    <div class="p-4 border-b border-border flex justify-between items-center bg-secondary/20">
-                        <h3 class="font-bold flex items-center gap-2">🏆 榮譽排行榜 <span class="text-xs font-normal text-muted-foreground">(Top 5)</span></h3>
-                        <span class="text-xs text-muted-foreground">依 PV 排序</span>
-                    </div>
-                    <div class="p-2">
-                        ${topPV.map((r, i) => {
-                            const rankIcon = i===0 ? '🥇' : i===1 ? '🥈' : i===2 ? '🥉' : `<span class="w-5 h-5 flex items-center justify-center bg-secondary rounded-full text-[10px] font-bold text-muted-foreground">${i+1}</span>`;
-                            const barColor = r.progress >= 100 ? 'bg-gradient-to-r from-yellow-400 to-amber-600' : 'bg-primary';
-                            return `
-                            <div class="flex items-center gap-3 p-3 hover:bg-secondary/10 rounded-lg transition-colors cursor-pointer" onclick="showPartnerStats('${r.partnerId}')">
-                                <div class="text-xl w-8 text-center flex-shrink-0">${rankIcon}</div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex justify-between items-end mb-1">
-                                        <span class="font-bold text-sm truncate">${r.partnerName}</span>
-                                        <div class="text-right">
-                                            <span class="text-sm font-bold text-foreground">${r.gpv} <span class="text-xs text-muted-foreground font-normal">PV</span></span>
-                                        </div>
-                                    </div>
-                                    <div class="relative h-2 w-full bg-secondary rounded-full overflow-hidden">
-                                        <div class="absolute top-0 left-0 h-full ${barColor} transition-all duration-1000" style="width: ${r.progress}%"></div>
-                                    </div>
-                                    <div class="flex justify-between text-[10px] text-muted-foreground mt-1">
-                                        <span>${r.target > 0 ? '目標: ' + r.target : '未設目標'}</span>
-                                        <span class="${r.progress>=100?'text-amber-500 font-bold':''}">${r.progress}%</span>
-                                    </div>
-                                </div>
-                            </div>`;
-                        }).join('') || '<div class="p-8 text-center text-muted-foreground">本月尚無資料，加油！</div>'}
-                    </div>
-                </div>
-
-                <div class="bg-card rounded-xl border border-border p-4">
-                    <h3 class="font-bold text-sm mb-3 text-muted-foreground uppercase tracking-wider">🎯 衝刺建議 (Top 4)</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        ${topGaps.map(g => `
-                            <div class="p-3 rounded-lg border border-border bg-card hover:border-primary/50 cursor-pointer transition-all" 
-                                 onclick="showGapDetail('${g.name}', ${g.current}, ${g.next}, ${g.gap})">
-                                <div class="flex justify-between items-start mb-2">
-                                    <span class="font-bold text-sm truncate">${g.name}</span>
-                                    <span class="text-xs bg-secondary px-2 py-0.5 rounded text-foreground whitespace-nowrap">${g.next} PV</span>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs text-muted-foreground">還差</span>
-                                    <span class="text-lg font-bold text-destructive">${parseFloat(g.gap.toFixed(2))}</span>
-                                </div>
-                            </div>
-                        `).join('') || '<div class="col-span-2 text-center text-xs text-muted-foreground py-2">目前沒有接近門檻的夥伴</div>'}
-                    </div>
-                </div>
-            </div>
-
-            <div class="space-y-6">
-                <div class="bg-card rounded-xl border border-border p-4">
-                    <h3 class="font-bold mb-4">⚡️ 快捷操作</h3>
-                    <div class="space-y-2">
-                        <button class="w-full text-left p-3 rounded bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors flex items-center gap-3" onclick="editRecord(null, '${m}')">
-                            <span class="text-xl">📝</span>
-                            <div>
-                                <div class="font-bold text-sm">新增業績紀錄</div>
-                                <div class="text-xs opacity-70">輸入 PV/BV 與產品</div>
-                            </div>
-                        </button>
-                        <button class="w-full text-left p-3 rounded bg-secondary hover:bg-secondary/80 transition-colors flex items-center gap-3" onclick="router('catalog')">
-                            <span class="text-xl">📦</span>
-                            <div>
-                                <div class="font-bold text-sm">產品資料庫</div>
-                                <div class="text-xs text-muted-foreground">查詢、修改或匯入 CSV</div>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="bg-card rounded-xl border border-border p-4">
-                    <h3 class="font-bold text-sm mb-3 text-muted-foreground">系統狀態</h3>
-                    <div class="flex justify-between text-xs py-1 border-b border-border/50">
-                        <span>版本</span>
-                        <span class="font-mono">v11.0 Stars Edition</span>
-                    </div>
-                    <div class="flex justify-between text-xs py-1 pt-2">
-                        <span>資料庫狀態</span>
-                        <span class="text-emerald-500">● 連線正常</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
+        const trends = [];
+        for(let i=0; i<3; i++){
+            const d = new Date(); d.setMonth(d.getMonth() - i); const tm = d.toISOString().slice(0,7);
+            const tRecs = allRecs.filter(r => r.month === tm).map(calculate).filter(x=>x);
+            const tBonus = tRecs.reduce((s,r) => s + r.starTotal, 0);
+            const tPeople = tRecs.filter(r => r.gpv > 0).length;
+            trends.push({ month: tm, bonus: tBonus, people: tPeople });
+        }
 
         // Tasks
         const tasks = [];
@@ -1306,86 +1152,8 @@ window.changeCatalogPage = function(delta) {
             const p = id ? store.getPartner(id) : {id:'', code:'', name:'', memberType:'directSeller', sponsorId:'', initiatorId:'', status:'active', joinedAt:''};
             if(!p.memberType) p.memberType = 'directSeller'; if(!p.status) p.status = 'active'; if(p.status === 'active' && !p.joinedAt && !id) p.joinedAt = getLocalToday(); 
             const others = store.data.partners.filter(x=>x.id!==p.id); const inits = store.data.initiators;
-           openModal(id ? '編輯夥伴' : '新增夥伴', `
-                <form onsubmit="savePartner(event, '${id||''}')">
-                    <div class="row">
-                        <div class="col">
-                            <label class="text-sm text-muted-foreground">編號 *</label>
-                            <input name="code" value="${p.code}" class="form-input" required>
-                        </div>
-                        <div class="col">
-                            <label class="text-sm text-muted-foreground">姓名 *</label>
-                            <input name="name" value="${p.name}" class="form-input" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="text-sm text-muted-foreground">會員性質 *</label>
-                        <select name="memberType" class="form-input" required>
-                            <option value="directSeller" ${p.memberType==='directSeller'?'selected':''}>直銷商</option>
-                            <option value="member" ${p.memberType==='member'?'selected':''}>生活會員</option>
-                        </select>
-                    </div>
-
-                    <div class="bg-card border border-border p-4 rounded-lg mb-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <label class="text-sm">計畫狀態</label>
-                            <div class="flex items-center gap-2">
-                                <label class="switch">
-                                    <input type="checkbox" id="statusToggle" ${p.status==='active'?'checked':''} onchange="toggleStatusUI(this)">
-                                    <span class="slider"></span>
-                                </label>
-                                <span id="statusLabel" class="text-sm font-bold">${p.status==='active'?'參與':'未參與'}</span>
-                            </div>
-                        </div>
-                        <div id="joinedAtGroup" style="display:${p.status==='active'?'block':'none'}">
-                            <label class="text-sm text-muted-foreground">加入計畫日期 *</label>
-                            <input type="date" name="joinedAt" id="joinedAtInput" class="form-input" value="${p.joinedAt||''}" ${p.status==='active'?'required':''}>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="text-sm text-muted-foreground">每月 PV 目標</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" name="targetPV" value="${p.targetPV||''}" class="form-input" placeholder="例如: 600">
-                            <span class="text-xs text-muted-foreground">PV</span>
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <label class="text-sm text-muted-foreground">推薦人 (上線)</label>
-                        <select name="sponsorId" class="form-input">
-                            <option value="">-- 無 (頂層) --</option>
-                            ${others.map(o=>`<option value="${o.id}" ${o.id===p.sponsorId?'selected':''}>${o.code} ${o.name}</option>`).join('')}
-                        </select>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="text-sm text-muted-foreground">所屬發起人 (獎金來源)</label>
-                        <select name="initiatorId" class="form-input" required>
-                            <option value="">-- 請選擇 --</option>
-                            ${inits.map(i=>`<option value="${i.id}" ${i.id===p.initiatorId?'selected':''}>${i.name}</option>`).join('')}
-                        </select>
-                    </div>
-
-                    <button class="w-full py-2 bg-primary text-primary-foreground rounded-lg font-bold">儲存</button>
-                </form>
-            `);
-
-        window.toggleStatusUI = function(el) {
-                const label = document.getElementById('statusLabel'),
-                      grp = document.getElementById('joinedAtGroup'),
-                      inp = document.getElementById('joinedAtInput');
-                if (el.checked) {
-                    label.innerText = "參與";
-                    grp.style.display = "block";
-                    inp.required = true;
-                    if (!inp.value) inp.value = getLocalToday();
-                } else {
-                    label.innerText = "未參與";
-                    grp.style.display = "none";
-                    inp.required = false;
-                }
-            };
+            openModal(id?'編輯夥伴':'新增夥伴', `<form onsubmit="savePartner(event, '${id||''}')"><div class="row"><div class="col"><label class="text-sm text-muted-foreground">編號 *</label><input name="code" value="${p.code}" class="form-input" required></div><div class="col"><label class="text-sm text-muted-foreground">姓名 *</label><input name="name" value="${p.name}" class="form-input" required></div></div><div class="mb-4"><label class="text-sm text-muted-foreground">會員性質 *</label><select name="memberType" class="form-input" required><option value="directSeller" ${p.memberType==='directSeller'?'selected':''}>直銷商</option><option value="member" ${p.memberType==='member'?'selected':''}>生活會員</option></select></div><div class="bg-card border border-border p-4 rounded-lg mb-4"><div class="flex justify-between items-center mb-2"><label class="text-sm">計畫狀態</label><div class="flex items-center gap-2"><label class="switch"><input type="checkbox" id="statusToggle" ${p.status==='active'?'checked':''} onchange="toggleStatusUI(this)"><span class="slider"></span></label><span id="statusLabel" class="text-sm font-bold">${p.status==='active'?'參與':'未參與'}</span></div></div><div id="joinedAtGroup" style="display:${p.status==='active'?'block':'none'}"><label class="text-sm text-muted-foreground">加入計畫日期 *</label><input type="date" name="joinedAt" id="joinedAtInput" class="form-input" value="${p.joinedAt||''}" ${p.status==='active'?'required':''}></div></div><div class="mb-4"><label class="text-sm text-muted-foreground">推薦人 (上線)</label><select name="sponsorId" class="form-input"><option value="">-- 無 (頂層) --</option>${others.map(o=>`<option value="${o.id}" ${o.id===p.sponsorId?'selected':''}>${o.code} ${o.name}</option>`).join('')}</select></div><div class="mb-4"><label class="text-sm text-muted-foreground">所屬發起人 (獎金來源)</label><select name="initiatorId" class="form-input" required><option value="">-- 請選擇 --</option>${inits.map(i=>`<option value="${i.id}" ${i.id===p.initiatorId?'selected':''}>${i.name}</option>`).join('')}</select></div><button class="w-full py-2 bg-primary text-primary-foreground rounded-lg font-bold">儲存</button></form>`);
+            window.toggleStatusUI = function(el) { const label = document.getElementById('statusLabel'), grp = document.getElementById('joinedAtGroup'), inp = document.getElementById('joinedAtInput'); if (el.checked) { label.innerText = "參與"; grp.style.display = "block"; inp.required = true; if (!inp.value) inp.value = getLocalToday(); } else { label.innerText = "未參與"; grp.style.display = "none"; inp.required = false; } };
         } catch(e) { alert(e.message); }
     }
     function savePartner(e, id) {
@@ -1985,65 +1753,6 @@ function saveBatchRename() {
         closeModal();
         renderCatalog();
     }).catch(err => alert('儲存失敗: ' + err.message));
-    }
-// =========================================
-// [新增功能] CSV 產品批次匯入
-// =========================================
-function openCsvImportModal() {
-    openModal('匯入產品 CSV', `
-        <div class="space-y-4">
-            <div class="bg-secondary/20 p-4 rounded text-sm text-muted-foreground">
-                <p class="font-bold text-foreground mb-2">📄 格式說明 (請不含標題列):</p>
-                <code class="block bg-black/20 p-2 rounded select-all">編號,名稱,分類,PV,BV,DP</code>
-                <p class="mt-2 text-xs">範例：<br>P001,紐崔萊蛋白素,營養,35,410,930<br>P002,牙膏,個人護理,4.5,50,120</p>
-            </div>
-            <textarea id="csvInput" class="form-input h-48 font-mono text-xs" placeholder="請在此貼上 CSV 內容..."></textarea>
-            <div class="flex gap-2">
-                <button class="flex-1 py-3 bg-primary text-primary-foreground font-bold rounded-lg" onclick="processCsvImport()">開始匯入</button>
-            </div>
-        </div>
-    `);
-}
-
-function processCsvImport() {
-    const text = document.getElementById('csvInput').value.trim();
-    if (!text) return alert('內容空白');
-    
-    const lines = text.split('\n');
-    const catalog = store.data.productCatalog || {};
-    let success = 0;
-    let errors = 0;
-
-    lines.forEach(line => {
-        // 簡單的 CSV 解析 (假設沒有引號包裹的逗號)
-        const parts = line.split(',').map(s => s.trim());
-        if (parts.length >= 2) {
-            const [pid, name, cat, pv, bv, dp] = parts;
-            // 檢查必要欄位
-            if(pid && name) {
-                catalog[pid] = {
-                    pid: pid,
-                    id: pid, // 兼容舊版
-                    name: name,
-                    category: cat || '未分類',
-                    pv: Number(pv) || 0,
-                    bv: Number(bv) || 0,
-                    dp: Number(dp) || 0,
-                    updatedAt: getLocalToday()
-                };
-                success++;
-            } else {
-                errors++;
-            }
-        }
-    });
-
-    store.data.productCatalog = catalog;
-    store.save().then(() => {
-        alert(`匯入完成！\n✅ 成功: ${success} 筆\n⚠️ 略過/格式錯: ${errors} 筆`);
-        closeModal();
-        if(typeof renderCatalog === 'function') renderCatalog();
-    }).catch(e => alert('儲存失敗: ' + e.message));
 }
 </script>
 </body>
