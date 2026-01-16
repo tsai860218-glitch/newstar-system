@@ -1371,7 +1371,7 @@ window.changeCatalogPage = function(delta) {
                 </form>
             `);
 
-            window.toggleStatusUI = function(el) {
+        window.toggleStatusUI = function(el) {
                 const label = document.getElementById('statusLabel'),
                       grp = document.getElementById('joinedAtGroup'),
                       inp = document.getElementById('joinedAtInput');
@@ -1385,7 +1385,8 @@ window.changeCatalogPage = function(delta) {
                     grp.style.display = "none";
                     inp.required = false;
                 }
-            }; { alert(e.message); }
+            };
+        } catch(e) { alert(e.message); }
     }
     function savePartner(e, id) {
         e.preventDefault(); const fd = new FormData(e.target), d = Object.fromEntries(fd);
@@ -2042,7 +2043,6 @@ function processCsvImport() {
         closeModal();
         if(typeof renderCatalog === 'function') renderCatalog();
     }).catch(e => alert('儲存失敗: ' + e.message));
-}
 }
 </script>
 </body>
